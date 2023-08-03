@@ -47,4 +47,5 @@ set(BUILD_QWLROOTS_EXAMPLES OFF)
 
 # add_subdirectory(3rdparty/waylib-shared)
 add_subdirectory(qtwaylandscanner)
+add_subdirectory(protocols/compositor)
 add_subdirectory(compositor)

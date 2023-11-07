@@ -81,6 +81,10 @@ qwlroots.code-workspace
 /.qmake.stash
 
 # Nix
+*.user
+
+# nix
+>>>>>>> a973202 (Support nix build and better cmake)
 .direnv/
 result
 result-*
@@ -110,3 +114,9 @@ obj-*-linux-gnu/
 
 # Kilo Code
 .kilocode/
+# clangd
+compile_commands.json
+
+# cmake
+CMakeLists.txt.user
+

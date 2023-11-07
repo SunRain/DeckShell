@@ -35,8 +35,12 @@ if(WITH_SUBMODULE_WAYLIB)
   add_subdirectory(waylib)
   message("Using waylib from submodule")
 else()
+<<<<<<< HEAD
   find_package(Waylib REQUIRED Server)
   find_package(QWlroots REQUIRED)
+=======
+    find_package(Waylib REQUIRED Server)
+>>>>>>> a973202 (Support nix build and better cmake)
 endif()
 
 # ECM

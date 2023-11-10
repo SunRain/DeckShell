@@ -35,12 +35,7 @@ if(WITH_SUBMODULE_WAYLIB)
   add_subdirectory(waylib)
   message("Using waylib from submodule")
 else()
-<<<<<<< HEAD
   find_package(Waylib REQUIRED Server)
-  find_package(QWlroots REQUIRED)
-=======
-    find_package(Waylib REQUIRED Server)
->>>>>>> a973202 (Support nix build and better cmake)
 endif()
 
 # ECM
@@ -60,7 +55,7 @@ endif()
 if(CMAKE_BUILD_TYPE MATCHES [Dd]ebug)
   message(STATUS "Debug build")
   add_definitions(-DDEBUG)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -O1")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -O0")
 else()
   message(STATUS "Release build")
   add_definitions(-DNDEBUG)

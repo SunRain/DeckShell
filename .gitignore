@@ -120,3 +120,5 @@ compile_commands.json
 # cmake
 CMakeLists.txt.user
 
+#ccls
+.ccls-cache

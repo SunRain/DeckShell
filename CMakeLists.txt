@@ -196,6 +196,9 @@ else()
 endif()
 
 # Set constants
+set(TREELAND_DATA_DIR
+    "${CMAKE_INSTALL_PREFIX}/share/treeland/"
+    CACHE PATH "treeland data install directory")
 set(DATA_INSTALL_DIR
     "${CMAKE_INSTALL_FULL_DATADIR}/ddm"
     CACHE PATH "System application data install directory")

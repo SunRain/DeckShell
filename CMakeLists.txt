@@ -1,9 +1,8 @@
 cmake_minimum_required(VERSION 3.25.0)
 
-project(
-  DDM
-  VERSION 0.0.1
-  LANGUAGES CXX C)
+project(DDM
+    VERSION 0.2.2
+    LANGUAGES CXX C)
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
@@ -92,20 +91,8 @@ set(BUILD_WAYLIB_EXAMPLES OFF)
 set(BUILD_QWLROOTS_TESTS OFF)
 set(BUILD_QWLROOTS_EXAMPLES OFF)
 
-find_package(
-  Qt6
-  CONFIG
-  REQUIRED
-  Core
-  DBus
-  Gui
-  Qml
-  Quick
-  QuickControls2
-  LinguistTools
-  Test
-  QuickTest)
-qt_standard_project_setup(REQUIRES 6.4)
+find_package(Qt6 CONFIG REQUIRED Core DBus Gui Qml Quick QuickControls2 LinguistTools Test QuickTest)
+qt_standard_project_setup(REQUIRES 6.6)
 
 # Uninstall target
 if("${ECM_VERSION}" VERSION_LESS "1.7.0")

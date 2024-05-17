@@ -38,12 +38,12 @@ BreakBeforeBraces: Custom
 BraceWrapping:
   AfterClass: true
   AfterControlStatement: false
-  AfterEnum: true
+  AfterEnum: false
   AfterFunction: true
   AfterNamespace: false
   AfterObjCDeclaration: false
   AfterStruct: true
-  AfterUnion: true
+  AfterUnion: false
   BeforeCatch: false
   BeforeElse: false
   IndentBraces: false
@@ -67,6 +67,10 @@ PPIndentWidth: 2
 # results closest to the existing code.
 AlignAfterOpenBracket: Align
 AlwaysBreakTemplateDeclarations: true
+
+# Ideally we should also allow less short function in a single line, but
+# clang-format does not handle that.
+AllowShortFunctionsOnASingleLine: Inline
 
 # As clang-format 13 can regroup includes we enable this feature.
 # basically according to https://wiki.qt.io/Coding_Conventions#Including_headers
@@ -106,14 +110,13 @@ IncludeCategories:
   - Regex: '^<'
     Priority: 3
 IncludeIsMainRegex: '((T|t)est)?$'
-SortIncludes: CaseSensitive
+SortIncludes: true
 
 # macros for which the opening brace stays attached.
 ForEachMacros:   [ foreach, Q_FOREACH, BOOST_FOREACH, forever, Q_FOREVER, QBENCHMARK, QBENCHMARK_ONCE ]
 
 # Break constructor initializers before the colon and after the commas.
 BreakConstructorInitializers: BeforeComma
-BreakInheritanceList: BeforeComma
 
 # Add "// namespace <namespace>" comments on closing brace for a namespace
 # Ignored for namespaces that qualify as a short namespace,
@@ -136,8 +139,6 @@ SpaceBeforeCpp11BracedList: false
 
 AllowAllArgumentsOnNextLine: false
 AllowShortLambdasOnASingleLine: Empty
-AllowShortFunctionsOnASingleLine: Empty
-AllowAllParametersOfDeclarationOnNextLine: false
 AlignTrailingComments: true
 BinPackArguments: false
 BinPackParameters: false

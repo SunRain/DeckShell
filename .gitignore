@@ -1,8 +1,6 @@
-# =============================================================================
-# DeckShell 项目 .gitignore 文件
-# =============================================================================
-# 此文件用于忽略不应提交到版本控制的临时文件、编译产物和本地配置
-# 按类别组织以提高可读性和维护性
+.vscode/
+.cache/
+build*/
 
 # =============================================================================
 # 编译产物 (Build Artifacts)
@@ -83,8 +81,21 @@ qwlroots.code-workspace
 # Nix
 *.user
 
+# Compiled Object files
+*.slo
+*.lo
+*.o
+
+# Compiled Dynamic libraries
+*.so
+*.dylib
+
+# Compiled Static libraries
+*.lai
+*.la
+*.a
+
 # nix
->>>>>>> a973202 (Support nix build and better cmake)
 .direnv/
 result
 result-*
@@ -117,8 +128,15 @@ obj-*-linux-gnu/
 # clangd
 compile_commands.json
 
+# executeable files
+*.qm
+
 # cmake
 CMakeLists.txt.user
 
 #ccls
 .ccls-cache
+
+# qtcreator
+*.autosave
+

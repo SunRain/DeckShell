@@ -140,3 +140,4 @@ CMakeLists.txt.user
 # qtcreator
 *.autosave
 
+.qmlls.ini

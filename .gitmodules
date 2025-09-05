@@ -1,0 +1,4 @@
+[submodule "3rdparty/waylib"]
+	path = 3rdparty/waylib
+	url = https://github.com/SunRain/waylib.git
+	branch = waylibshared

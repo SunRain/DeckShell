@@ -13,15 +13,15 @@
 
 QmlEngine::QmlEngine(QObject *parent)
     : QQmlApplicationEngine(parent)
-    , titleBarComponent(this, "Tinywl", "TitleBar")
-    , decorationComponent(this, "Tinywl", "Decoration")
-    , windowMenuComponent(this, "Tinywl", "WindowMenu")
-    , taskBarComponent(this, "Tinywl", "TaskBar")
-    , surfaceContent(this, "Tinywl", "SurfaceContent")
-    , shadowComponent(this, "Tinywl", "Shadow")
-    , geometryAnimationComponent(this, "Tinywl", "GeometryAnimation")
-    , menuBarComponent(this, "Tinywl", "OutputMenuBar")
-    , workspaceSwitcher(this, "Tinywl", "WorkspaceSwitcher")
+    , titleBarComponent(this, "DeckShell.Compositor", "TitleBar")
+    , decorationComponent(this, "DeckShell.Compositor", "Decoration")
+    , windowMenuComponent(this, "DeckShell.Compositor", "WindowMenu")
+    , taskBarComponent(this, "DeckShell.Compositor", "TaskBar")
+    , surfaceContent(this, "DeckShell.Compositor", "SurfaceContent")
+    , shadowComponent(this, "DeckShell.Compositor", "Shadow")
+    , geometryAnimationComponent(this, "DeckShell.Compositor", "GeometryAnimation")
+    , menuBarComponent(this, "DeckShell.Compositor", "OutputMenuBar")
+    , workspaceSwitcher(this, "DeckShell.Compositor", "WorkspaceSwitcher")
 {
 }
 

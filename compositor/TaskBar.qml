@@ -3,7 +3,7 @@
 
 import QtQuick
 import Waylib.QuickSharedServer
-import Tinywl
+import DeckShell.Compositor
 
 ListView {
     required property QtObject output

@@ -21,8 +21,8 @@ include(GNUInstallDirs)
 # Macros
 include(FeatureSummary)
 
-find_package(QT NAMES Qt6 REQUIRED COMPONENTS Core)
-find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Core)
+
+find_package(Qt6 REQUIRED COMPONENTS Core)
 
 qt_standard_project_setup(REQUIRES 6.8)
 
@@ -39,4 +39,4 @@ set(BUILD_QWLROOTS_EXAMPLES OFF)
 # Qt${QT_VERSION_MAJOR}::Core)
 
 add_subdirectory(3rdparty/waylib)
-# add_subdirectory(compositor)
+add_subdirectory(compositor)

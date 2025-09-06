@@ -4,7 +4,7 @@
 import QtQuick
 import QtQuick.Controls
 import Waylib.QuickSharedServer
-import Tinywl
+import DeckShell.Compositor
 
 OutputItem {
     id: rootOutputItem

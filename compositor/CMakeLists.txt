@@ -1,5 +1,18 @@
-find_package(Qt6 COMPONENTS Quick QuickControls2 REQUIRED)
-qt_standard_project_setup(REQUIRES 6.4)
+cmake_minimum_required(VERSION 3.16)
+
+project(DeckCompositor
+        VERSION 0.1
+        LANGUAGES C CXX
+        DESCRIPTION "Deck Shell Compositor")
+
+set(TARGET deckcompositor)
+
+set(CMAKE_INCLUDE_CURRENT_DIR ON)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+qt_standard_project_setup(REQUIRES 6.8)
 
 if(QT_KNOWN_POLICY_QTP0001) # this policy was introduced in Qt 6.5
     qt_policy(SET QTP0001 NEW)
@@ -10,21 +23,38 @@ if(POLICY CMP0071)
     cmake_policy(SET CMP0071 NEW)
 endif()
 
-set(QML_IMPORT_PATH ${CMAKE_BINARY_DIR}/src/server/ CACHE STRING "" FORCE)
+
+# Standard installation paths
+include(GNUInstallDirs)
+# Macros
+include(FeatureSummary)
+
+# include(cmake/DefineTarget.cmake)
+
 option(START_DEMO "Start demo when boot" ON)
+
+set(LOCAL_QML_IMPORT_PATH "${PROJECT_BINARY_DIR}/qt/qml")
+list(APPEND LOCAL_QML_IMPORT_PATH "${PROJECT_BINARY_DIR}/waylib/src/server")
+
+set(QML_IMPORT_PATH ${CMAKE_BINARY_DIR}/src/server/ CACHE STRING "" FORCE)
+set(QML_IMPORT_PATH "${LOCAL_QML_IMPORT_PATH}" CACHE STRING "For LSP" FORCE)
+
+
+find_package(Qt6 COMPONENTS REQUIRED Core Quick QuickControls2 )
+# Find Waylib
+find_package(Waylib REQUIRED COMPONENTS SharedServer)
 
 find_package(PkgConfig REQUIRED)
 pkg_search_module(PIXMAN REQUIRED IMPORTED_TARGET pixman-1)
 pkg_search_module(WAYLAND REQUIRED IMPORTED_TARGET wayland-server)
 
-set(TARGET tinywl-qtquick)
 
 add_executable(${TARGET}
     main.cpp
 )
 
 qt_add_qml_module(${TARGET}
-    URI Tinywl
+    URI DeckShell.Compositor
     VERSION "2.0"
 
     SOURCES helper.h helper.cpp
@@ -76,6 +106,5 @@ target_link_libraries(${TARGET}
     PkgConfig::WAYLAND
 )
 
-if (INSTALL_TINYWL)
-    install(TARGETS ${TARGET} DESTINATION ${CMAKE_INSTALL_BINDIR})
-endif()
+install(TARGETS ${TARGET} DESTINATION ${CMAKE_INSTALL_BINDIR})
+

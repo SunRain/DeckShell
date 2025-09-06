@@ -4,7 +4,7 @@
 import QtQuick
 import QtQuick.Effects
 import Waylib.QuickSharedServer
-import Tinywl
+import DeckShell.Compositor
 
 Item {
     id: root

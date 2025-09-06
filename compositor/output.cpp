@@ -26,7 +26,7 @@ Q_LOGGING_CATEGORY(qLcLayerShell, "tinywl.shell.layer", QtWarningMsg)
 
 Output *Output::createPrimary(WOutput *output, QQmlEngine *engine, QObject *parent)
 {
-    QQmlComponent delegate(engine, "Tinywl", "PrimaryOutput");
+    QQmlComponent delegate(engine, "DeckShell.Compositor", "PrimaryOutput");
     QObject *obj = delegate.beginCreate(engine->rootContext());
     delegate.setInitialProperties(obj, {
         {"forceSoftwareCursor", output->handle()->is_x11()}
@@ -72,7 +72,7 @@ Output *Output::createPrimary(WOutput *output, QQmlEngine *engine, QObject *pare
 
 Output *Output::createCopy(WOutput *output, Output *proxy, QQmlEngine *engine, QObject *parent)
 {
-    QQmlComponent delegate(engine, "Tinywl", "CopyOutput");
+    QQmlComponent delegate(engine, "DeckShell.Compositor", "CopyOutput");
     QObject *obj = delegate.createWithInitialProperties({
                                                          {"targetOutputItem", QVariant::fromValue(proxy->outputItem())},
                                                          }, engine->rootContext());

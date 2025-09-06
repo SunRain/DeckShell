@@ -38,7 +38,7 @@ int main(int argc, char *argv[]) {
     QmlEngine qmlEngine;
 
     // 3. 获取 Helper 单例并初始化
-    Helper *helper = qmlEngine.singletonInstance<Helper*>("Tinywl", "Helper");
+    Helper *helper = qmlEngine.singletonInstance<Helper*>("DeckShell.Compositor", "Helper");
     helper->init();
 
     // 4. 启动事件循环
@@ -81,11 +81,11 @@ QmlEngine 作为 QML 组件的统一工厂，预注册了所有可用的 QML 组
 ```cpp
 QmlEngine::QmlEngine(QObject *parent)
     : QQmlApplicationEngine(parent)
-    , titleBarComponent(this, "Tinywl", "TitleBar")
-    , decorationComponent(this, "Tinywl", "Decoration")
-    , windowMenuComponent(this, "Tinywl", "WindowMenu")
-    , taskBarComponent(this, "Tinywl", "TaskBar")
-    , surfaceContent(this, "Tinywl", "SurfaceContent")
+    , titleBarComponent(this, "DeckShell.Compositor", "TitleBar")
+    , decorationComponent(this, "DeckShell.Compositor", "Decoration")
+    , windowMenuComponent(this, "DeckShell.Compositor", "WindowMenu")
+    , taskBarComponent(this, "DeckShell.Compositor", "TaskBar")
+    , surfaceContent(this, "DeckShell.Compositor", "SurfaceContent")
     // ... 其他组件
 {
 }
@@ -114,7 +114,7 @@ QQuickItem *QmlEngine::createTitleBar(SurfaceWrapper *surface, QQuickItem *paren
 
 **调用路径:**
 ```
-Helper::init() → WBackend::outputAdded → Output::createPrimary() → QQmlComponent("Tinywl", "PrimaryOutput")
+Helper::init() → WBackend::outputAdded → Output::createPrimary() → QQmlComponent("DeckShell.Compositor", "PrimaryOutput")
 ```
 
 **功能:**
@@ -136,7 +136,7 @@ OutputItem {
 
 **调用路径:**
 ```
-Helper::init() → WBackend::outputAdded → Output::createCopy() → QQmlComponent("Tinywl", "CopyOutput")
+Helper::init() → WBackend::outputAdded → Output::createCopy() → QQmlComponent("DeckShell.Compositor", "CopyOutput")
 ```
 
 **功能:**
@@ -148,7 +148,7 @@ Helper::init() → WBackend::outputAdded → Output::createCopy() → QQmlCompon
 
 **调用路径:**
 ```
-SurfaceWrapper::setNoDecoration() → QmlEngine::createDecoration() → QQmlComponent("Tinywl", "Decoration")
+SurfaceWrapper::setNoDecoration() → QmlEngine::createDecoration() → QQmlComponent("DeckShell.Compositor", "Decoration")
 ```
 
 **功能:**
@@ -175,7 +175,7 @@ Item {
 
 **调用路径:**
 ```
-SurfaceWrapper::updateTitleBar() → QmlEngine::createTitleBar() → QQmlComponent("Tinywl", "TitleBar")
+SurfaceWrapper::updateTitleBar() → QmlEngine::createTitleBar() → QQmlComponent("DeckShell.Compositor", "TitleBar")
 ```
 
 **功能:**
@@ -201,7 +201,7 @@ Control {
 
 **调用路径:**
 ```
-SurfaceWrapper 构造函数 → surfaceItem->setDelegate() → QQmlComponent("Tinywl", "SurfaceContent")
+SurfaceWrapper 构造函数 → surfaceItem->setDelegate() → QQmlComponent("DeckShell.Compositor", "SurfaceContent")
 ```
 
 **功能:**
@@ -213,7 +213,7 @@ SurfaceWrapper 构造函数 → surfaceItem->setDelegate() → QQmlComponent("Ti
 
 **调用路径:**
 ```
-Output::createPrimary() → QmlEngine::createTaskBar() → QQmlComponent("Tinywl", "TaskBar")
+Output::createPrimary() → QmlEngine::createTaskBar() → QQmlComponent("DeckShell.Compositor", "TaskBar")
 ```
 
 **功能:**
@@ -225,7 +225,7 @@ Output::createPrimary() → QmlEngine::createTaskBar() → QQmlComponent("Tinywl
 
 **调用路径:**
 ```
-Helper::init() → QmlEngine::createWindowMenu() → QQmlComponent("Tinywl", "WindowMenu")
+Helper::init() → QmlEngine::createWindowMenu() → QQmlComponent("DeckShell.Compositor", "WindowMenu")
 ```
 
 **功能:**
@@ -236,7 +236,7 @@ Helper::init() → QmlEngine::createWindowMenu() → QQmlComponent("Tinywl", "Wi
 
 **调用路径:**
 ```
-Workspace::switchTo() → QmlEngine::createWorkspaceSwitcher() → QQmlComponent("Tinywl", "WorkspaceSwitcher")
+Workspace::switchTo() → QmlEngine::createWorkspaceSwitcher() → QQmlComponent("DeckShell.Compositor", "WorkspaceSwitcher")
 ```
 
 **功能:**
@@ -247,7 +247,7 @@ Workspace::switchTo() → QmlEngine::createWorkspaceSwitcher() → QQmlComponent
 
 **调用路径:**
 ```
-SurfaceWrapper::startStateChangeAnimation() → QmlEngine::createGeometryAnimation() → QQmlComponent("Tinywl", "GeometryAnimation")
+SurfaceWrapper::startStateChangeAnimation() → QmlEngine::createGeometryAnimation() → QQmlComponent("DeckShell.Compositor", "GeometryAnimation")
 ```
 
 **功能:**
@@ -258,7 +258,7 @@ SurfaceWrapper::startStateChangeAnimation() → QmlEngine::createGeometryAnimati
 
 **调用路径:**
 ```
-Output::createPrimary() → QmlEngine::createMenuBar() → QQmlComponent("Tinywl", "OutputMenuBar")
+Output::createPrimary() → QmlEngine::createMenuBar() → QQmlComponent("DeckShell.Compositor", "OutputMenuBar")
 ```
 
 **功能:**

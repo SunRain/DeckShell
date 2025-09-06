@@ -42,12 +42,15 @@ set(QML_IMPORT_PATH "${LOCAL_QML_IMPORT_PATH}" CACHE STRING "For LSP" FORCE)
 
 find_package(Qt6 COMPONENTS REQUIRED Core Quick QuickControls2 )
 # Find Waylib
-find_package(Waylib REQUIRED COMPONENTS SharedServer)
+# Waylib is built as a submodule, so we don't need to find it
+# find_package(Waylib REQUIRED COMPONENTS SharedServer)
 
 find_package(PkgConfig REQUIRED)
 pkg_search_module(PIXMAN REQUIRED IMPORTED_TARGET pixman-1)
 pkg_search_module(WAYLAND REQUIRED IMPORTED_TARGET wayland-server)
 
+# Waylib is built as a submodule, so we link directly to the target
+# The Waylib::SharedServer target should be available from the waylib submodule
 
 add_executable(${TARGET}
     main.cpp
@@ -94,6 +97,16 @@ target_compile_definitions(${TARGET}
     SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}"
     PROJECT_BINARY_DIR="${PROJECT_BINARY_DIR}"
     $<$<BOOL:${START_DEMO}>:START_DEMO>
+)
+
+target_include_directories(
+    ${TARGET}
+    PUBLIC 
+    $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/protocols>
+    $<INSTALL_INTERFACE:${CMAKE_INSTALL_BINDIR}>
+    PRIVATE ${Qt6Gui_PRIVATE_INCLUDE_DIRS} ${Qt6Quick_PRIVATE_INCLUDE_DIRS}
+    ${Qt6EglSupport_PRIVATE_INCLUDE_DIRS}
+    ${Qt6InputSupport_PRIVATE_INCLUDE_DIRS}
 )
 
 target_link_libraries(${TARGET}

@@ -38,5 +38,7 @@ set(BUILD_QWLROOTS_EXAMPLES OFF)
 # add_executable(DeckShell ${PROJECT_SOURCES}) target_link_libraries(DeckShell
 # Qt${QT_VERSION_MAJOR}::Core)
 
-add_subdirectory(3rdparty/waylib)
+# set(QT_QML_GENERATE_QMLLS_INI ON)
+
+add_subdirectory(3rdparty/waylib-shared)
 add_subdirectory(compositor)

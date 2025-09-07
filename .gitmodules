@@ -2,3 +2,7 @@
 	path = 3rdparty/waylib
 	url = https://github.com/SunRain/waylib.git
 	branch = waylibshared
+[submodule "3rdparty/waylib-shared"]
+	path = 3rdparty/waylib-shared
+	url = https://github.com/SunRain/waylib-shared.git
+	branch = waylibshared

@@ -42,6 +42,7 @@ QmlEngine::QmlEngine(QObject *parent)
     , launchpadCoverComponent(this, "DeckShell.Compositor", "LaunchpadCover")
     , layershellAnimationComponent(this, "DeckShell.Compositor", "LayerShellAnimation")
     , lockScreenFallbackComponent(this, "DeckShell.Compositor", "LockScreenFallback")
+    , fpsDisplayComponent(this, "DeckShell.Compositor", "FpsDisplay")
 {
 }
 
@@ -247,4 +248,8 @@ QQuickItem *QmlEngine::createWindowPicker(QQuickItem *parent)
 QQuickItem *QmlEngine::createLockScreenFallback(QQuickItem *parent, const QVariantMap &properties)
 {
     return createComponent(lockScreenFallbackComponent, parent, properties);
+}
+QQuickItem *QmlEngine::createFpsDisplay(QQuickItem *parent)
+{
+    return createComponent(fpsDisplayComponent, parent);
 }

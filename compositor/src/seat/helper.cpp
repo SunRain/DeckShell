@@ -6,6 +6,7 @@
 #include "treelandconfig.hpp"
 #include "modules/capture/capture.h"
 #include "utils/cmdline.h"
+#include "utils/fpsdisplaymanager.h"
 #include "modules/dde-shell/ddeshellattached.h"
 #include "modules/dde-shell/ddeshellmanagerinterfacev1.h"
 #include "input/inputdevice.h"
@@ -1351,6 +1352,10 @@ bool Helper::beforeDisposeEvent(WSeat *seat, QWindow *, QInputEvent *event)
             == QKeySequence(Qt::META | Qt::Key_F12)) {
             Q_EMIT requestQuit();
             return true;
+        } else if (QKeySequence(kevent->modifiers() | kevent->key())
+            == QKeySequence(Qt::META | Qt::Key_F11)) {
+            toggleFpsDisplay();
+            return true;
         } else if (m_captureSelector) {
             if (event->modifiers() == Qt::NoModifier && kevent->key() == Qt::Key_Escape)
                 m_captureSelector->cancelSelection();
@@ -2384,4 +2389,14 @@ void Helper::setNoAnimation(bool noAnimation) {
         return;
     m_noAnimation = noAnimation;
     emit noAnimationChanged();
+}
+void Helper::toggleFpsDisplay()
+{
+    if (m_fpsDisplay) {
+        m_fpsDisplay->deleteLater();
+        m_fpsDisplay = nullptr;
+        return;
+    }
+
+    m_fpsDisplay = qmlEngine()->createFpsDisplay(m_renderWindow->contentItem());
 }

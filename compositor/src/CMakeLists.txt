@@ -150,6 +150,8 @@ qt_add_qml_module(libdeckcompositor
         utils/propertymonitor.h
         utils/loginddbustypes.h
         utils/loginddbustypes.cpp
+        utils/fpsdisplaymanager.cpp
+        utils/fpsdisplaymanager.h
         wallpaper/wallpapercontroller.cpp
         wallpaper/wallpapercontroller.h
         wallpaper/wallpaperimage.cpp
@@ -176,6 +178,7 @@ qt_add_qml_module(libdeckcompositor
         core/qml/OutputMenuBar.qml
         core/qml/WorkspaceSwitcher.qml
         core/qml/WorkspaceProxy.qml
+        core/qml/FpsDisplay.qml
         core/qml/Animations/GeometryAnimation.qml
         core/qml/Animations/NewAnimation.qml
         core/qml/Animations/MinimizeAnimation.qml

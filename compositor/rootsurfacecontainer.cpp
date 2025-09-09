@@ -3,15 +3,17 @@
 
 #include "rootsurfacecontainer.h"
 #include "helper.h"
-#include "surfacewrapper.h"
+#include "surface/surfacewrapper.h"
 #include "output.h"
 
 #include <woutputlayout.h>
 #include <wcursor.h>
+#include <woutput.h>
 #include <woutputitem.h>
 #include <woutput.h>
 #include <wxdgsurface.h>
 #include <wxdgpopupsurface.h>
+#include <wxdgtoplevelsurface.h>
 
 #include <qwoutputlayout.h>
 
@@ -96,13 +98,13 @@ SurfaceWrapper *RootSurfaceContainer::getSurface(WToplevelSurface *surface) cons
     return nullptr;
 }
 
-void RootSurfaceContainer::destroyForSurface(WSurface *surface)
+void RootSurfaceContainer::destroyForSurface(SurfaceWrapper *wrapper)
 {
-    auto wrapper = getSurface(surface);
-    if (wrapper == moveResizeState.surface)
+    if (wrapper == moveResizeState.surface) {
         endMoveResize();
+    }
 
-    delete wrapper;
+    wrapper->markWrapperToRemoved();
 }
 
 void RootSurfaceContainer::addOutput(Output *output)
@@ -196,18 +198,21 @@ void RootSurfaceContainer::endMoveResize()
     if (!moveResizeState.surface)
         return;
 
-    auto o = moveResizeState.surface->ownsOutput();
-    moveResizeState.surface->shellSurface()->setResizeing(false);
+    if (moveResizeState.surface->surface()->mapped()) {
+        auto o = moveResizeState.surface->ownsOutput();
+        moveResizeState.surface->shellSurface()->setResizeing(false);
 
-    if (!o || !moveResizeState.surface->surface()->outputs().contains(o->output())) {
-        o = cursorOutput();
-        Q_ASSERT(o);
-        moveResizeState.surface->setOwnsOutput(o);
+        if (!o || !moveResizeState.surface->surface()->outputs().contains(o->output())) {
+            o = cursorOutput();
+            Q_ASSERT(o);
+            moveResizeState.surface->setOwnsOutput(o);
+        }
+
+        ensureSurfaceNormalPositionValid(moveResizeState.surface);
+
+        moveResizeState.surface->setXwaylandPositionFromSurface(true);
     }
 
-    ensureSurfaceNormalPositionValid(moveResizeState.surface);
-
-    moveResizeState.surface->setXwaylandPositionFromSurface(true);
     moveResizeState.surface = nullptr;
     Q_EMIT moveResizeFinised();
 }
@@ -249,44 +254,53 @@ void RootSurfaceContainer::addBySubContainer(SurfaceContainer *sub, SurfaceWrapp
 {
     SurfaceContainer::addBySubContainer(sub, surface);
 
-    connect(surface, &SurfaceWrapper::requestMove, this, [this] {
-        auto surface = qobject_cast<SurfaceWrapper*>(sender());
-        Q_ASSERT(surface);
-        startMove(surface);
-    });
-    connect(surface, &SurfaceWrapper::requestResize, this, [this] (Qt::Edges edges) {
-        auto surface = qobject_cast<SurfaceWrapper*>(sender());
-        Q_ASSERT(surface);
-        startResize(surface, edges);
-    });
-    connect(surface, &SurfaceWrapper::surfaceStateChanged, this, [surface, this] {
-        if (surface->surfaceState() == SurfaceWrapper::State::Minimized
-            || surface->surfaceState() == SurfaceWrapper::State::Tiling)
-            return;
-        Helper::instance()->activeSurface(surface);
-    });
+    if (surface->type() != SurfaceWrapper::Type::Layer) {
+        // RootSurfaceContainer does not have control over layer surface's position and ownsOutput
+        // All things are done in LayerSurfaceContainer
+        connect(surface, &SurfaceWrapper::requestMove, this, [this] {
+            auto surface = qobject_cast<SurfaceWrapper*>(sender());
+            Q_ASSERT(surface);
+            startMove(surface);
+        });
+        connect(surface, &SurfaceWrapper::requestResize, this, [this] (Qt::Edges edges) {
+            auto surface = qobject_cast<SurfaceWrapper*>(sender());
+            Q_ASSERT(surface);
+            startResize(surface, edges);
+        });
+		//TODO tiling
+        /*
+        connect(surface, &SurfaceWrapper::surfaceStateChanged, this, [surface, this] {
+            if (surface->surfaceState() == SurfaceWrapper::State::Minimized
+                || surface->surfaceState() == SurfaceWrapper::State::Tiling)
+                return;
+            Helper::instance()->activeSurface(surface);
+        });
+		*/
 
-    if (!surface->ownsOutput()) {
-        auto parentSurface = surface->parentSurface();
-        auto output = parentSurface ? parentSurface->ownsOutput() : primaryOutput();
+        if (!surface->ownsOutput()) {
+            auto parentSurface = surface->parentSurface();
+            auto output = parentSurface ? parentSurface->ownsOutput() : primaryOutput();
 
-        if (auto xdgPopupSurface = qobject_cast<WXdgPopupSurface*>(surface->shellSurface())) {
-            if (parentSurface->type() != SurfaceWrapper::Type::Layer) {
-                auto pos = parentSurface->position() + parentSurface->surfaceItem()->position() + xdgPopupSurface->getPopupPosition();
-                if (auto op = m_outputLayout->handle()->output_at(pos.x(), pos.y()))
-                    output = Helper::instance()->getOutput(WOutput::fromHandle(qw_output::from(op)));
+            if (auto xdgPopupSurface = qobject_cast<WXdgPopupSurface*>(surface->shellSurface())) {
+                if (parentSurface->type() != SurfaceWrapper::Type::Layer) {
+                    // If parentSurface is Layer surface, follow parentSurface->ownsOutput
+                    auto pos = parentSurface->position() + parentSurface->surfaceItem()->position()
+                        + xdgPopupSurface->getPopupPosition();
+                    if (auto op = m_outputLayout->handle()->output_at(pos.x(), pos.y()))
+                        output = Helper::instance()->getOutput(WOutput::fromHandle(qw_output::from(op)));
+                }
             }
+            surface->setOwnsOutput(output);
         }
-        surface->setOwnsOutput(output);
-    }
 
-    connect(surface, &SurfaceWrapper::geometryChanged, this, [this, surface] {
+        connect(surface, &SurfaceWrapper::geometryChanged, this, [this, surface] {
+            updateSurfaceOutputs(surface);
+        });
+
         updateSurfaceOutputs(surface);
-    });
-
-    updateSurfaceOutputs(surface);
-    if (surface->shellSurface()->surface()->mapped())
-        Helper::instance()->activeSurface(surface, Qt::OtherFocusReason);
+       // if (surface->shellSurface()->surface()->mapped())
+       //     Helper::instance()->activeSurface(surface, Qt::OtherFocusReason);
+    }
 }
 
 void RootSurfaceContainer::removeBySubContainer(SurfaceContainer *sub, SurfaceWrapper *surface)
@@ -328,10 +342,10 @@ bool RootSurfaceContainer::filterSurfaceGeometryChanged(SurfaceWrapper *surface,
     return false;
 }
 
-bool RootSurfaceContainer::filterSurfaceStateChange(SurfaceWrapper *surface, SurfaceWrapper::State newState, SurfaceWrapper::State oldState)
+bool RootSurfaceContainer::filterSurfaceStateChange(SurfaceWrapper *surface,
+                                                    [[maybe_unused]] SurfaceWrapper::State newState,
+                                                    [[maybe_unused]] SurfaceWrapper::State oldState)
 {
-    Q_UNUSED(oldState);
-    Q_UNUSED(newState);
     return surface == moveResizeState.surface;
 }
 
@@ -366,7 +380,7 @@ void RootSurfaceContainer::setPrimaryOutput(Output *newPrimaryOutput)
     if (m_primaryOutput == newPrimaryOutput)
         return;
     m_primaryOutput = newPrimaryOutput;
-    emit primaryOutputChanged();
+    Q_EMIT primaryOutputChanged();
 }
 
 const QList<Output*> &RootSurfaceContainer::outputs() const
@@ -395,8 +409,10 @@ void RootSurfaceContainer::updateSurfaceOutputs(SurfaceWrapper *surface)
 static qreal pointToRectMinDistance(const QPointF &pos, const QRectF &rect) {
     if (rect.contains(pos))
         return 0;
-    return std::min({std::abs(rect.x() - pos.x()), std::abs(rect.y() - pos.y()),
-                     std::abs(rect.right() - pos.x()), std::abs(rect.bottom() - pos.y())});
+    return std::min({ std::abs(rect.x() - pos.x()),
+                      std::abs(rect.y() - pos.y()),
+                      std::abs(rect.right() - pos.x()),
+                      std::abs(rect.bottom() - pos.y()) });
 }
 
 static QRectF adjustRectToMakePointVisible(const QRectF& inputRect, const QPointF& absolutePoint, const QList<QRectF>& visibleAreas)

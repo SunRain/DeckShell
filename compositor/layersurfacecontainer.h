@@ -3,11 +3,14 @@
 
 #pragma once
 
-#include "surfacecontainer.h"
+#include "surface/surfacecontainer.h"
 
 #include <wglobal.h>
+#include <QLoggingCategory>
 
 WAYLIB_SERVER_USE_NAMESPACE
+
+Q_DECLARE_LOGGING_CATEGORY(qLcLayer)
 
 class LayerSurfaceContainer;
 class OutputLayerSurfaceContainer : public SurfaceContainer
@@ -45,5 +48,5 @@ private:
     void addSurfaceToContainer(SurfaceWrapper *surface);
     void updateSurfacesContainer();
 
-    QList<OutputLayerSurfaceContainer*> m_surfaceContainers;
+    QList<OutputLayerSurfaceContainer *> m_surfaceContainers;
 };

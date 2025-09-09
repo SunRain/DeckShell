@@ -2,9 +2,11 @@
 // SPDX-License-Identifier: Apache-2.0 OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
 #pragma once
 
-#include "surfacecontainer.h"
+#include "surface/surfacecontainer.h"
 
 #include <wglobal.h>
+
+Q_MOC_INCLUDE(<wcursor.h>)
 
 WAYLIB_SERVER_BEGIN_NAMESPACE
 class WSurface;
@@ -40,18 +42,21 @@ public:
         BackgroundZOrder = -2,
         BottomZOrder = -1,
         NormalZOrder = 0,
-        TopZOrder = 1,
-        OverlayZOrder = 2,
-        TaskBarZOrder = 3,
-        MenuBarZOrder = 3,
-        PopupZOrder = 4,
+        MultitaskviewZOrder = 1,
+        TopZOrder = 2,
+        OverlayZOrder = 3,
+        TaskBarZOrder = 4,
+        MenuBarZOrder = 4,
+        PopupZOrder = 5,
+        CaptureLayerZOrder = 6,
+        LockScreenZOrder = 7,
     };
 
     void init(WServer *server);
 
     SurfaceWrapper *getSurface(WSurface *surface) const;
     SurfaceWrapper *getSurface(WToplevelSurface *surface) const;
-    void destroyForSurface(WSurface *surface);
+    void destroyForSurface(SurfaceWrapper *wrapper);
 
     WOutputLayout *outputLayout() const;
     WCursor *cursor() const;
@@ -71,12 +76,12 @@ public:
 
     OutputListModel *outputModel() const;
 
-public slots:
+public Q_SLOTS:
     void startMove(SurfaceWrapper *surface);
     void startResize(SurfaceWrapper *surface, Qt::Edges edges);
     void cancelMoveResize(SurfaceWrapper *surface);
 
-signals:
+Q_SIGNALS:
     void primaryOutputChanged();
     void moveResizeFinised();
 
@@ -87,8 +92,12 @@ private:
     void addBySubContainer(SurfaceContainer *, SurfaceWrapper *surface) override;
     void removeBySubContainer(SurfaceContainer *, SurfaceWrapper *surface) override;
 
-    bool filterSurfaceGeometryChanged(SurfaceWrapper *surface, QRectF &newGeometry, const QRectF &oldGeometry) override;
-    bool filterSurfaceStateChange(SurfaceWrapper *surface, SurfaceWrapper::State newState, SurfaceWrapper::State oldState) override;
+    bool filterSurfaceGeometryChanged(SurfaceWrapper *surface,
+                                      QRectF &newGeometry,
+                                      const QRectF &oldGeometry) override;
+    bool filterSurfaceStateChange(SurfaceWrapper *surface,
+                                  [[maybe_unused]] SurfaceWrapper::State newState,
+                                  [[maybe_unused]] SurfaceWrapper::State oldState) override;
 
     void ensureCursorVisible();
     void updateSurfaceOutputs(SurfaceWrapper *surface);
@@ -110,4 +119,4 @@ private:
 };
 
 Q_DECLARE_OPAQUE_POINTER(WAYLIB_SERVER_NAMESPACE::WOutputLayout*)
-Q_DECLARE_OPAQUE_POINTER(WAYLIB_SERVER_NAMESPACE::WCursor*)
+//Q_DECLARE_OPAQUE_POINTER(WAYLIB_SERVER_NAMESPACE::WCursor*)

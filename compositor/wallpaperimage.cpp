@@ -4,7 +4,7 @@
 #include "wallpaperprovider.h"
 #include "wallpaperimage.h"
 #include "helper.h"
-#include "workspacemodel.h"
+#include "workspace/workspacemodel.h"
 
 #include <woutput.h>
 

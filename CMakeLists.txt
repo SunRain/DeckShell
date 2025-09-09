@@ -16,11 +16,16 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/")
+include(WaylandScannerHelpers)
+
 # Standard installation paths
 include(GNUInstallDirs)
 # Macros
 include(FeatureSummary)
 
+include(cmake/WaylandScannerHelpers.cmake)
+include(cmake/DefineImplModule.cmake)
 
 find_package(Qt6 REQUIRED COMPONENTS Core)
 
@@ -40,5 +45,6 @@ set(BUILD_QWLROOTS_EXAMPLES OFF)
 
 # set(QT_QML_GENERATE_QMLLS_INI ON)
 
-add_subdirectory(3rdparty/waylib-shared)
+# add_subdirectory(3rdparty/waylib-shared)
+add_subdirectory(qtwaylandscanner)
 add_subdirectory(compositor)

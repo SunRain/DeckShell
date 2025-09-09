@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0 OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
 
 #include "layersurfacecontainer.h"
-#include "surfacewrapper.h"
+#include "surface/surfacewrapper.h"
 #include "output.h"
 #include "helper.h"
 #include "rootsurfacecontainer.h"
@@ -11,6 +11,8 @@
 #include <woutputitem.h>
 
 WAYLIB_SERVER_USE_NAMESPACE
+
+Q_LOGGING_CATEGORY(qLcLayer, "deckshell.layer")
 
 OutputLayerSurfaceContainer::OutputLayerSurfaceContainer(Output *output, LayerSurfaceContainer *parent)
     : SurfaceContainer(parent)
@@ -27,12 +29,17 @@ Output *OutputLayerSurfaceContainer::output() const
 void OutputLayerSurfaceContainer::addSurface(SurfaceWrapper *surface)
 {
     SurfaceContainer::addSurface(surface);
+    // Only layer-surface is update it's outputs by `OutputLayerSurfaceContainer`
+    // other types of surfaces are updated in `RootSurfaceContainer`.
+    // Currently there is no consideration of layer surface spanning multiple outputs
+    surface->setOutputs({m_output->output()});
     surface->setOwnsOutput(m_output);
 }
 
 void OutputLayerSurfaceContainer::removeSurface(SurfaceWrapper *surface)
 {
     SurfaceContainer::removeSurface(surface);
+    surface->setOutputs({});
     if (surface->ownsOutput() == m_output)
         surface->setOwnsOutput(nullptr);
 }
@@ -62,11 +69,16 @@ void LayerSurfaceContainer::removeOutput(Output *output)
         auto layerSurface = qobject_cast<WLayerSurface*>(surface->shellSurface());
         Q_ASSERT(layerSurface);
         // Needs to be moved to the new primary output
-        if (!layerSurface->output())
+        if (!layerSurface->output() && rootContainer()->primaryOutput()) {
             addSurfaceToContainer(surface);
+        } else {
+            qCDebug(qLcLayer) << "Layer surface has no valid output, closing it";
+            layerSurface->closed();
+        }
     }
 
     container->deleteLater();
+    qCDebug(qLcLayer) << "Output removed from layer surface container";
 }
 
 OutputLayerSurfaceContainer *LayerSurfaceContainer::getSurfaceContainer(const Output *output) const
@@ -93,6 +105,8 @@ void LayerSurfaceContainer::addSurface(SurfaceWrapper *surface)
     if (!SurfaceContainer::doAddSurface(surface, false))
         return;
     addSurfaceToContainer(surface);
+    surface->setHasInitializeContainer(true);
+    qCDebug(qLcLayer) << "Layer surface added with initialization state set";
 }
 
 void LayerSurfaceContainer::removeSurface(SurfaceWrapper *surface)
@@ -105,15 +119,19 @@ void LayerSurfaceContainer::removeSurface(SurfaceWrapper *surface)
     Q_ASSERT(container);
     Q_ASSERT(container->surfaces().contains(surface));
     container->removeSurface(surface);
+    surface->setHasInitializeContainer(false);
+    qCDebug(qLcLayer) << "Layer surface removed with initialization state cleared";
 }
 
 void LayerSurfaceContainer::addSurfaceToContainer(SurfaceWrapper *surface)
 {
     Q_ASSERT(!surface->container());
     auto shell = qobject_cast<WLayerSurface*>(surface->shellSurface());
-    auto output = shell->output() ? shell->output() : rootContainer()->primaryOutput()->output();
+    auto output = shell->output()          ? shell->output()
+                : rootContainer()->primaryOutput() ? rootContainer()->primaryOutput()->output()
+                                                   : nullptr;
     if (!output) {
-        qCWarning(qLcLayerShell) << "No output, will close layer surface!";
+        qCWarning(qLcLayer) << "No output available, will close layer surface!";
         shell->closed();
         return;
     }
@@ -121,6 +139,7 @@ void LayerSurfaceContainer::addSurfaceToContainer(SurfaceWrapper *surface)
     Q_ASSERT(container);
     Q_ASSERT(!container->surfaces().contains(surface));
     container->addSurface(surface);
+    qCDebug(qLcLayer) << "Layer surface added to container successfully";
 }
 
 void LayerSurfaceContainer::updateSurfacesContainer()

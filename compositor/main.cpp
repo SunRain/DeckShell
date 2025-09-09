@@ -1,47 +1,52 @@
 // Copyright (C) 2024 JiDe Zhang <zhangjide@deepin.org>.
 // SPDX-License-Identifier: Apache-2.0 OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
 
-#include "helper.h"
+#include "treeland.h"
+#include "utils/cmdline.h"
 
 #include <wrenderhelper.h>
+
 #include <qwbuffer.h>
 #include <qwlogging.h>
+
+#include <DLog>
 
 #include <QGuiApplication>
 
 WAYLIB_SERVER_USE_NAMESPACE
+DCORE_USE_NAMESPACE;
 
-int main(int argc, char *argv[]) {
+int main(int argc, char *argv[])
+{
     qw_log::init();
-
-    WRenderHelper::setupRendererBackend();
-    Q_ASSERT(qw_buffer::get_objects().isEmpty());
-
     WServer::initializeQPA();
     //    QQuickStyle::setStyle("Material");
 
-    QPointer<Helper> helper;
-    int quitCode = 0;
-    {
-        QGuiApplication::setAttribute(Qt::AA_UseOpenGLES);
-        QGuiApplication::setHighDpiScaleFactorRoundingPolicy(Qt::HighDpiScaleFactorRoundingPolicy::PassThrough);
-        QGuiApplication::setQuitOnLastWindowClosed(false);
-        QGuiApplication app(argc, argv);
+    QGuiApplication::setAttribute(Qt::AA_UseOpenGLES);
+    QGuiApplication::setHighDpiScaleFactorRoundingPolicy(
+        Qt::HighDpiScaleFactorRoundingPolicy::PassThrough);
+    QGuiApplication::setQuitOnLastWindowClosed(false);
 
-        QmlEngine qmlEngine;
+    QGuiApplication app(argc, argv);
+    app.setOrganizationName("deepin");
+    app.setApplicationName("treeland");
 
-        QObject::connect(&qmlEngine, &QQmlEngine::quit, &app, &QGuiApplication::quit);
-        QObject::connect(&qmlEngine, &QQmlEngine::exit, &app, [] (int code) {
-            qApp->exit(code);
-        });
+#ifdef QT_DEBUG
+    DLogManager::registerConsoleAppender();
+#endif
+    DLogManager::registerJournalAppender();
 
-        Helper *helper = qmlEngine.singletonInstance<Helper*>("DeckShell.Compositor", "Helper");
-        helper->init();
+    CmdLine::ref();
 
-        quitCode = app.exec();
-    }
+    WRenderHelper::setupRendererBackend();
+    if (CmdLine::ref().tryExec())
+        return 0;
+    Q_ASSERT(qw_buffer::get_objects().isEmpty());
 
-    Q_ASSERT(!helper);
+    Treeland::Treeland treeland;
+
+    int quitCode = app.exec();
+
     Q_ASSERT(qw_buffer::get_objects().isEmpty());
 
     return quitCode;

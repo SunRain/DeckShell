@@ -62,6 +62,7 @@
 #include <wxwaylandsurface.h>
 #include <wxdgtoplevelsurface.h>
 #include <wextimagecapturesourcev1impl.h>
+#include <wsecuritycontextmanager.h>
 
 #include <qwallocator.h>
 #include <qwbackend.h>
@@ -91,7 +92,6 @@
 #include <qwidleinhibitv1.h>
 #include <qwalphamodifierv1.h>
 #include <qwdrm.h>
-#include <qwsecuritycontextmanagerv1.h>
 
 #include <QAction>
 #include <QKeySequence>
@@ -1050,6 +1050,7 @@ void Helper::init()
     qmlRegisterType<CaptureContextV1>("DeckShell.Compositor.Protocols", 1, 0, "CaptureContextV1");
     qmlRegisterType<CaptureSourceSelector>("DeckShell.Compositor.Protocols", 1, 0, "CaptureSourceSelector");
 
+    m_server->attach<WSecurityContextManager>();
     m_server->start();
     m_renderer = WRenderHelper::createRenderer(m_backend->handle());
     if (!m_renderer) {
@@ -1153,8 +1154,6 @@ void Helper::init()
     m_outputPowerManager = qw_output_power_manager_v1::create(*m_server->handle());
 
     connect(m_outputPowerManager, &qw_output_power_manager_v1::notify_set_mode, this, &Helper::onSetOutputPowerMode);
-
-    qw_security_context_manager_v1::create(*m_server->handle());
 
     m_backend->handle()->start();
 

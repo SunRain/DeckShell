@@ -1,111 +1,52 @@
 cmake_minimum_required(VERSION 3.25.0)
 
-project(Treeland
-    VERSION 0.7.0
-    LANGUAGES CXX C)
+project(
+  DeckShell
+  VERSION 0.1
+  LANGUAGES CXX)
 
-set(CMAKE_INCLUDE_CURRENT_DIR ON)
-set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+set(CMAKE_AUTOUIC ON)
+set(CMAKE_AUTOMOC ON)
+set(CMAKE_AUTORCC ON)
+
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+
+set(CMAKE_INCLUDE_CURRENT_DIR ON)
+
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/")
+include(WaylandScannerHelpers)
 
 # Standard installation paths
 include(GNUInstallDirs)
 # Macros
 include(FeatureSummary)
 
-include(cmake/DefineTarget.cmake)
+include(cmake/WaylandScannerHelpers.cmake)
+include(cmake/DefineImplModule.cmake)
 
-option(WITH_SUBMODULE_WAYLIB "Use the waylib from git submodule" ON)
-add_feature_info(submodule_waylib WITH_SUBMODULE_WAYLIB "Use waylib from submodule")
-
-option(ADDRESS_SANITIZER "Enable address sanitizer" OFF)
-add_feature_info(ASanSupport ADDRESS_SANITIZER "https://github.com/google/sanitizers/wiki/AddressSanitizer")
-
-option(BUILD_TREELAND_EXAMPLES "Build clients demo to test treeland" OFF)
-add_feature_info(DemoClents BUILD_TEST_CLIENTS "clients demo for testing")
-
-option(DISABLE_DDM "Disable DDM and greeter" OFF)
-
-if (DISABLE_DDM)
-    add_compile_definitions("DISABLE_DDM")
-endif()
-
-if (ADDRESS_SANITIZER)
-    add_compile_options(-fsanitize=address -fno-optimize-sibling-calls -fno-omit-frame-pointer)
-    add_link_options(-fsanitize=address)
-endif()
-# NOTE: Qt keywords conflict with wlroots. but dtksystemsettings still uses it.
-# add_definitions("-DQT_NO_KEYWORDS")
-
-# NOTE: Enable Qt logging with context.
-add_definitions("-DQT_MESSAGELOGCONTEXT")
-
-set(LOCAL_QML_IMPORT_PATH "${PROJECT_BINARY_DIR}/qt/qml")
-
-if(WITH_SUBMODULE_WAYLIB)
-    set(WITH_SUBMODULE_QWLROOTS ON)
-    include(${CMAKE_CURRENT_SOURCE_DIR}/qwlroots/cmake/WaylandScannerHelpers.cmake)
-    add_subdirectory(waylib)
-    list(APPEND LOCAL_QML_IMPORT_PATH "${PROJECT_BINARY_DIR}/waylib/src/server")
-else()
-  find_package(Waylib REQUIRED Server)
-endif()
-
-set(QML_IMPORT_PATH "${LOCAL_QML_IMPORT_PATH}" CACHE STRING "For LSP" FORCE)
-
-# PKG-CONFIG
-find_package(PkgConfig REQUIRED)
-find_package(Qt6 CONFIG REQUIRED Core DBus Gui Qml Quick QuickControls2 LinguistTools Test QuickTest)
-
-pkg_check_modules(WLROOTS REQUIRED IMPORTED_TARGET wlroots-0.19)
+find_package(Qt6 REQUIRED COMPONENTS Core)
 
 qt_standard_project_setup(REQUIRES 6.8)
 
-# Set constants
-set(TREELAND_DATA_DIR           "${CMAKE_INSTALL_DATADIR}/treeland/"               CACHE PATH      "treeland data install directory")
-set(TREELAND_COMPONENTS_TRANSLATION_DIR  "${TREELAND_DATA_DIR}/translations"                  CACHE PATH      "Components translations directory")
-set(TREELAND_PLUGINS_OUTPUT_PATH   "${CMAKE_BINARY_DIR}/lib/plugins"          CACHE PATH      "treeland plugins output directory")
-set(TREELAND_PLUGINS_INSTALL_PATH  "${CMAKE_INSTALL_LIBDIR}/treeland/plugins" CACHE PATH      "treeland plugins install directory")
-
-GNUInstallDirs_get_absolute_install_dir(
-    TREELAND_FULL_DATA_DIR
-    TREELAND_DATA_DIR
-    DATADIR
+set(PROJECT_SOURCES # Place your source files here
 )
 
-GNUInstallDirs_get_absolute_install_dir(
-    TREELAND_FULL_PLUGINS_INSTALL_PATH
-    TREELAND_PLUGINS_INSTALL_PATH
-    LIBDIR
-)
+set(BUILD_TREELAND_EXAMPLES OFF)
+set(BUILD_WAYLIB_TESTS OFF)
+set(BUILD_WAYLIB_EXAMPLES OFF)
+set(BUILD_QWLROOTS_TESTS OFF)
+set(BUILD_QWLROOTS_EXAMPLES OFF)
 
-GNUInstallDirs_get_absolute_install_dir(
-    TREELAND_FULL_COMPONENTS_TRANSLATION_DIR
-    TREELAND_COMPONENTS_TRANSLATION_DIR
-    DATADIR
-)
+# add_executable(DeckShell ${PROJECT_SOURCES}) target_link_libraries(DeckShell
+# Qt${QT_VERSION_MAJOR}::Core)
 
-add_compile_definitions("TREELAND_DATA_DIR=\"${TREELAND_FULL_DATA_DIR}\"")
-# NOTE:: remove force assert before stable version
-add_compile_definitions("QT_FORCE_ASSERTS")
+# set(QT_QML_GENERATE_QMLLS_INI ON)
 
-add_compile_definitions("TREELAND_PLUGINS_INSTALL_PATH=\"${TREELAND_FULL_PLUGINS_INSTALL_PATH}\"")
-add_compile_definitions("TREELAND_PLUGINS_OUTPUT_PATH=\"${TREELAND_PLUGINS_OUTPUT_PATH}\"")
-
-add_compile_definitions("TREELAND_COMPONENTS_TRANSLATION_DIR=\"${TREELAND_FULL_COMPONENTS_TRANSLATION_DIR}\"")
-
-set(PROJECT_RESOURCES_DIR "${CMAKE_SOURCE_DIR}/misc")
-
-enable_testing(true)
-
-add_subdirectory(src)
-add_subdirectory(misc)
-add_subdirectory(tests)
-
-if (BUILD_TREELAND_EXAMPLES)
-    add_subdirectory(examples)
-endif()
-
-# Display feature summary
-feature_summary(WHAT ALL FATAL_ON_MISSING_REQUIRED_PACKAGES)
+# add_subdirectory(3rdparty/waylib-shared)
+add_subdirectory(qtwaylandscanner)
+add_subdirectory(dconfig2cpp)
+add_subdirectory(protocols/compositor)
+add_subdirectory(compositor)

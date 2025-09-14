@@ -1,195 +1,158 @@
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.25.0)
 
-project(DeckCompositor
-        VERSION 0.1
-        LANGUAGES C CXX
-        DESCRIPTION "Deck Shell Compositor")
+project(
+    DeckCompositor
+    VERSION 0.7.0
+    LANGUAGES CXX C
+    DESCRIPTION "Deck Shell Compositor"
+)
 
-set(TARGET deckcompositor)
+set(CMAKE_AUTOMOC ON)
+set(CMAKE_AUTORCC ON)
+set(CMAKE_AUTOUIC ON)
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-find_package(Qt6 REQUIRED COMPONENTS Core)
-if(Qt6_VERSION VERSION_GREATER_EQUAL 6.8)
-    qt_standard_project_setup(REQUIRES 6.8)
-else()
-    set(CMAKE_AUTOMOC ON)
-    set(CMAKE_AUTORCC ON)
-    set(CMAKE_AUTOUIC ON)
-endif()
-
-if(QT_KNOWN_POLICY_QTP0001) # this policy was introduced in Qt 6.5
-    qt_policy(SET QTP0001 NEW)
-    # the RESOURCE_PREFIX argument for qt_add_qml_module() defaults to ":/qt/qml/"
-endif()
-if(POLICY CMP0071)
-    # https://cmake.org/cmake/help/latest/policy/CMP0071.html
-    cmake_policy(SET CMP0071 NEW)
-endif()
-
-
 # Standard installation paths
 include(GNUInstallDirs)
 # Macros
 include(FeatureSummary)
 
-# include(cmake/DefineTarget.cmake)
+include(cmake/DefineTarget.cmake)
 
-option(START_DEMO "Start demo when boot" ON)
+# Include Wayland scanner helpers
+# include(${CMAKE_CURRENT_SOURCE_DIR}/../cmake/WaylandScannerHelpers.cmake)
 
-# set(QT_QML_GENERATE_QMLLS_INI ON)
+# Include translation utilities
+include(cmake/TranslationUtils.cmake)
+
+# option(WITH_SUBMODULE_WAYLIB "Use the waylib from git submodule" ON)
+# add_feature_info(submodule_waylib WITH_SUBMODULE_WAYLIB
+#                  "Use waylib from submodule")
+
+option(ADDRESS_SANITIZER "Enable address sanitizer" OFF)
+add_feature_info(ASanSupport ADDRESS_SANITIZER
+    "https://github.com/google/sanitizers/wiki/AddressSanitizer")
+
+option(BUILD_TREELAND_EXAMPLES "Build clients demo to test treeland" OFF)
+add_feature_info(DemoClents BUILD_TEST_CLIENTS "clients demo for testing")
+
+option(DISABLE_DDM "Disable DDM and greeter" OFF)
+
+if(DISABLE_DDM)
+    add_compile_definitions("DISABLE_DDM")
+endif()
+
+if(ADDRESS_SANITIZER)
+    add_compile_options(-fsanitize=address -fno-optimize-sibling-calls
+        -fno-omit-frame-pointer)
+    add_link_options(-fsanitize=address)
+endif()
+# NOTE: Qt keywords conflict with wlroots. but dtksystemsettings still uses it.
+# add_definitions("-DQT_NO_KEYWORDS")
+
+# NOTE: Enable Qt logging with context.
+add_definitions("-DQT_MESSAGELOGCONTEXT")
 
 set(LOCAL_QML_IMPORT_PATH "${QML_IMPORT_PATH}")
 list(APPEND LOCAL_QML_IMPORT_PATH "${PROJECT_BINARY_DIR}")
+list(APPEND LOCAL_QML_IMPORT_PATH "${PROJECT_BINARY_DIR}/qt/qml")
+list(APPEND LOCAL_QML_IMPORT_PATH "${PROJECT_BINARY_DIR}/waylib/src/server")
+
+# if(WITH_SUBMODULE_WAYLIB)
+#   set(WITH_SUBMODULE_QWLROOTS ON)
+#   include(
+#     ${CMAKE_CURRENT_SOURCE_DIR}/qwlroots/cmake/WaylandScannerHelpers.cmake)
+#   add_subdirectory(waylib)
+#   list(APPEND LOCAL_QML_IMPORT_PATH "${PROJECT_BINARY_DIR}/waylib/src/server")
+# else()
+#   find_package(Waylib REQUIRED Server)
+# endif()
 
 set(QML_IMPORT_PATH "${LOCAL_QML_IMPORT_PATH}" CACHE STRING "For LSP" FORCE)
 
-find_package(Qt6 COMPONENTS REQUIRED Core Quick QuickControls2 WaylandCompositor Network DBus)
-# Find DTK
-find_package(Dtk6 REQUIRED COMPONENTS Core Declarative SystemSettings)
+# PKG-CONFIG
+find_package(PkgConfig REQUIRED)
+find_package(
+    Qt6
+    CONFIG
+    REQUIRED
+    Core
+    DBus
+    Gui
+    Qml
+    Quick
+    QuickControls2
+    LinguistTools
+    Test
+    QuickTest)
+
+pkg_check_modules(WLROOTS REQUIRED IMPORTED_TARGET wlroots-0.19)
 
 # Find Waylib
 # Waylib is built as a submodule, so we don't need to find it
 find_package(Waylib REQUIRED COMPONENTS SharedServer)
 
-find_package(PkgConfig REQUIRED)
-pkg_search_module(PIXMAN REQUIRED IMPORTED_TARGET pixman-1)
-pkg_search_module(WAYLAND REQUIRED IMPORTED_TARGET wayland-server)
-pkg_search_module(XCB REQUIRED IMPORTED_TARGET xcb)
-# pkg_search_module(LIBINPUT REQUIRED IMPORTED_TARGET libinput)
+qt_standard_project_setup(REQUIRES 6.8)
 
-
-# Waylib is built as a submodule, so we link directly to the target
-# The Waylib::SharedServer target should be available from the waylib submodule
-
-
-ws_generate(
-    server
-    wayland-protocols
-    staging/color-management/color-management-v1.xml
-    color-management-v1-protocol
+# Set constants
+set(TREELAND_DATA_DIR
+    "${CMAKE_INSTALL_DATADIR}/DeckShell/Compositor/"
+    CACHE PATH "DeckCompositor data install directory"
 )
 
-add_executable(${TARGET}
-    main.cpp
+set(TREELAND_COMPONENTS_TRANSLATION_DIR
+    "${TREELAND_DATA_DIR}/translations"
+    CACHE PATH "Components translations directory"
 )
 
-qt6_generate_wayland_protocol_server_sources(${TARGET}
-    FILES
-        ${CMAKE_CURRENT_SOURCE_DIR}/protocols/deckcompositor-shortcut-manager-v1.xml
-        #${CMAKE_CURRENT_SOURCE_DIR}/protocols/treeland-dde-shell-v1.xml
+set(TREELAND_PLUGINS_OUTPUT_PATH
+    "${PROJECT_BINARY_DIR}/lib/plugins"
+    CACHE PATH "DeckCompositor plugins output directory"
 )
 
-qt_add_qml_module(${TARGET}
-    URI DeckShell.Compositor
-    VERSION "2.0"
-
-    SOURCES treelandlogging.h treelandlogging.cpp
-    SOURCES treelandconfig.h treelandconfig.cpp
-    SOURCES helper.h helper.cpp
-    SOURCES utils/cmdline.h utils/cmdline.cpp
-    SOURCES surface/surfacewrapper.h surface/surfacewrapper.cpp
-    SOURCES output.h output.cpp
-    SOURCES qmlengine.h qmlengine.cpp
-    SOURCES surface/surfacecontainer.h surface/surfacecontainer.cpp
-    SOURCES layersurfacecontainer.h layersurfacecontainer.cpp
-    SOURCES rootsurfacecontainer.h rootsurfacecontainer.cpp
-    SOURCES surface/surfaceproxy.h surface/surfaceproxy.cpp
-    SOURCES surface/surfacefilterproxymodel.h surface/surfacefilterproxymodel.cpp
-    SOURCES wallpaperprovider.h wallpaperprovider.cpp
-    SOURCES wallpaperimage.h wallpaperimage.cpp
-    SOURCES workspace/workspace.h workspace/workspace.cpp
-    SOURCES workspace/workspaceanimationcontroller.h workspace/workspaceanimationcontroller.cpp
-    SOURCES workspace/workspacemodel.h workspace/workspacemodel.cpp
-    # SOURCES shellmanager.h shellmanager.cpp # ShellManager files not found in target directory
-    SOURCES shellhandler.h shellhandler.cpp
-    SOURCES popupsurfacecontainer.h popupsurfacecontainer.cpp
-    SOURCES interfaces/proxyinterface.h
-
-    # Ensure QML types are properly registered
-    DEPENDENCIES
-        QtQuick
-        QtQuick.Controls
-        Waylib.QuickSharedServer
-
-    QML_FILES qml/Border.qml
-    QML_FILES qml/CopyOutput.qml
-    QML_FILES qml/Decoration.qml
-    QML_FILES qml/DockPreview.qml
-    QML_FILES qml/FadeBehavior.qml
-    QML_FILES qml/LockScreen.qml
-    QML_FILES qml/OutputMenuBar.qml
-    QML_FILES qml/PrimaryOutput.qml
-    QML_FILES qml/RoundedClipEffect.qml
-    QML_FILES qml/SurfaceContent.qml
-    QML_FILES qml/SwitchViewDelegate.qml
-    QML_FILES qml/SwitchViewHighlightDelegate.qml
-    QML_FILES qml/TaskBar.qml
-    QML_FILES qml/TaskSwitcher.qml
-    QML_FILES qml/TaskWindowPreview.qml
-    QML_FILES qml/TitleBar.qml
-    QML_FILES qml/WindowMenu.qml
-    QML_FILES qml/WindowPickerLayer.qml
-    QML_FILES qml/WorkSpaceMask.qml
-    QML_FILES qml/WorkspaceProxy.qml
-    QML_FILES qml/WorkspaceSwitcher.qml
-    QML_FILES qml/XdgShadow.qml
-    QML_FILES qml/Animations/GeometryAnimation.qml
-    QML_FILES qml/Animations/LaunchpadAnimation.qml
-    QML_FILES qml/Animations/LayerShellAnimation.qml
-    QML_FILES qml/Animations/MinimizeAnimation.qml
-    QML_FILES qml/Animations/NewAnimation.qml
-    QML_FILES qml/Animations/ShowDesktopAnimation.qml
-    QML_FILES qml/Effects/Blur.qml
-    QML_FILES qml/Effects/LaunchpadCover.qml
-
-    RESOURCES
-    "res/xx.jpg"
+set(TREELAND_PLUGINS_INSTALL_PATH
+    "${CMAKE_INSTALL_LIBDIR}/DeckShell/Compositor/plugins"
+    CACHE PATH "DeckCompositor plugins install directory"
 )
 
-target_compile_definitions(${TARGET}
-    PRIVATE
-    SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}"
-    PROJECT_BINARY_DIR="${PROJECT_BINARY_DIR}"
-    $<$<BOOL:${START_DEMO}>:START_DEMO>
+GNUInstallDirs_get_absolute_install_dir(TREELAND_FULL_DATA_DIR
+    TREELAND_DATA_DIR DATADIR)
+
+GNUInstallDirs_get_absolute_install_dir(TREELAND_FULL_PLUGINS_INSTALL_PATH
+    TREELAND_PLUGINS_INSTALL_PATH LIBDIR)
+
+GNUInstallDirs_get_absolute_install_dir(
+    TREELAND_FULL_COMPONENTS_TRANSLATION_DIR TREELAND_COMPONENTS_TRANSLATION_DIR
+    DATADIR)
+
+add_compile_definitions("TREELAND_DATA_DIR=\"${TREELAND_FULL_DATA_DIR}\"")
+# NOTE:: remove force assert before stable version
+add_compile_definitions("QT_FORCE_ASSERTS")
+
+add_compile_definitions(
+    "TREELAND_PLUGINS_INSTALL_PATH=\"${TREELAND_FULL_PLUGINS_INSTALL_PATH}\"")
+add_compile_definitions(
+    "TREELAND_PLUGINS_OUTPUT_PATH=\"${TREELAND_PLUGINS_OUTPUT_PATH}\"")
+
+add_compile_definitions(
+    "TREELAND_COMPONENTS_TRANSLATION_DIR=\"${TREELAND_FULL_COMPONENTS_TRANSLATION_DIR}\""
 )
 
-target_include_directories(
-    ${TARGET}
-    PUBLIC
-    $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/protocols>
-    $<INSTALL_INTERFACE:${CMAKE_INSTALL_BINDIR}>
-    PRIVATE ${Qt6Gui_PRIVATE_INCLUDE_DIRS} ${Qt6Quick_PRIVATE_INCLUDE_DIRS}
-    ${Qt6EglSupport_PRIVATE_INCLUDE_DIRS}
-    ${Qt6InputSupport_PRIVATE_INCLUDE_DIRS}
-)
+set(PROJECT_RESOURCES_DIR "${CMAKE_CURRENT_SOURCE_DIR}/misc")
 
-target_link_libraries(${TARGET}
-    PRIVATE
-    Qt6::Quick
-    Qt6::QuickControls2
-    Qt6::QuickPrivate
-    Qt6::Network
-    Dtk6::Core
-    Qt6::DBus
-    Dtk6::Declarative
-    Dtk6::SystemSettings
-    Waylib::SharedServer
-    PkgConfig::PIXMAN
-    PkgConfig::WAYLAND
-    PkgConfig::XCB
-)
+enable_testing(true)
 
-install(TARGETS ${TARGET} DESTINATION ${CMAKE_INSTALL_BINDIR})
+add_subdirectory(src)
+add_subdirectory(misc)
+add_subdirectory(tests)
 
-# Generate protocol files before adding dde-shell subdirectory
-local_qtwayland_server_protocol_treeland(${TARGET}
-    PROTOCOL ${CMAKE_CURRENT_SOURCE_DIR}/protocols/treeland-dde-shell-v1.xml
-    BASENAME treeland-dde-shell-v1
-)
+if(BUILD_TREELAND_EXAMPLES)
+    add_subdirectory(examples)
+endif()
 
-add_subdirectory(dde-shell)
-
+# Display feature summary
+feature_summary(WHAT ALL FATAL_ON_MISSING_REQUIRED_PACKAGES)

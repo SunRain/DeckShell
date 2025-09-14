@@ -1,4 +1,4 @@
-project(qtwaylandscanner_treeland CXX)
+project(qtwaylandscanner_deckshell CXX)
 
 if (PROJECT_IS_TOP_LEVEL)
     cmake_minimum_required(VERSION 3.16)
@@ -37,12 +37,12 @@ function(local_qtwayland_server_protocol_treeland target)
     set_source_files_properties(${_header} ${_code} GENERATED)
 
     add_custom_command(OUTPUT "${_header}"
-        COMMAND qtwaylandscanner_treeland server-header ${_infile} "" ${_prefix} > ${_header}
-        DEPENDS ${_infile} qtwaylandscanner_treeland VERBATIM)
+        COMMAND qtwaylandscanner_deckshell server-header ${_infile} "" ${_prefix} > ${_header}
+        DEPENDS ${_infile} qtwaylandscanner_deckshell VERBATIM)
 
     add_custom_command(OUTPUT "${_code}"
-        COMMAND qtwaylandscanner_treeland server-code ${_infile} "" ${_prefix} > ${_code}
-        DEPENDS ${_infile} ${_header} qtwaylandscanner_treeland VERBATIM)
+        COMMAND qtwaylandscanner_deckshell server-code ${_infile} "" ${_prefix} > ${_code}
+        DEPENDS ${_infile} ${_header} qtwaylandscanner_deckshell VERBATIM)
 
     set_property(SOURCE ${_header} ${_code} PROPERTY SKIP_AUTOMOC ON)
 
@@ -57,9 +57,9 @@ function(local_qtwayland_server_protocol_treeland target)
 endfunction()
 
 # Now define the build targets after the function
-if(CMAKE_CROSSCOMPILING AND QTWAYLANDSCANNER_TREELAND_EXECUTABLE)
-    add_executable(qtwaylandscanner_treeland IMPORTED GLOBAL)
-    set_target_properties(qtwaylandscanner_treeland PROPERTIES IMPORTED_LOCATION ${QTWAYLANDSCANNER_TREELAND_EXECUTABLE})
+if(CMAKE_CROSSCOMPILING AND qtwaylandscanner_deckshell_EXECUTABLE)
+    add_executable(qtwaylandscanner_deckshell IMPORTED GLOBAL)
+    set_target_properties(qtwaylandscanner_deckshell PROPERTIES IMPORTED_LOCATION ${qtwaylandscanner_deckshell_EXECUTABLE})
 elseif(CMAKE_CROSSCOMPILING)
     # search native tooling prefix
     set(NATIVE_PREFIX "" CACHE STRING "CMAKE_PREFIX_PATH for native Qt libraries")
@@ -74,24 +74,24 @@ elseif(CMAKE_CROSSCOMPILING)
         endif()
     endif()
 
-    message(STATUS "Building qtwaylandscanner_treeland against ${NATIVE_PREFIX}")
+    message(STATUS "Building qtwaylandscanner_deckshell against ${NATIVE_PREFIX}")
 
     include(ExternalProject)
-    ExternalProject_Add(native_qtwaylandscanner_treeland
+    ExternalProject_Add(native_qtwaylandscanner_deckshell
             SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}
             CMAKE_ARGS -DCMAKE_PREFIX_PATH=${NATIVE_PREFIX}
             -DCMAKE_INSTALL_PREFIX=${CMAKE_CURRENT_BINARY_DIR}
             -DQT_MAJOR_VERSION=6
             INSTALL_COMMAND ""
-            BUILD_BYPRODUCTS ${CMAKE_CURRENT_BINARY_DIR}/native_qtwaylandscanner_treeland-prefix/src/native_qtwaylandscanner_treeland-build/qtwaylandscanner_treeland
+            BUILD_BYPRODUCTS ${CMAKE_CURRENT_BINARY_DIR}/native_qtwaylandscanner_deckshell-prefix/src/native_qtwaylandscanner_deckshell-build/qtwaylandscanner_deckshell
             )
-    add_executable(qtwaylandscanner_treeland IMPORTED GLOBAL)
-    add_dependencies(qtwaylandscanner_treeland native_qtwaylandscanner_treeland)
-    set_target_properties(qtwaylandscanner_treeland PROPERTIES IMPORTED_LOCATION
-            ${CMAKE_CURRENT_BINARY_DIR}/native_qtwaylandscanner_treeland-prefix/src/native_qtwaylandscanner_treeland-build/qtwaylandscanner_treeland)
+    add_executable(qtwaylandscanner_deckshell IMPORTED GLOBAL)
+    add_dependencies(qtwaylandscanner_deckshell native_qtwaylandscanner_deckshell)
+    set_target_properties(qtwaylandscanner_deckshell PROPERTIES IMPORTED_LOCATION
+            ${CMAKE_CURRENT_BINARY_DIR}/native_qtwaylandscanner_deckshell-prefix/src/native_qtwaylandscanner_deckshell-build/qtwaylandscanner_deckshell)
 else()
     # host build
     remove_definitions(-DQT_NO_CAST_FROM_ASCII)
-    add_executable(qtwaylandscanner_treeland ${CMAKE_CURRENT_SOURCE_DIR}/qtwaylandscanner.cpp)
-    target_link_libraries(qtwaylandscanner_treeland Qt::Core)
+    add_executable(qtwaylandscanner_deckshell ${CMAKE_CURRENT_SOURCE_DIR}/qtwaylandscanner.cpp)
+    target_link_libraries(qtwaylandscanner_deckshell Qt::Core)
 endif()

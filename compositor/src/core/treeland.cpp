@@ -6,7 +6,9 @@
 #include "compositor1adaptor.h"
 #include "treelandconfig.hpp"
 #include "core/qmlengine.h"
+#ifndef DISABLE_DDM
 #include "greeter/usermodel.h"
+#endif
 #include "interfaces/multitaskviewinterface.h"
 #include "interfaces/plugininterface.h"
 #include "seat/helper.h"
@@ -371,6 +373,7 @@ bool Treeland::ActivateWayland(QDBusUnixFileDescriptor _fd)
     auto socket = std::make_shared<WSocket>(true);
     socket->create(fd->fileDescriptor(), false);
 
+#ifndef DISABLE_DDM
     auto userModel =
         d->helper->qmlEngine()->singletonInstance<UserModel *>("DeckShell.Compositor", "UserModel");
     if (auto u = userModel->getUser(user)) {
@@ -378,11 +381,13 @@ bool Treeland::ActivateWayland(QDBusUnixFileDescriptor _fd)
     }
 
     socket->setEnabled(userModel->currentUserName() == user);
+#endif
 
     d->helper->addSocket(socket.get());
 
     d->userDisplayFds[user] = fd;
 
+#ifndef DISABLE_DDM
     connect(connection().interface(),
             &QDBusConnectionInterface::serviceUnregistered,
             socket.get(),
@@ -390,6 +395,7 @@ bool Treeland::ActivateWayland(QDBusUnixFileDescriptor _fd)
                 userModel->getUser(user)->setWaylandSocket(nullptr);
                 d->userDisplayFds.remove(user);
             });
+#endif
 
     return true;
 }

@@ -5,7 +5,9 @@
 
 #include "modules/foreign-toplevel/foreigntoplevelmanagerv1.h"
 #include "core/qmlengine.h"
+#ifndef DISABLE_DDM
 #include "core/lockscreen.h"
+#endif
 #include "input/togglablegesture.h"
 #include "modules/virtual-output/virtualoutputmanager.h"
 #include "modules/window-management/windowmanagement.h"
@@ -90,8 +92,10 @@ class treeland_window_picker_v1;
 class IMultitaskView;
 class LockScreenInterface;
 class ILockScreen;
+#ifndef DISABLE_DDM
 class UserModel;
 class DDMInterfaceV1;
+#endif
 class TreelandConfig;
 struct wlr_idle_inhibitor_v1;
 struct wlr_output_power_v1_set_mode_event;
@@ -206,8 +210,10 @@ public:
 
     Output* getOutputAtCursor() const;
 
+#ifndef DISABLE_DDM
     UserModel *userModel() const;
     DDMInterfaceV1 *ddmInterfaceV1() const;
+#endif
 
     void activateSession();
     void deactivateSession();
@@ -263,9 +269,11 @@ private:
     void onSurfaceWrapperAdded(SurfaceWrapper *wrapper);
     void onSurfaceWrapperAboutToRemove(SurfaceWrapper *wrapper);
     void handleRequestDrag([[maybe_unused]] WSurface *surface);
+#ifndef DISABLE_DDM
     void handleLockScreen(LockScreenInterface *lockScreen);
     void onSessionLock();
     void onSessionUnlock();
+#endif
     void handleNewForeignToplevelCaptureRequest(wlr_ext_foreign_toplevel_image_capture_source_manager_v1_request *request);
 
 private:
@@ -303,7 +311,7 @@ private:
     void updateIdleInhibitor();
 
     static Helper *m_instance;
-    TreelandConfig *m_config;
+    TreelandConfig *m_config = nullptr;
 
     CurrentMode m_currentMode{ CurrentMode::Normal };
 
@@ -345,7 +353,9 @@ private:
     DDEShellManagerInterfaceV1 *m_ddeShellV1 = nullptr;
     VirtualOutputV1 *m_virtualOutput = nullptr;
     PrimaryOutputV1 *m_primaryOutputV1 = nullptr;
+#ifndef DISABLE_DDM
     DDMInterfaceV1 *m_ddmInterfaceV1 = nullptr;
+#endif
 
     // private data
     QList<Output *> m_outputList;
@@ -353,7 +363,9 @@ private:
     QList<qw_idle_inhibitor_v1 *> m_idleInhibitors;
 
     SurfaceWrapper *m_activatedSurface = nullptr;
+#ifndef DISABLE_DDM
     LockScreen *m_lockScreen = nullptr;
+#endif
     float m_animationSpeed = 1.0;
     quint64 m_taskAltTimestamp = 0;
     quint32 m_taskAltCount = 0;
@@ -368,7 +380,9 @@ private:
     bool m_singleMetaKeyPendingPressed{ false };
 
     IMultitaskView *m_multitaskView{ nullptr };
+#ifndef DISABLE_DDM
     UserModel *m_userModel{ nullptr };
+#endif
 
     quint32 m_atomDeepinNoTitlebar;
 

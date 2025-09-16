@@ -825,6 +825,7 @@ void Helper::onSurfaceWrapperAboutToRemove(SurfaceWrapper *wrapper)
 bool Helper::surfaceBelongsToCurrentUser(SurfaceWrapper *wrapper)
 {
     static const uid_t puid = getuid();
+#ifndef DISABLE_DDM
     auto credentials = WClient::getCredentials(wrapper->surface()->waylandClient()->handle());
     auto user = m_userModel->currentUser();
     if (user) {
@@ -834,6 +835,10 @@ bool Helper::surfaceBelongsToCurrentUser(SurfaceWrapper *wrapper)
     } else {
         return credentials->uid == puid;
     }
+#else
+    // When DISABLE_DDM is defined, only check against current process uid
+    return puid == getuid();
+#endif
 }
 
 void Helper::deleteTaskSwitch()
@@ -885,7 +890,9 @@ void Helper::init()
         m_seat->detachInputDevice(device);
     });
 
+#ifndef DISABLE_DDM
     m_ddmInterfaceV1 = m_server->attach<DDMInterfaceV1>();
+#endif
 
     m_outputManager = m_server->attach<WOutputManagerV1>();
     connect(m_backend, &WBackend::outputAdded, this, &Helper::onOutputAdded);
@@ -901,10 +908,12 @@ void Helper::init()
             &DDEShellManagerInterfaceV1::requestPickWindow,
             this,
             &Helper::handleWindowPicker);
+#ifndef DISABLE_DDM
     connect(m_ddeShellV1,
             &DDEShellManagerInterfaceV1::lockScreenCreated,
             this,
             &Helper::handleLockScreen);
+#endif
     m_shellHandler->createComponent(engine);
     m_shellHandler->initXdgShell(m_server);
     m_shellHandler->initLayerShell(m_server);
@@ -956,13 +965,17 @@ void Helper::init()
         });
     m_personalization = m_server->attach<PersonalizationV1>();
 
+#ifndef DISABLE_DDM
     auto updateCurrentUser = [this] {
         auto user = m_userModel->currentUser();
         m_personalization->setUserId(user ? user->UID() : getuid());
     };
     connect(m_userModel, &UserModel::currentUserNameChanged, this, updateCurrentUser);
+#endif
 
+#ifndef DISABLE_DDM
     updateCurrentUser();
+#endif
 
     connect(m_personalization,
             &PersonalizationV1::backgroundChanged,
@@ -1007,9 +1020,11 @@ void Helper::init()
         if (m_rootSurfaceContainer->primaryOutput()) {
             m_primaryOutputV1->sendPrimaryOutput(
                 m_rootSurfaceContainer->primaryOutput()->output()->nativeHandle()->name);
+#ifndef DISABLE_DDM
             if (m_lockScreen) {
                 m_lockScreen->setPrimaryOutputName(m_rootSurfaceContainer->primaryOutput()->output()->name());
             }
+#endif
         }
     });
 
@@ -1267,6 +1282,7 @@ bool Helper::beforeDisposeEvent(WSeat *seat, QWindow *, QInputEvent *event)
             // Check if the backend is active to avoid this.
             if (key >= Qt::Key_F1 && key <= Qt::Key_F12 && m_backend->isSessionActive()) {
                 const int vtnr = key - Qt::Key_F1 + 1;
+#ifndef DISABLE_DDM
                 if (m_ddmInterfaceV1 && m_ddmInterfaceV1->isConnected()) {
                     m_ddmInterfaceV1->switchToVt(vtnr);
                 } else {
@@ -1274,10 +1290,14 @@ bool Helper::beforeDisposeEvent(WSeat *seat, QWindow *, QInputEvent *event)
                     showLockScreen(false);
                     m_backend->session()->change_vt(vtnr);
                 }
+#else
+                m_backend->session()->change_vt(vtnr);
+#endif
                 return true;
             }
         }
 
+#ifndef DISABLE_DDM
         if (m_lockScreen
             && m_currentMode == CurrentMode::Normal
             && QKeySequence(kevent->modifiers() | kevent->key())
@@ -1287,6 +1307,7 @@ bool Helper::beforeDisposeEvent(WSeat *seat, QWindow *, QInputEvent *event)
             setWorkspaceVisible(false);
             return true;
         }
+#endif
         if (QKeySequence(kevent->modifiers() | kevent->key())
             == QKeySequence(Qt::META | Qt::Key_F12)) {
             qApp->quit();
@@ -1317,16 +1338,18 @@ bool Helper::beforeDisposeEvent(WSeat *seat, QWindow *, QInputEvent *event)
                     m_multitaskView->toggleMultitaskView(IMultitaskView::ActiveReason::ShortcutKey);
                 }
                 return true;
+            }
 #ifndef DISABLE_DDM
-            } else if (m_lockScreen && kevent->key() == Qt::Key_L) {
+            else if (m_lockScreen && kevent->key() == Qt::Key_L) {
                 if (m_lockScreen->isLocked()) {
                     return true;
                 }
 
                 showLockScreen();
                 return true;
+            }
 #endif
-            } else if (kevent->key() == Qt::Key_D) { // ShowDesktop : Meta + D
+            else if (kevent->key() == Qt::Key_D) { // ShowDesktop : Meta + D
                 if (m_currentMode == CurrentMode::Multitaskview) {
                     return true;
                 }
@@ -1492,9 +1515,14 @@ bool Helper::beforeDisposeEvent(WSeat *seat, QWindow *, QInputEvent *event)
                 break;
             }
             bool isFind = false;
+#ifndef DISABLE_DDM
             QKeySequence sequence(kevent->modifiers() | kevent->key());
             auto user = m_userModel->currentUser();
             for (auto *action : m_shortcut->actions(user ? user->UID() : getuid())) {
+#else
+            QKeySequence sequence(kevent->modifiers() | kevent->key());
+            for (auto *action : m_shortcut->actions(getuid())) {
+#endif
                 if (action->shortcut() == sequence) {
                     isFind = true;
                     if (event->type() == QEvent::KeyRelease) {
@@ -1750,6 +1778,7 @@ void Helper::handleRequestDrag([[maybe_unused]] WSurface *surface)
         DDEActiveInterface::sendStartDrag(m_seat);
 }
 
+#ifndef DISABLE_DDM
 void Helper::handleLockScreen(LockScreenInterface *lockScreen)
 {
     connect(lockScreen, &LockScreenInterface::shutdown, this, [this]() {
@@ -1774,6 +1803,7 @@ void Helper::handleLockScreen(LockScreenInterface *lockScreen)
         }
     });
 }
+#endif
 
 
 void Helper::onSessionNew(const QString &sessionId, const QDBusObjectPath &sessionPath)
@@ -1784,6 +1814,7 @@ void Helper::onSessionNew(const QString &sessionId, const QDBusObjectPath &sessi
     QDBusConnection::systemBus().connect("org.freedesktop.login1", path, "org.freedesktop.login1.Session", "Unlock", this, SLOT(onSessionUnLock()));
 }
 
+#ifndef DISABLE_DDM
 void Helper::onSessionLock()
 {
     showLockScreen();
@@ -1795,6 +1826,7 @@ void Helper::onSessionUnlock()
         m_lockScreen->unlock();
     }
 }
+#endif
 
 void Helper::allowNonDrmOutputAutoChangeMode(WOutput *output)
 {
@@ -2029,6 +2061,7 @@ void Helper::setCurrentMode(CurrentMode mode)
 
 void Helper::showLockScreen(bool switchToGreeter)
 {
+#ifndef DISABLE_DDM
     if (m_lockScreen->isLocked()) {
         return;
     }
@@ -2055,6 +2088,7 @@ void Helper::showLockScreen(bool switchToGreeter)
             interface.call("SwitchToGreeter");
         });
     }
+#endif
 }
 
 WSeat *Helper::seat() const
@@ -2185,13 +2219,17 @@ void Helper::onPrepareForSleep(bool sleep)
     }
 }
 
+#ifndef DISABLE_DDM
 UserModel *Helper::userModel() const {
     return m_userModel;
 }
+#endif
 
+#ifndef DISABLE_DDM
 DDMInterfaceV1 *Helper::ddmInterfaceV1() const {
     return m_ddmInterfaceV1;
 }
+#endif
 
 void Helper::activateSession() {
     if (!m_backend->isSessionActive())

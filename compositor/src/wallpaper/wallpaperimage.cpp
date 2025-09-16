@@ -21,11 +21,13 @@ WAYLIB_SERVER_USE_NAMESPACE
 WallpaperImage::WallpaperImage(QQuickItem *parent)
     : QQuickAnimatedImage(parent)
 {
+#ifndef DISABLE_DDM
     connect(Helper::instance()->qmlEngine()->singletonInstance<UserModel *>("Treeland",
                                                                             "UserModel"),
             &UserModel::currentUserNameChanged,
             this,
             &WallpaperImage::updateSource);
+#endif
 
     connect(Helper::instance()->personalization(),
             &PersonalizationV1::backgroundChanged,

@@ -142,5 +142,9 @@ std::optional<QString> CmdLine::run() const
 
 bool CmdLine::useLockScreen() const
 {
+#ifndef DISABLE_DDM
     return m_parser->isSet(*m_lockScreen.get());
+#else
+    return false;
+#endif
 }

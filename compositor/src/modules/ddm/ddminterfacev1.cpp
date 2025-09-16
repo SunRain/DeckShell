@@ -1,6 +1,8 @@
 // Copyright (C) 2025 April Lu <apr3vau@outlook.com>.
 // SPDX-License-Identifier: Apache-2.0 OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
 
+#ifndef DISABLE_DDM
+
 #include "ddminterfacev1.h"
 #include "treeland-ddm-v1-protocol.h"
 #include "common/treelandlogging.h"
@@ -134,3 +136,5 @@ void DDMInterfaceV1::acquireVt(const int vtnr) {
     else
         qCWarning(treelandCore) << "DDM is not connected when trying to call acquireVt";
 }
+
+#endif // DISABLE_DDM

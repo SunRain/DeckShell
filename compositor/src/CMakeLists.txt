@@ -64,12 +64,12 @@ qt_add_dbus_interface(DBUS_INTERFACE   "${PROJECT_SOURCE_DIR}/misc/interfaces/or
 qt_add_dbus_interface(DBUS_INTERFACE   "${PROJECT_SOURCE_DIR}/misc/interfaces/org.freedesktop.login1.Session.xml"          Login1Session)
 qt_add_dbus_interface(DBUS_INTERFACE   "${PROJECT_SOURCE_DIR}/misc/interfaces/org.freedesktop.login1.User.xml"             Login1User)
 
-dtk_add_config_to_cpp(
-    TREELAND_CONFIG
-    "${PROJECT_SOURCE_DIR}/misc/dconfig/org.deepin.treeland.json"
-    OUTPUT_FILE_NAME "treelandconfig.hpp"
-    CLASS_NAME "TreelandConfig"
-)
+# dtk_add_config_to_cpp(
+#     TREELAND_CONFIG
+#     "${PROJECT_SOURCE_DIR}/misc/dconfig/org.deepin.treeland.json"
+#     OUTPUT_FILE_NAME "treelandconfig.hpp"
+#     CLASS_NAME "TreelandConfig"
+# )
 
 qt_add_library(libdeckcompositor SHARED)
 
@@ -104,6 +104,8 @@ qt_add_qml_module(libdeckcompositor
         core/treeland.h
         core/windowpicker.cpp
         core/windowpicker.h
+        config/treelandconfig.cpp
+        config/treelandconfig.hpp
         effects/tquickradiuseffect.cpp
         effects/tquickradiuseffect.h
         effects/tquickradiuseffect_p.h

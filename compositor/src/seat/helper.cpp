@@ -3,6 +3,7 @@
 
 #include "helper.h"
 
+#include "treelandconfig.hpp"
 #include "modules/capture/capture.h"
 #include "utils/cmdline.h"
 #include "modules/dde-shell/ddeshellattached.h"
@@ -176,9 +177,10 @@ Helper::Helper(QObject *parent)
     m_instance = this;
 
     Q_ASSERT(!m_config);
-    m_config = TreelandConfig::createByName("org.deepin.treeland",
-                                            "org.deepin.treeland",
-                                            QString());
+    // m_config = TreelandConfig::createByName("org.deepin.treeland",
+    //                                         "org.deepin.treeland",
+    //                                         QString());
+    m_config = &TreelandConfig::ref();
 
     m_renderWindow->setColor(Qt::black);
     m_rootSurfaceContainer->setFlag(QQuickItem::ItemIsFocusScope, true);

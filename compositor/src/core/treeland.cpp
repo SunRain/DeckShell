@@ -6,6 +6,8 @@
 #include "compositor1adaptor.h"
 #include "treelandconfig.hpp"
 #include "core/qmlengine.h"
+#include <qcontainerfwd.h>
+#include <qloggingcategory.h>
 #ifndef DISABLE_DDM
 #include "greeter/usermodel.h"
 #endif
@@ -60,50 +62,66 @@ public:
 #ifndef DISABLE_DDM
         , socket(new QLocalSocket(this))
 #endif
-    {
+{
+
+
+}
+
+void init()
+{
+    qmlEngine = new QmlEngine(this);
+    qmlEngine->addImportPath(QString("%1/qt/qml").arg(QCoreApplication::applicationDirPath()));
+    for (const auto &item : QStandardPaths::standardLocations(QStandardPaths::GenericDataLocation)) {
+        qmlEngine->addImportPath(item + "/DeckShell/Compositor");
+        qCDebug(treelandCore) << "Add qml import path:" << item + "/DeckShell/Compositor";
     }
 
-    void init()
+#if defined(PROJECT_COMPILE_QML_DIR)
     {
-        qmlEngine = new QmlEngine(this);
-        qmlEngine->addImportPath(QString("%1/qt/qml").arg(QCoreApplication::applicationDirPath()));
-        for (const auto &item :
-             QStandardPaths::standardLocations(QStandardPaths::GenericDataLocation)) {
-            qmlEngine->addImportPath(item + "/treeland/qml");
+        QString path(PROJECT_COMPILE_QML_DIR);
+        if (!path.isEmpty() && QFileInfo(path).isDir()) {
+            qmlEngine->addImportPath(path);
+            qCDebug(treelandCore) << "Add PROJECT_COMPILE_QML_DIR qml import path:" << path;
         }
-        QObject::connect(qmlEngine, &QQmlEngine::quit, qApp, &QCoreApplication::quit);
+    }
+#endif
 
-        helper = qmlEngine->singletonInstance<Helper *>("DeckShell.Compositor", "Helper");
-        helper->init();
+    QObject::connect(qmlEngine, &QQmlEngine::quit, qApp, &QCoreApplication::quit);
+
+    helper = qmlEngine->singletonInstance<Helper *>("DeckShell.Compositor", "Helper");
+    helper->init();
+
+    qCDebug(treelandCore) << "after helper init";
+
 
 #ifndef DISABLE_DDM
-        auto userModel = qmlEngine->singletonInstance<UserModel *>("DeckShell.Compositor", "UserModel");
+    auto userModel = qmlEngine->singletonInstance<UserModel *>("DeckShell.Compositor", "UserModel");
 
-        auto updateUser = [this, userModel] {
-            auto user = userModel->currentUser();
-            onCurrentChanged(user ? user->UID() : getuid());
-        };
+    auto updateUser = [this, userModel] {
+        auto user = userModel->currentUser();
+        onCurrentChanged(user ? user->UID() : getuid());
+    };
 
-        connect(userModel, &UserModel::currentUserNameChanged, this, updateUser);
-        updateUser();
+    connect(userModel, &UserModel::currentUserNameChanged, this, updateUser);
+    updateUser();
 #endif
+}
+
+~TreelandPrivate()
+{
+    for (auto plugin : plugins) {
+        plugin->shutdown();
+        delete plugin;
     }
 
-    ~TreelandPrivate()
-    {
-        for (auto plugin : plugins) {
-            plugin->shutdown();
-            delete plugin;
-        }
+    plugins.clear();
 
-        plugins.clear();
-
-        for (auto it = pluginTs.begin(); it != pluginTs.end();) {
-            QCoreApplication::removeTranslator(it->second);
-            it->second->deleteLater();
-            pluginTs.erase(it++);
-        }
+    for (auto it = pluginTs.begin(); it != pluginTs.end();) {
+        QCoreApplication::removeTranslator(it->second);
+        it->second->deleteLater();
+        pluginTs.erase(it++);
     }
+}
 
 #ifndef DISABLE_DDM
     void onCurrentChanged(uid_t uid)

@@ -199,6 +199,7 @@ qt_add_qml_module(libdeckcompositor
 target_compile_definitions(libdeckcompositor
     PRIVATE
     WLR_USE_UNSTABLE
+    PROJECT_COMPILE_QML_DIR="${PROJECT_BINARY_DIR}/qt/qml/DeckShell/Compositor"
 )
 
 qt_add_shaders(libdeckcompositor "deckcompositor_shaders_ng"

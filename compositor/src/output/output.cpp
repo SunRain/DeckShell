@@ -85,11 +85,7 @@ Output *Output::create(WOutput *output, QQmlEngine *engine, QObject *parent)
     if (CmdLine::ref().enableDebugView()) {
         o->m_debugMenuBar = Helper::instance()->qmlEngine()->createMenuBar(outputItem, contentItem);
         o->m_debugMenuBar->setZ(RootSurfaceContainer::MenuBarZOrder);
-#ifndef QT_DEBUG
-        o->m_debugMenuBar->setVisible(false);
-#else
         o->setExclusiveZone(Qt::TopEdge, o->m_debugMenuBar, o->m_debugMenuBar->height());
-#endif
 
         connect(o->m_debugMenuBar, &QQuickItem::visibleChanged, o, [o]() {
             if (o->m_debugMenuBar->isVisible()) {

@@ -40,6 +40,13 @@ set(BUILD_WAYLIB_EXAMPLES OFF)
 set(BUILD_QWLROOTS_TESTS OFF)
 set(BUILD_QWLROOTS_EXAMPLES OFF)
 
+
+option(ENABLE_QT_DEBUG "Enable Qt debug features" OFF)
+if(ENABLE_QT_DEBUG)
+    add_compile_definitions("QT_DEBUG")
+endif()
+
+
 # add_executable(DeckShell ${PROJECT_SOURCES}) target_link_libraries(DeckShell
 # Qt${QT_VERSION_MAJOR}::Core)
 

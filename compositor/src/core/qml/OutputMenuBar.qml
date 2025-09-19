@@ -156,6 +156,12 @@ Item {
                     }
                 }
             }
+            ToolButton {
+                text: "MulitView"
+                onClicked: {
+                    Helper.toggleMultitaskView()
+                }
+            }
         }
     }
 }

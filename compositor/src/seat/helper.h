@@ -5,12 +5,15 @@
 
 #include "modules/foreign-toplevel/foreigntoplevelmanagerv1.h"
 #include "core/qmlengine.h"
+#include <qtmetamacros.h>
 #ifndef DISABLE_DDM
 #include "core/lockscreen.h"
 #endif
 #include "input/togglablegesture.h"
 #include "modules/virtual-output/virtualoutputmanager.h"
 #include "modules/window-management/windowmanagement.h"
+
+#include "interfaces/multitaskviewinterface.h"
 
 #include <wglobal.h>
 #include <wqmlcreator.h>
@@ -222,6 +225,9 @@ public:
 
     void setBlockActivateSurface(bool block);
     bool blockActivateSurface() const;
+
+    Q_INVOKABLE void toggleMultitaskView(IMultitaskView::ActiveReason reason = IMultitaskView::ActiveReason::ShortcutKey);
+
 public Q_SLOTS:
     void activateSurface(SurfaceWrapper *wrapper, Qt::FocusReason reason = Qt::OtherFocusReason);
     void forceActivateSurface(SurfaceWrapper *wrapper,

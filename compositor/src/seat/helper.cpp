@@ -2276,3 +2276,11 @@ bool Helper::blockActivateSurface() const
 {
     return m_blockActivateSurface;
 }
+
+void Helper::toggleMultitaskView(IMultitaskView::ActiveReason reason)
+{
+    if (!m_multitaskView) {
+        return;
+    }
+    m_multitaskView->toggleMultitaskView(reason);
+}

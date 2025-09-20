@@ -42,6 +42,21 @@ add_feature_info(DemoClents BUILD_TEST_CLIENTS "clients demo for testing")
 
 option(DISABLE_DDM "Disable DDM and greeter" OFF)
 
+option(COMPOSITOR_PLUGINS_ADD_BUILD_PATH "Add compositor build path to plugin search paths" ON)
+if (COMPOSITOR_PLUGINS_ADD_BUILD_PATH)
+    add_feature_info(CompositorPluginsBuildPath COMPOSITOR_PLUGINS_ADD_BUILD_PATH
+        "Add plugins build path to plugin search paths for compositor")
+    add_compile_definitions("COMPOSITOR_PLUGINS_ADD_BUILD_PATH")
+endif()
+
+option(COMPOSITOR_ENABLE_CONSOLE_DEBUG_OUTPUT "Enable debug output to console for compositor" ON)
+if(COMPOSITOR_ENABLE_CONSOLE_DEBUG_OUTPUT)
+    add_compile_definitions("COMPOSITOR_ENABLE_CONSOLE_DEBUG_OUTPUT")
+    add_feature_info(DebugOutput COMPOSITOR_ENABLE_CONSOLE_DEBUG_OUTPUT
+        "Enable debug output to console for compositor")
+endif()
+
+
 if(DISABLE_DDM)
     add_compile_definitions("DISABLE_DDM")
 endif()

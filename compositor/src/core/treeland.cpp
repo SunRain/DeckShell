@@ -323,7 +323,7 @@ Treeland::Treeland()
     QDBusConnection::sessionBus().registerService("org.deepin.Compositor1");
     QDBusConnection::sessionBus().registerObject("/org/deepin/Compositor1", this);
 
-#ifdef QT_DEBUG
+#ifdef COMPOSITOR_PLUGINS_ADD_BUILD_PATH
     QDir dir(QStringLiteral(TREELAND_PLUGINS_OUTPUT_PATH));
     if (dir.exists() && dir.isReadable()) {
         d->loadPlugin(QStringLiteral(TREELAND_PLUGINS_OUTPUT_PATH));

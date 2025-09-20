@@ -31,7 +31,7 @@ int main(int argc, char *argv[])
     app.setOrganizationName("deepin");
     app.setApplicationName("treeland");
 
-#ifdef QT_DEBUG
+#ifdef COMPOSITOR_ENABLE_CONSOLE_DEBUG_OUTPUT
     DLogManager::registerConsoleAppender();
 #endif
     DLogManager::registerJournalAppender();

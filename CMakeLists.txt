@@ -44,6 +44,8 @@ set(BUILD_QWLROOTS_EXAMPLES OFF)
 option(ENABLE_QT_DEBUG "Enable Qt debug features" OFF)
 if(ENABLE_QT_DEBUG)
     add_compile_definitions("QT_DEBUG")
+    set(COMPOSITOR_PLUGINS_ADD_BUILD_PATH ON)
+    set(COMPOSITOR_ENABLE_CONSOLE_DEBUG_OUTPUT ON)
 endif()
 
 

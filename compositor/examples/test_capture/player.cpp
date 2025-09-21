@@ -7,6 +7,7 @@
 #include <EGL/egl.h>
 #include <EGL/eglext.h>
 #include <GLES2/gl2.h>
+#include <GLES2/gl2ext.h>
 #include <libdrm/drm_fourcc.h>
 #include <rhi/qrhi.h>
 
@@ -214,6 +215,18 @@ void Player::updateTexture()
     Q_ASSERT(glContext);
     auto eglContext = glContext->nativeInterface<QNativeInterface::QEGLContext>();
     Q_ASSERT(eglContext);
+
+    // Get the extension function pointer
+    static PFNGLEGLIMAGETARGETTEXTURE2DOESPROC glEGLImageTargetTexture2DOES = nullptr;
+    if (!glEGLImageTargetTexture2DOES) {
+        glEGLImageTargetTexture2DOES = (PFNGLEGLIMAGETARGETTEXTURE2DOESPROC)
+            eglGetProcAddress("glEGLImageTargetTexture2DOES");
+        if (!glEGLImageTargetTexture2DOES) {
+            qCritical() << "glEGLImageTargetTexture2DOES extension not available";
+            m_captureContext->session()->doneFrame();
+            return;
+        }
+    }
     EGLImage eglImage;
     EGLAttrib attribs[47];
     int atti = 0;

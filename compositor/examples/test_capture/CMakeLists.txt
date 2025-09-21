@@ -1,7 +1,8 @@
 find_package(PkgConfig REQUIRED)
 find_package(Qt6 REQUIRED COMPONENTS Core Gui WaylandClient Quick)
 find_package(DeckCompositorProtocols REQUIRED)
-pkg_check_modules(EGL REQUIRED IMPORTED_TARGET egl gl)
+pkg_check_modules(EGL REQUIRED IMPORTED_TARGET egl gl glesv2)
+
 qt_add_executable(test-capture
     main.cpp
 )

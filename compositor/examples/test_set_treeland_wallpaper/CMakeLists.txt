@@ -6,7 +6,7 @@ find_package(PkgConfig REQUIRED)
 pkg_get_variable(WAYLAND_PROTOCOLS wayland-protocols pkgdatadir)
 
 # Include translation utilities
-include(${CMAKE_SOURCE_DIR}/cmake/TranslationUtils.cmake)
+include(${PROJECT_SOURCE_DIR}/cmake/TranslationUtils.cmake)
 
 set(BIN_NAME test-set-treeland-wallpaper)
 

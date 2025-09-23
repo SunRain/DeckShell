@@ -85,14 +85,14 @@ void init()
         }
     }
 #endif
-
-    QObject::connect(qmlEngine, &QQmlEngine::quit, qApp, &QCoreApplication::quit);
-
+    W_Q(Treeland);
+    // Use QueuedConnection to avoid
+    // assert(wlroots: assert(wl_list_empty(&cur->events.button.listener_list)))
+    // failed during quit(If the quit call is from the cursor's button press/release event)
+    connect(qmlEngine, &QQmlEngine::quit, q, &Treeland::quit, Qt::QueuedConnection);
     helper = qmlEngine->singletonInstance<Helper *>("DeckShell.Compositor", "Helper");
+    connect(helper, &Helper::requestQuit, q, &Treeland::quit, Qt::QueuedConnection);
     helper->init();
-
-    qCDebug(treelandCore) << "after helper init";
-
 
 #ifndef DISABLE_DDM
     auto userModel = qmlEngine->singletonInstance<UserModel *>("DeckShell.Compositor", "UserModel");
@@ -339,7 +339,7 @@ Treeland::Treeland()
 
 Treeland::~Treeland()
 {
-    Q_D(Treeland);
+
 }
 
 bool Treeland::debugMode() const
@@ -468,6 +468,13 @@ QString Treeland::XWaylandName()
     process->start();
 
     return {};
+}
+
+void Treeland::quit()
+{
+    // make sure all deleted before app exit
+    d_ptr.reset();
+    qApp->quit();
 }
 
 } // namespace Treeland

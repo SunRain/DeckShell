@@ -40,7 +40,7 @@ add_feature_info(ASanSupport ADDRESS_SANITIZER
 option(BUILD_TREELAND_EXAMPLES "Build clients demo to test treeland" OFF)
 add_feature_info(DemoClents BUILD_TEST_CLIENTS "clients demo for testing")
 
-option(DISABLE_DDM "Disable DDM and greeter" OFF)
+option(DISABLE_DDM "Disable DDM and greeter" ON)
 
 option(COMPOSITOR_PLUGINS_ADD_BUILD_PATH "Add compositor build path to plugin search paths" ON)
 if(COMPOSITOR_PLUGINS_ADD_BUILD_PATH)

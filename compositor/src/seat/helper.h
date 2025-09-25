@@ -58,6 +58,8 @@ class WForeignToplevel;
 class WExtForeignToplevelListV1;
 class WOutputManagerV1;
 class WLayerSurface;
+class WSessionLockManager;
+class WSessionLock;
 WAYLIB_SERVER_END_NAMESPACE
 
 QW_BEGIN_NAMESPACE
@@ -122,6 +124,7 @@ class Helper : public WSeatEventFilter
     Q_PROPERTY(Workspace* workspace READ workspace CONSTANT FINAL)
     Q_PROPERTY(TreelandConfig* config READ config CONSTANT FINAL)
     Q_PROPERTY(bool blockActivateSurface READ blockActivateSurface WRITE setBlockActivateSurface NOTIFY blockActivateSurfaceChanged FINAL)
+    Q_PROPERTY(bool noAnimation READ noAnimation WRITE setNoAnimation NOTIFY noAnimationChanged FINAL)
     QML_ELEMENT
     QML_SINGLETON
 
@@ -228,6 +231,9 @@ public:
 
     Q_INVOKABLE void toggleMultitaskView(IMultitaskView::ActiveReason reason = IMultitaskView::ActiveReason::ShortcutKey);
 
+    bool noAnimation() const;
+
+
 public Q_SLOTS:
     void activateSurface(SurfaceWrapper *wrapper, Qt::FocusReason reason = Qt::OtherFocusReason);
     void forceActivateSurface(SurfaceWrapper *wrapper,
@@ -245,6 +251,7 @@ Q_SIGNALS:
     void outputModeChanged();
 
     void currentModeChanged();
+    void noAnimationChanged();
 
     void blockActivateSurfaceChanged();
     void requestQuit();
@@ -282,6 +289,7 @@ private:
     void onSessionUnlock();
 #endif
     void handleNewForeignToplevelCaptureRequest(wlr_ext_foreign_toplevel_image_capture_source_manager_v1_request *request);
+    void onExtSessionLock(WSessionLock *lock);
 
 private:
     void allowNonDrmOutputAutoChangeMode(WOutput *output);
@@ -316,6 +324,7 @@ private:
     void setWorkspaceVisible(bool visible);
     void restoreFromShowDesktop(SurfaceWrapper *activeSurface = nullptr);
     void updateIdleInhibitor();
+    void setNoAnimation(bool noAnimation);
 
     static Helper *m_instance;
     TreelandConfig *m_config = nullptr;
@@ -364,6 +373,11 @@ private:
     DDMInterfaceV1 *m_ddmInterfaceV1 = nullptr;
 #endif
 
+#ifdef EXT_SESSION_LOCK_V1
+    WSessionLockManager *m_sessionLockManager = nullptr;
+    QTimer *m_lockScreenGraceTimer = nullptr;
+#endif
+
     // private data
     QList<Output *> m_outputList;
     QPointer<QQuickItem> m_taskSwitch;
@@ -394,4 +408,6 @@ private:
     quint32 m_atomDeepinNoTitlebar;
 
     bool m_blockActivateSurface{ false };
+
+    bool m_noAnimation{ false };
 };

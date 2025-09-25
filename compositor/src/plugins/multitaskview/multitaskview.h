@@ -178,6 +178,7 @@ private:
     void handleWrapperOutputChanged();
     void handleSurfaceStateChanged();
     void handleSurfaceMappedChanged();
+    void handleSurfaceSkipMutiTaskViewChanged();
     void handleSurfaceAdded(SurfaceWrapper *surface);
     void handleSurfaceRemoved(SurfaceWrapper *surface);
     void addReadySurface(SurfaceWrapper *surface);

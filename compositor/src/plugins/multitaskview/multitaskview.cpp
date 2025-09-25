@@ -493,6 +493,28 @@ void MultitaskviewSurfaceModel::handleSurfaceMappedChanged()
     }
 }
 
+void MultitaskviewSurfaceModel::handleSurfaceSkipMutiTaskViewChanged()
+{
+    auto surface = qobject_cast<SurfaceWrapper *>(sender());
+    Q_ASSERT(surface);
+    if (surface->skipMutiTaskView()) {
+        auto dataPtr = std::find_if(m_data.begin(),
+                                    m_data.end(),
+                                    [this, surface](const ModelDataPtr &modelData) {
+                                        return modelData->wrapper == surface;
+                                    });
+        if (dataPtr != m_data.end()) {
+            // Remove from model
+            handleSurfaceRemoved(surface);
+        }
+    } else {
+        if (surfaceReady(surface) && surface->ownsOutput() == output()) {
+            // Add to model
+            addReadySurface(surface);
+        }
+    }
+}
+
 void MultitaskviewSurfaceModel::handleSurfaceAdded(SurfaceWrapper *surface)
 {
     if (!Helper::instance()->surfaceBelongsToCurrentUser(surface))
@@ -626,11 +648,16 @@ void MultitaskviewSurfaceModel::monitorUnreadySurface(SurfaceWrapper *surface)
             this,
             &MultitaskviewSurfaceModel::handleSurfaceMappedChanged,
             Qt::UniqueConnection);
+    connect(surface,
+            &SurfaceWrapper::skipMutiTaskViewChanged,
+            this,
+            &MultitaskviewSurfaceModel::handleSurfaceSkipMutiTaskViewChanged,
+            Qt::UniqueConnection);
 }
 
 bool MultitaskviewSurfaceModel::surfaceReady(SurfaceWrapper *surface)
 {
-    return surface->surface()->mapped() && surfaceGeometry(surface).isValid();
+    return surface->surface()->mapped() && surfaceGeometry(surface).isValid() && !surface->skipMutiTaskView();
 }
 
 QRectF MultitaskviewSurfaceModel::surfaceGeometry(SurfaceWrapper *surface)

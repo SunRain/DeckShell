@@ -2063,6 +2063,11 @@ bool Helper::isLaunchpad(WLayerSurface *surface) const
     return scope == "dde-shell/launchpad";
 }
 
+DDEShellManagerInterfaceV1 *Helper::ddeShellV1() const
+{
+    return m_ddeShellV1;
+}
+
 void Helper::handleWindowPicker(WindowPickerInterface *picker)
 {
     connect(picker, &WindowPickerInterface::pick, this, [this, picker](const QString &hint) {

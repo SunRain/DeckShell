@@ -201,6 +201,8 @@ public:
 
     Q_INVOKABLE bool isLaunchpad(WLayerSurface *surface) const;
 
+    DDEShellManagerInterfaceV1 *ddeShellV1() const;
+
     void handleWindowPicker(WindowPickerInterface *picker);
 
     RootSurfaceContainer *rootSurfaceContainer() const;

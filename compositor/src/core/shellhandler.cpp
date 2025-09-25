@@ -150,6 +150,23 @@ void ShellHandler::onXdgToplevelSurfaceAdded(WXdgToplevelSurface *surface)
 
     if (DDEShellSurfaceInterface::get(surface->surface())) {
         handleDdeShellSurfaceAdded(surface->surface(), wrapper);
+    } else {
+        // If no DDEShellSurface found initially, listen for surfaceCreated signal
+        // to handle late-created DDE shell surfaces
+        auto ddeShellManager = Helper::instance()->ddeShellV1();
+        if (ddeShellManager) {
+            auto connection = connect(ddeShellManager, &DDEShellManagerInterfaceV1::surfaceCreated,
+                                      this, [this, surface, wrapper, ddeShellManager](DDEShellSurfaceInterface *ddeSurface) {
+                if (ddeSurface->wSurface() == surface->surface()) {
+                    qCDebug(treelandCore) << "Late DDEShellSurface created for surface" << surface->surface();
+                    handleDdeShellSurfaceAdded(surface->surface(), wrapper);
+                    // Disconnect after handling
+                    disconnect(ddeShellManager, &DDEShellManagerInterfaceV1::surfaceCreated, this, nullptr);
+                }
+            });
+            // Store connection for cleanup if needed
+            wrapper->setProperty("ddeShellConnection", QVariant::fromValue(connection));
+        }
     }
 
     auto updateSurfaceWithParentContainer = [this, wrapper, surface] {

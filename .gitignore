@@ -110,3 +110,9 @@ obj-*-linux-gnu/
 
 # Kilo Code
 .kilocode/
+
+# Claude
+CLAUDE.md
+claudecode-session-history
+.mcp.json
+dev.db

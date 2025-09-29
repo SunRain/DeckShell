@@ -293,7 +293,11 @@ Treeland::Treeland()
 
                 auto envs = QProcessEnvironment::systemEnvironment();
                 envs.insert("WAYLAND_DISPLAY", d->helper->defaultWaylandSocket()->fullServerName());
-                envs.insert("DISPLAY", d->helper->defaultXWaylandSocket()->displayName());
+                if (auto *xwayland = d->helper->xwaylandForUid(getuid())) {
+                    envs.insert("DISPLAY", xwayland->displayName());
+                } else if (auto *current = d->helper->defaultXWaylandSocket()) {
+                    envs.insert("DISPLAY", current->displayName());
+                }
                 envs.insert("XDG_SESSION_DESKTOP", "DeckShell");
 
                 QProcess process;
@@ -426,16 +430,22 @@ QString Treeland::XWaylandName()
 
     setDelayedReply(true);
 
+    auto m = message();
+    auto conn = connection();
+
     auto uid = connection().interface()->serviceUid(message().service());
     struct passwd *pw;
     pw = getpwuid(uid);
     QString user{ pw->pw_name };
 
-    auto *xwayland = d->helper->defaultXWaylandSocket();
+    auto *xwayland = d->helper->xwaylandForUid(uid);
+    if (!xwayland) {
+        auto reply = m.createErrorReply(QDBusError::InternalError,
+                                        "Failed to prepare XWayland session");
+        conn.send(reply);
+        return {};
+    }
     const QString &display = xwayland->displayName();
-
-    auto m = message();
-    auto conn = connection();
 
     QProcess *process = new QProcess(this);
     connect(process, &QProcess::finished, [process, m, conn, user, display] {

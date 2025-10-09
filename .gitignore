@@ -45,6 +45,7 @@ Makefile*
 # IDE 和编辑器文件 (IDE and Editor Files)
 # =============================================================================
 # Qt Creator
+.qtcreator/
 *.autosave
 .qmlls.ini
 *.qmlproject.user

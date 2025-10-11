@@ -43,7 +43,7 @@ add_feature_info(DemoClents BUILD_TEST_CLIENTS "clients demo for testing")
 option(DISABLE_DDM "Disable DDM and greeter" OFF)
 
 option(COMPOSITOR_PLUGINS_ADD_BUILD_PATH "Add compositor build path to plugin search paths" ON)
-if (COMPOSITOR_PLUGINS_ADD_BUILD_PATH)
+if(COMPOSITOR_PLUGINS_ADD_BUILD_PATH)
     add_feature_info(CompositorPluginsBuildPath COMPOSITOR_PLUGINS_ADD_BUILD_PATH
         "Add plugins build path to plugin search paths for compositor")
     add_compile_definitions("COMPOSITOR_PLUGINS_ADD_BUILD_PATH")
@@ -91,19 +91,8 @@ set(QML_IMPORT_PATH "${LOCAL_QML_IMPORT_PATH}" CACHE STRING "For LSP" FORCE)
 
 # PKG-CONFIG
 find_package(PkgConfig REQUIRED)
-find_package(
-    Qt6
-    CONFIG
-    REQUIRED
-    Core
-    DBus
-    Gui
-    Qml
-    Quick
-    QuickControls2
-    LinguistTools
-    Test
-    QuickTest)
+find_package(Qt6 CONFIG REQUIRED
+    Core DBus Gui Qml Quick QuickControls2 LinguistTools Test QuickTest QuickPrivate)
 
 pkg_check_modules(WLROOTS REQUIRED IMPORTED_TARGET wlroots-0.19)
 

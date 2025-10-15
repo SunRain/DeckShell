@@ -35,6 +35,13 @@ OutputItem {
                 return size.width / isize.width;
             }
         }
+
+        Text {
+            anchors.horizontalCenter: parent.horizontalCenter
+            text: "I'm a duplicate of the primary screen"
+            font.pointSize: 18
+            color: "yellow"
+        }
     }
 
     OutputViewport {

@@ -997,9 +997,6 @@ void Helper::init()
 
 #ifndef DISABLE_DDM
     auto updateCurrentUser = [this] {
-        m_config = TreelandConfig::createByName("org.deepin.treeland",
-                                                "org.deepin.treeland",
-                                                "/" + m_userModel->currentUserName());
         auto user = m_userModel->currentUser();
         m_personalization->setUserId(user ? user->UID() : getuid());
     };

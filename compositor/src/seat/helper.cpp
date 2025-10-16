@@ -1335,6 +1335,7 @@ bool Helper::beforeDisposeEvent(WSeat *seat, QWindow *, QInputEvent *event)
             }
         }
 
+#if !defined(DISABLE_DDM) || defined(EXT_SESSION_LOCK_V1)
         if (m_lockScreen && m_lockScreen->available()
             && m_currentMode == CurrentMode::Normal
             && QKeySequence(kevent->modifiers() | kevent->key())
@@ -1344,6 +1345,7 @@ bool Helper::beforeDisposeEvent(WSeat *seat, QWindow *, QInputEvent *event)
             setWorkspaceVisible(false);
             return true;
         }
+#endif
 
         if (QKeySequence(kevent->modifiers() | kevent->key())
             == QKeySequence(Qt::META | Qt::Key_F12)) {

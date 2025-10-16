@@ -11,7 +11,7 @@ endif()
 set(BIN_NAME deckcompositor)
 
 find_package(Dtk6 REQUIRED COMPONENTS Core Declarative SystemSettings Tools)
-if (NOT DISABLE_DDM)
+if (NOT DISABLE_DDM OR EXT_SESSION_LOCK_V1)
     find_package(DDM 0.2.0  REQUIRED COMPONENTS Auth Common)
 endif()
 find_package(QT NAMES Qt6 COMPONENTS Core REQUIRED)
@@ -114,14 +114,14 @@ qt_add_qml_module(libdeckcompositor
         effects/tsgradiusimagenode.h
         $<$<OR:$<NOT:$<BOOL:${DISABLE_DDM}>>,$<BOOL:${EXT_SESSION_LOCK_V1}>>:core/lockscreen.h>
         $<$<OR:$<NOT:$<BOOL:${DISABLE_DDM}>>,$<BOOL:${EXT_SESSION_LOCK_V1}>>:core/lockscreen.cpp>
-        $<$<NOT:$<BOOL:${DISABLE_DDM}>>:greeter/greeterproxy.cpp>
-        $<$<NOT:$<BOOL:${DISABLE_DDM}>>:greeter/greeterproxy.h>
-        $<$<NOT:$<BOOL:${DISABLE_DDM}>>:greeter/sessionmodel.cpp>
-        $<$<NOT:$<BOOL:${DISABLE_DDM}>>:greeter/sessionmodel.h>
-        $<$<NOT:$<BOOL:${DISABLE_DDM}>>:greeter/user.cpp>
-        $<$<NOT:$<BOOL:${DISABLE_DDM}>>:greeter/user.h>
-        $<$<NOT:$<BOOL:${DISABLE_DDM}>>:greeter/usermodel.cpp>
-        $<$<NOT:$<BOOL:${DISABLE_DDM}>>:greeter/usermodel.h>
+        $<$<OR:$<NOT:$<BOOL:${DISABLE_DDM}>>,$<BOOL:${EXT_SESSION_LOCK_V1}>>:greeter/greeterproxy.cpp>
+        $<$<OR:$<NOT:$<BOOL:${DISABLE_DDM}>>,$<BOOL:${EXT_SESSION_LOCK_V1}>>:greeter/greeterproxy.h>
+        $<$<OR:$<NOT:$<BOOL:${DISABLE_DDM}>>,$<BOOL:${EXT_SESSION_LOCK_V1}>>:greeter/sessionmodel.cpp>
+        $<$<OR:$<NOT:$<BOOL:${DISABLE_DDM}>>,$<BOOL:${EXT_SESSION_LOCK_V1}>>:greeter/sessionmodel.h>
+        $<$<OR:$<NOT:$<BOOL:${DISABLE_DDM}>>,$<BOOL:${EXT_SESSION_LOCK_V1}>>:greeter/user.cpp>
+        $<$<OR:$<NOT:$<BOOL:${DISABLE_DDM}>>,$<BOOL:${EXT_SESSION_LOCK_V1}>>:greeter/user.h>
+        $<$<OR:$<NOT:$<BOOL:${DISABLE_DDM}>>,$<BOOL:${EXT_SESSION_LOCK_V1}>>:greeter/usermodel.cpp>
+        $<$<OR:$<NOT:$<BOOL:${DISABLE_DDM}>>,$<BOOL:${EXT_SESSION_LOCK_V1}>>:greeter/usermodel.h>
         input/gestures.cpp
         input/gestures.h
         input/inputdevice.cpp
@@ -303,9 +303,9 @@ target_link_libraries(libdeckcompositor
         PkgConfig::WAYLAND
         PkgConfig::LIBINPUT
         PkgConfig::XCB
-        $<$<NOT:$<BOOL:${DISABLE_DDM}>>:DDM::Auth>
-        $<$<NOT:$<BOOL:${DISABLE_DDM}>>:DDM::Common>
-        $<$<NOT:$<BOOL:${DISABLE_DDM}>>:PkgConfig::PAM>
+        $<$<OR:$<NOT:$<BOOL:${DISABLE_DDM}>>,$<BOOL:${EXT_SESSION_LOCK_V1}>>:DDM::Auth>
+        $<$<OR:$<NOT:$<BOOL:${DISABLE_DDM}>>,$<BOOL:${EXT_SESSION_LOCK_V1}>>:DDM::Common>
+        $<$<OR:$<NOT:$<BOOL:${DISABLE_DDM}>>,$<BOOL:${EXT_SESSION_LOCK_V1}>>:PkgConfig::PAM>
 )
 
 add_subdirectory(plugins)

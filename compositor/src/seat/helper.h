@@ -6,7 +6,7 @@
 #include "modules/foreign-toplevel/foreigntoplevelmanagerv1.h"
 #include "core/qmlengine.h"
 #include <qtmetamacros.h>
-#ifndef DISABLE_DDM
+#if !defined(DISABLE_DDM) || defined(EXT_SESSION_LOCK_V1)
 #include "core/lockscreen.h"
 #endif
 #include "input/togglablegesture.h"
@@ -391,7 +391,7 @@ private:
     QList<qw_idle_inhibitor_v1 *> m_idleInhibitors;
 
     SurfaceWrapper *m_activatedSurface = nullptr;
-#ifndef DISABLE_DDM
+#if !defined(DISABLE_DDM) || defined(EXT_SESSION_LOCK_V1)
     LockScreen *m_lockScreen = nullptr;
 #endif
     float m_animationSpeed = 1.0;

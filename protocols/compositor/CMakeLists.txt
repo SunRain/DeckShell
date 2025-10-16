@@ -25,3 +25,5 @@ set(XML
 
 install(FILES ${XML} DESTINATION ${CMAKE_INSTALL_DATADIR}/DeckShell/compositor-protocols)
 
+# 导出协议路径给父项目使用（构建时）
+set(TREELAND_PROTOCOLS_DATA_DIR "${CMAKE_CURRENT_SOURCE_DIR}/xml" PARENT_SCOPE)

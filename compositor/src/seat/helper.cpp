@@ -24,7 +24,7 @@
 #endif
 #include "interfaces/multitaskviewinterface.h"
 #include "output/output.h"
-#include "modules/primary-output/outputmanagement.h"
+#include "modules/output-manager/outputmanagement.h"
 #include "modules/personalization/personalizationmanager.h"
 #include "core/qmlengine.h"
 #include "core/rootsurfacecontainer.h"
@@ -1140,7 +1140,7 @@ void Helper::init()
     auto *xdgOutputManager =
         m_server->attach<WXdgOutputManager>(m_rootSurfaceContainer->outputLayout());
 
-    m_primaryOutputV1 = m_server->attach<PrimaryOutputV1>();
+    m_outputManagerV1 = m_server->attach<OutputManagerV1>();
     m_wallpaperColorV1 = m_server->attach<WallpaperColorV1>();
     m_windowManagement = m_server->attach<WindowManagementV1>();
     m_virtualOutput = m_server->attach<VirtualOutputV1>();
@@ -1202,8 +1202,8 @@ void Helper::init()
             this,
             &Helper::onRestoreCopyOutput);
 
-    connect(m_primaryOutputV1,
-            &PrimaryOutputV1::requestSetPrimaryOutput,
+    connect(m_outputManagerV1,
+            &OutputManagerV1::requestSetPrimaryOutput,
             this,
             [this](const char *name) {
                 for (auto &&output : m_rootSurfaceContainer->outputs()) {
@@ -1215,7 +1215,7 @@ void Helper::init()
 
     connect(m_rootSurfaceContainer, &RootSurfaceContainer::primaryOutputChanged, this, [this]() {
         if (m_rootSurfaceContainer->primaryOutput()) {
-            m_primaryOutputV1->sendPrimaryOutput(
+            m_outputManagerV1->sendPrimaryOutput(
                 m_rootSurfaceContainer->primaryOutput()->output()->nativeHandle()->name);
 #ifndef DISABLE_DDM
             if (m_lockScreen) {

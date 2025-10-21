@@ -72,6 +72,13 @@ qt_add_dbus_interface(DBUS_INTERFACE   "${PROJECT_SOURCE_DIR}/misc/interfaces/or
 #     CLASS_NAME "TreelandConfig"
 # )
 
+dtk_add_config_to_cpp(
+    OUTPUT_CONFIG
+    "${PROJECT_SOURCE_DIR}/misc/dconfig/org.deepin.treeland.output.json"
+    OUTPUT_FILE_NAME "outputconfig.hpp"
+    CLASS_NAME "OutputConfig"
+)
+
 qt_add_library(libdeckcompositor SHARED)
 
 set_target_properties(libdeckcompositor PROPERTIES
@@ -89,6 +96,7 @@ qt_add_qml_module(libdeckcompositor
         ${DDM_DBUS_SOURCES}
         ${DBUS_INTERFACE}
         ${TREELAND_CONFIG}
+        ${OUTPUT_CONFIG}
         common/treelandlogging.cpp
         common/treelandlogging.h
         core/layersurfacecontainer.cpp
@@ -135,6 +143,8 @@ qt_add_qml_module(libdeckcompositor
         interfaces/proxyinterface.h
         output/output.cpp
         output/output.h
+        output/backlight.h
+        output/backlight.cpp
         seat/helper.cpp
         seat/helper.h
         surface/surfacecontainer.cpp

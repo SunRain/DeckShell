@@ -96,7 +96,7 @@ class DDEShellManagerInterfaceV1;
 class WindowPickerInterface;
 class VirtualOutputV1;
 class ShellHandler;
-class PrimaryOutputV1;
+class OutputManagerV1;
 class CaptureSourceSelector;
 class treeland_window_picker_v1;
 class IMultitaskView;
@@ -395,7 +395,7 @@ private:
     WindowManagementV1::DesktopState m_showDesktop = WindowManagementV1::DesktopState::Normal;
     DDEShellManagerInterfaceV1 *m_ddeShellV1 = nullptr;
     VirtualOutputV1 *m_virtualOutput = nullptr;
-    PrimaryOutputV1 *m_primaryOutputV1 = nullptr;
+    OutputManagerV1 *m_outputManagerV1 = nullptr;
 #ifndef DISABLE_DDM
     DDMInterfaceV1 *m_ddmInterfaceV1 = nullptr;
 #endif

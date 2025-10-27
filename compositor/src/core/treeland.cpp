@@ -94,7 +94,7 @@ void init()
     connect(qmlEngine, &QQmlEngine::quit, q, &Treeland::quit, Qt::QueuedConnection);
     helper = qmlEngine->singletonInstance<Helper *>("DeckShell.Compositor", "Helper");
     connect(helper, &Helper::requestQuit, q, &Treeland::quit, Qt::QueuedConnection);
-    helper->init();
+    helper->init(q);
 
 #ifndef DISABLE_DDM
     auto userModel = qmlEngine->singletonInstance<UserModel *>("DeckShell.Compositor", "UserModel");

@@ -109,6 +109,8 @@ class DDMInterfaceV1;
 class TreelandConfig;
 class FpsDisplayManager;
 class ScreensaverInterfaceV1;
+class SettingManager;
+
 struct wlr_idle_inhibitor_v1;
 struct wlr_output_power_v1_set_mode_event;
 struct wlr_ext_foreign_toplevel_image_capture_source_manager_v1_request;
@@ -129,6 +131,8 @@ public:
     WSocket *socket = nullptr;
     WXWayland *xwayland = nullptr;
     quint32 noTitlebarAtom = XCB_ATOM_NONE;
+    SettingManager *settingManager = nullptr;
+    QThread *settingManagerThread = nullptr;
 
     ~Session();
 

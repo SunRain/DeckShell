@@ -175,6 +175,14 @@ qt_add_qml_module(libdeckcompositor
         workspace/workspaceanimationcontroller.h
         workspace/workspacemodel.cpp
         workspace/workspacemodel.h
+        xsettings/abstractsettings.h
+        xsettings/abstractsettings.cpp
+        xsettings/xsettings.h
+        xsettings/xsettings.cpp
+        xsettings/xresource.h
+        xsettings/xresource.cpp
+        xsettings/settingmanager.h
+        xsettings/settingmanager.cpp
 
     QML_FILES
         core/qml/PrimaryOutput.qml

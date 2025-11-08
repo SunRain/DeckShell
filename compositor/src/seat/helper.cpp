@@ -1292,7 +1292,8 @@ void Helper::init(Treeland::Treeland *treeland)
     xwaylandOutputManager->setScaleOverride(1.0);
     xdgOutputManager->setFilter([this](WClient *client) { return !isXWaylandClient(client); });
     xwaylandOutputManager->setFilter([this](WClient *client) { return isXWaylandClient(client); });
-    updateActiveUserSession(QStringLiteral("dde"));
+    // User dde does not has a real Logind session, so just pass 0 as id
+    updateActiveUserSession(QStringLiteral("dde"), 0);
     connect(m_userModel, &UserModel::userLoggedIn, this, &Helper::updateActiveUserSession);
     m_xdgDecorationManager = m_server->attach<WXdgDecorationManager>();
     connect(m_xdgDecorationManager,
@@ -2243,7 +2244,7 @@ void Helper::removeSession(std::shared_ptr<Session> session)
         Q_EMIT activatedSurfaceChanged();
     }
 
-    for (auto s : m_sessions) {
+    for (auto s : std::as_const(m_sessions)) {
         if (s.get() == session.get()) {
             m_sessions.removeOne(s);
             break;
@@ -2256,10 +2257,11 @@ void Helper::removeSession(std::shared_ptr<Session> session)
 /**
  * Ensure a session exists for the given uid, creating it if necessary
  * 
+ * @param id An existing logind session ID
  * @param uid User ID to ensure session for
  * @returns Session for the given uid, or nullptr on failure
  */
-std::shared_ptr<Session> Helper::ensureSession(uid_t uid)
+std::shared_ptr<Session> Helper::ensureSession(int id, uid_t uid)
 {
     // Helper lambda to create WSocket and WXWayland
     auto createWSocket = [this]() {
@@ -2329,6 +2331,7 @@ std::shared_ptr<Session> Helper::ensureSession(uid_t uid)
     }
     // Session does not exist, create new session with deleter
     auto session = std::make_shared<Session>();
+    session->id = id;
     session->uid = uid;
 
     session->socket = createWSocket();
@@ -2349,28 +2352,26 @@ std::shared_ptr<Session> Helper::ensureSession(uid_t uid)
 }
 
 /**
- * Get the WXWayland for the given uid, optionally creating it if missing
+ * Get the WXWayland for the given uid
  * 
  * @param uid User ID to get WXWayland for
- * @param createIfMissing Whether to create the session if it does not exist
  * @returns WXWayland for the given uid, or nullptr if not found/created
  */
-WXWayland *Helper::xwaylandForUid(uid_t uid, bool createIfMissing)
+WXWayland *Helper::xwaylandForUid(uid_t uid)
 {
-    auto session = createIfMissing ? ensureSession(uid) : sessionForUid(uid);
+    auto session = sessionForUid(uid);
     return session ? session->xwayland : nullptr;
 }
 
 /**
- * Get the WSocket for the given uid, optionally creating it if missing
+ * Get the WSocket for the given uid
  * 
  * @param uid User ID to get WSocket for
- * @param createIfMissing Whether to create the session if it does not exist
  * @returns WSocket for the given uid, or nullptr if not found/created
  */
-WSocket *Helper::waylandSocketForUid(uid_t uid, bool createIfMissing)
+WSocket *Helper::waylandSocketForUid(uid_t uid)
 {
-    auto session = createIfMissing ? ensureSession(uid) : sessionForUid(uid);
+    auto session = sessionForUid(uid);
     return session ? session->socket : nullptr;
 }
 
@@ -2407,12 +2408,12 @@ WXWayland *Helper::defaultXWaylandSocket() const
  * 
  * @param username Username to set as active session
  */
-void Helper::updateActiveUserSession(const QString &username)
+void Helper::updateActiveUserSession(const QString &username, int id)
 {
     // Get previous active session
     auto previous = m_activeSession.lock();
     // Get new session for uid, creating if necessary
-    auto session = ensureSession(getpwnam(username.toLocal8Bit().data())->pw_uid);
+    auto session = ensureSession(id, getpwnam(username.toLocal8Bit().data())->pw_uid);
     if (!session) {
         qCWarning(treelandInput) << "Failed to ensure session for user" << username;
         return;

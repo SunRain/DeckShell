@@ -1,4 +1,5 @@
 find_package(Qt6 REQUIRED COMPONENTS WaylandClient Widgets)
+find_package(Qt6 COMPONENTS GuiPrivate WaylandClientPrivate QUIET)
 find_package(DeckCompositorProtocols REQUIRED)
 
 set(BIN_NAME test-virtual-output)
@@ -22,4 +23,3 @@ target_link_libraries(${BIN_NAME}
 )
 
 install(TARGETS ${BIN_NAME} RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}")
-

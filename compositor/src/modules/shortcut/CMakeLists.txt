@@ -1,6 +1,6 @@
 find_package(DeckCompositorProtocols REQUIRED)
 
-ws_generate_local(server ${TREELAND_PROTOCOLS_DATA_DIR}/treeland-shortcut-manager-v1.xml treeland-shortcut-manager-protocol)
+ws_generate_local(server ${TREELAND_PROTOCOLS_DATA_DIR}/treeland-shortcut-manager-v2.xml treeland-shortcut-manager-protocol)
 
 impl_treeland(
     NAME
@@ -10,6 +10,10 @@ impl_treeland(
         ${CMAKE_CURRENT_SOURCE_DIR}/impl/shortcut_manager_impl.h
         ${CMAKE_CURRENT_SOURCE_DIR}/shortcutmanager.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/impl/shortcut_manager_impl.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/shortcutrunner.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/shortcutrunner.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/shortcutcontroller.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/shortcutcontroller.cpp
         ${WAYLAND_PROTOCOLS_OUTPUTDIR}/treeland-shortcut-manager-protocol.c
     LINK
         PkgConfig::WLROOTS

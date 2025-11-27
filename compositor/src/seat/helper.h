@@ -40,6 +40,7 @@ Q_MOC_INCLUDE("modules/capture/capture.h")
 Q_MOC_INCLUDE(<wlayersurface.h>)
 Q_MOC_INCLUDE(<QDBusObjectPath>)
 Q_MOC_INCLUDE("treelandconfig.hpp")
+Q_MOC_INCLUDE("treelandglobalconfig.hpp")
 
 QT_BEGIN_NAMESPACE
 class QQuickItem;
@@ -113,6 +114,7 @@ class UserModel;
 class DDMInterfaceV1;
 #endif
 class TreelandConfig;
+class TreelandGlobalConfig;
 class FpsDisplayManager;
 class ScreensaverInterfaceV1;
 class SettingManager;
@@ -158,6 +160,7 @@ class Helper : public WSeatEventFilter
     Q_PROPERTY(SurfaceWrapper* activatedSurface READ activatedSurface NOTIFY activatedSurfaceChanged FINAL)
     Q_PROPERTY(Workspace* workspace READ workspace CONSTANT FINAL)
     Q_PROPERTY(TreelandConfig* config READ config CONSTANT FINAL)
+    Q_PROPERTY(TreelandGlobalConfig* globalConfig READ globalConfig CONSTANT FINAL)
     Q_PROPERTY(bool blockActivateSurface READ blockActivateSurface WRITE setBlockActivateSurface NOTIFY blockActivateSurfaceChanged FINAL)
     Q_PROPERTY(bool noAnimation READ noAnimation WRITE setNoAnimation NOTIFY noAnimationChanged FINAL)
     QML_ELEMENT
@@ -185,6 +188,7 @@ public:
 
     static Helper *instance();
     TreelandConfig *config();
+    TreelandGlobalConfig *globalConfig();
 
     QmlEngine *qmlEngine() const;
     WOutputRenderWindow *window() const;
@@ -366,7 +370,8 @@ private:
     bool isXWaylandClient(WClient *client);
 
     static Helper *m_instance;
-    TreelandConfig *m_config = nullptr;
+    std::unique_ptr<TreelandConfig> m_config;
+    std::unique_ptr<TreelandGlobalConfig> m_globalConfig;
     Treeland::Treeland *m_treeland = nullptr;
     FpsDisplayManager *m_fpsManager = nullptr;
 

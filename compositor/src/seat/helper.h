@@ -360,6 +360,7 @@ private:
     void moveSurfacesToOutput(const QList<SurfaceWrapper *> &surfaces,
                               Output *targetOutput,
                               Output *sourceOutput);
+    void handleCopyModeOutputDisable(Output *affectedOutput);
     bool isNvidiaCardPresent();
     void setWorkspaceVisible(bool visible);
     void restoreFromShowDesktop(SurfaceWrapper *activeSurface = nullptr);

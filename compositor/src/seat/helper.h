@@ -111,6 +111,8 @@ class LockScreenInterface;
 class ILockScreen;
 #ifndef DISABLE_DDM
 class UserModel;
+class OutputConfigState;
+class OutputLifecycleManager;
 class DDMInterfaceV1;
 #endif
 class TreelandConfig;
@@ -360,6 +362,8 @@ private:
                               Output *targetOutput,
                               Output *sourceOutput);
     void handleCopyModeOutputDisable(Output *affectedOutput);
+    void restoreCopyMode();
+    void applyCopyModeToOutputs(Output *primaryOutput, const QList<SurfaceWrapper *> &surfaces);
     bool isNvidiaCardPresent();
     void setWorkspaceVisible(bool visible);
     void restoreFromShowDesktop(SurfaceWrapper *activeSurface = nullptr);
@@ -428,6 +432,8 @@ private:
 
     // private data
     QList<Output *> m_outputList;
+    OutputConfigState *m_outputConfigState = nullptr;
+    OutputLifecycleManager *m_outputLifecycleManager = nullptr;
     QPointer<QQuickItem> m_taskSwitch;
     QList<qw_idle_inhibitor_v1 *> m_idleInhibitors;
 

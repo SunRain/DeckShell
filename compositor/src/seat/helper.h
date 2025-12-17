@@ -40,7 +40,7 @@ Q_MOC_INCLUDE("modules/capture/capture.h")
 Q_MOC_INCLUDE(<wlayersurface.h>)
 Q_MOC_INCLUDE(<QDBusObjectPath>)
 Q_MOC_INCLUDE("treelandconfig.hpp")
-Q_MOC_INCLUDE("treelandglobalconfig.hpp")
+Q_MOC_INCLUDE("treelanduserconfig.hpp")
 
 QT_BEGIN_NAMESPACE
 class QQuickItem;
@@ -114,7 +114,7 @@ class UserModel;
 class DDMInterfaceV1;
 #endif
 class TreelandConfig;
-class TreelandGlobalConfig;
+class TreelandUserConfig;
 class FpsDisplayManager;
 class ScreensaverInterfaceV1;
 class SettingManager;
@@ -159,8 +159,8 @@ class Helper : public WSeatEventFilter
     Q_PROPERTY(OutputMode outputMode READ outputMode WRITE setOutputMode NOTIFY outputModeChanged FINAL)
     Q_PROPERTY(SurfaceWrapper* activatedSurface READ activatedSurface NOTIFY activatedSurfaceChanged FINAL)
     Q_PROPERTY(Workspace* workspace READ workspace CONSTANT FINAL)
-    Q_PROPERTY(TreelandConfig* config READ config CONSTANT FINAL)
-    Q_PROPERTY(TreelandGlobalConfig* globalConfig READ globalConfig CONSTANT FINAL)
+    Q_PROPERTY(TreelandUserConfig* config READ config CONSTANT FINAL)
+    Q_PROPERTY(TreelandConfig* globalConfig READ globalConfig CONSTANT FINAL)
     Q_PROPERTY(bool blockActivateSurface READ blockActivateSurface WRITE setBlockActivateSurface NOTIFY blockActivateSurfaceChanged FINAL)
     Q_PROPERTY(bool noAnimation READ noAnimation WRITE setNoAnimation NOTIFY noAnimationChanged FINAL)
     QML_ELEMENT
@@ -187,8 +187,8 @@ public:
     Q_ENUM(CurrentMode)
 
     static Helper *instance();
-    TreelandConfig *config();
-    TreelandGlobalConfig *globalConfig();
+    TreelandUserConfig *config();
+    TreelandConfig *globalConfig();
 
     QmlEngine *qmlEngine() const;
     WOutputRenderWindow *window() const;
@@ -370,8 +370,8 @@ private:
     bool isXWaylandClient(WClient *client);
 
     static Helper *m_instance;
-    std::unique_ptr<TreelandConfig> m_config;
-    std::unique_ptr<TreelandGlobalConfig> m_globalConfig;
+    std::unique_ptr<TreelandUserConfig> m_config;
+    std::unique_ptr<TreelandConfig> m_globalConfig;
     Treeland::Treeland *m_treeland = nullptr;
     FpsDisplayManager *m_fpsManager = nullptr;
 

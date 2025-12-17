@@ -1106,7 +1106,7 @@ void Helper::onSurfaceWrapperAboutToRemove(SurfaceWrapper *wrapper)
 bool Helper::surfaceBelongsToCurrentSession(SurfaceWrapper *wrapper)
 {
     if (wrapper->type() == SurfaceWrapper::Type::Undetermined) {
-        // TODO(rewine)： Support splash in multitaskview
+        // TODO(rewine): Support splash in multitaskview.
         return false;
     }
     WClient *client = wrapper->surface()->waylandClient();

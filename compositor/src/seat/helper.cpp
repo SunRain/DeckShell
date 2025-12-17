@@ -212,7 +212,7 @@ Helper::Helper(QObject *parent)
 
     Q_ASSERT(!m_config);
     m_config.reset(TreelandUserConfig::createByName("org.deepin.dde.treeland.user",
-                                              "org.deepin.dde.treeland.user",
+                                              "org.deepin.dde.treeland",
                                               "/dde")); // will update user path in Helper::init
     m_globalConfig.reset(TreelandConfig::create("org.deepin.dde.treeland",
                                                       QString()));
@@ -1239,7 +1239,7 @@ void Helper::init(Treeland::Treeland *treeland)
 #ifndef DISABLE_DDM
     auto updateCurrentUser = [this] {
         m_config.reset(TreelandUserConfig::createByName("org.deepin.dde.treeland.user",
-                                                  "org.deepin.dde.treeland.user",
+                                                  "org.deepin.dde.treeland",
                                                   "/" + m_userModel->currentUserName()));
         auto user = m_userModel->currentUser();
         m_personalization->setUserId(user ? user->UID() : getuid());

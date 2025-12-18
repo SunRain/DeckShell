@@ -1,20 +1,23 @@
 find_package(DeckCompositorProtocols REQUIRED)
 
-ws_generate_local(server ${TREELAND_PROTOCOLS_DATA_DIR}/treeland-shortcut-manager-v2.xml treeland-shortcut-manager-protocol)
+local_qtwayland_server_protocol_treeland(libtreeland
+    PROTOCOL ${TREELAND_PROTOCOLS_DATA_DIR}/treeland-shortcut-manager-v2.xml
+    BASENAME treeland-shortcut-manager-v2
+)
 
 impl_treeland(
     NAME
         module_shortcut
     SOURCE
-        ${CMAKE_CURRENT_SOURCE_DIR}/shortcutmanager.h
-        ${CMAKE_CURRENT_SOURCE_DIR}/impl/shortcut_manager_impl.h
-        ${CMAKE_CURRENT_SOURCE_DIR}/shortcutmanager.cpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/impl/shortcut_manager_impl.cpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/shortcutrunner.h
-        ${CMAKE_CURRENT_SOURCE_DIR}/shortcutrunner.cpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/shortcutcontroller.h
-        ${CMAKE_CURRENT_SOURCE_DIR}/shortcutcontroller.cpp
-        ${WAYLAND_PROTOCOLS_OUTPUTDIR}/treeland-shortcut-manager-protocol.c
+        shortcutmanager.h
+        shortcutmanager.cpp
+        shortcutrunner.h
+        shortcutrunner.cpp
+        shortcutcontroller.h
+        shortcutcontroller.cpp
+    ${CMAKE_BINARY_DIR}/src/modules/shortcut/wayland-treeland-shortcut-manager-v2-server-protocol.c
+    INCLUDE
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>
     LINK
         PkgConfig::WLROOTS
         Waylib::SharedServer

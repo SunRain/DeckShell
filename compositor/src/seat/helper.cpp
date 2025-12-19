@@ -1196,7 +1196,7 @@ void Helper::onSurfaceWrapperAboutToRemove(SurfaceWrapper *wrapper)
 
 bool Helper::surfaceBelongsToCurrentSession(SurfaceWrapper *wrapper)
 {
-    if (wrapper->type() == SurfaceWrapper::Type::Undetermined) {
+    if (wrapper->type() == SurfaceWrapper::Type::SplashScreen) {
         // TODO(rewine): Support splash in multitaskview.
         return false;
     }

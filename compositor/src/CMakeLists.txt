@@ -11,8 +11,8 @@ endif()
 set(BIN_NAME deckcompositor)
 
 find_package(Dtk6 REQUIRED COMPONENTS Core Declarative SystemSettings Tools)
-if (NOT DISABLE_DDM OR EXT_SESSION_LOCK_V1)
-    find_package(DDM 0.2.0  REQUIRED COMPONENTS Auth Common)
+if (NOT DISABLE_DDM)
+    find_package(DDM 0.2.0 REQUIRED COMPONENTS Common)
 endif()
 find_package(QT NAMES Qt6 COMPONENTS Core REQUIRED)
 find_package(Qt6 CONFIG REQUIRED ShaderTools Concurrent)
@@ -335,9 +335,8 @@ target_link_libraries(libdeckcompositor
         PkgConfig::WAYLAND
         PkgConfig::LIBINPUT
         PkgConfig::XCB
-        $<$<OR:$<NOT:$<BOOL:${DISABLE_DDM}>>,$<BOOL:${EXT_SESSION_LOCK_V1}>>:DDM::Auth>
-        $<$<OR:$<NOT:$<BOOL:${DISABLE_DDM}>>,$<BOOL:${EXT_SESSION_LOCK_V1}>>:DDM::Common>
-        $<$<OR:$<NOT:$<BOOL:${DISABLE_DDM}>>,$<BOOL:${EXT_SESSION_LOCK_V1}>>:PkgConfig::PAM>
+        $<$<NOT:$<BOOL:${DISABLE_DDM}>>:DDM::Common>
+        $<$<NOT:$<BOOL:${DISABLE_DDM}>>:PkgConfig::PAM>
 )
 
 add_subdirectory(plugins)

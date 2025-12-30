@@ -671,7 +671,16 @@ void MultitaskviewSurfaceModel::monitorUnreadySurface(SurfaceWrapper *surface)
 
 bool MultitaskviewSurfaceModel::surfaceReady(SurfaceWrapper *surface)
 {
-    return surface->surface()->mapped() && surfaceGeometry(surface).isValid() && !surface->skipMutiTaskView();
+    if (surface->skipMutiTaskView()) {
+        return false;
+    }
+    if (surface->type() != SurfaceWrapper::Type::SplashScreen) {
+        auto surf = surface->surface();
+        if (!surf || !surf->mapped()) {
+            return false;
+        }
+    }
+    return surfaceGeometry(surface).isValid();
 }
 
 QRectF MultitaskviewSurfaceModel::surfaceGeometry(SurfaceWrapper *surface)

@@ -49,6 +49,7 @@
 #include "modules/shortcut/shortcutrunner.h"
 #include "modules/prelaunch-splash/prelaunchsplash.h"
 #include "modules/app-id-resolver/appidresolver.h"
+#include "modules/keystate/keystate.h"
 
 #include <xcb/xcb.h>
 #include <xcb/xproto.h>
@@ -1519,6 +1520,8 @@ void Helper::init(Treeland::Treeland *treeland)
             &ShortcutController::actionFinished,
             shortcutRunner,
             &ShortcutRunner::onActionFinish);
+
+    m_server->attach<KeyStateV5>(m_seat);
 
     m_backend->handle()->start();
 }

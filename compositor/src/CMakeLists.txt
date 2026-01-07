@@ -167,6 +167,8 @@ qt_add_qml_module(libdeckcompositor
         output/outputlifecyclemanager.h
         seat/helper.cpp
         seat/helper.h
+        session/session.cpp
+        session/session.h
         surface/surfacecontainer.cpp
         surface/surfacecontainer.h
         surface/surfacefilterproxymodel.cpp
@@ -319,6 +321,7 @@ target_include_directories(libdeckcompositor
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/interfaces>
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/output>
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/seat>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/session>
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/surface>
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/workspace>
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/utils>

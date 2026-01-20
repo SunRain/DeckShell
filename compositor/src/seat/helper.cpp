@@ -2017,7 +2017,7 @@ void Helper::onSessionNew(const QString &sessionId, const QDBusObjectPath &sessi
     const auto path = sessionPath.path();
     qCDebug(treelandCore) << "Session new, sessionId:" << sessionId << ", sessionPath:" << path;
     QDBusConnection::systemBus().connect("org.freedesktop.login1", path, "org.freedesktop.login1.Session", "Lock", this, SLOT(onSessionLock()));
-    QDBusConnection::systemBus().connect("org.freedesktop.login1", path, "org.freedesktop.login1.Session", "Unlock", this, SLOT(onSessionUnLock()));
+    QDBusConnection::systemBus().connect("org.freedesktop.login1", path, "org.freedesktop.login1.Session", "Unlock", this, SLOT(onSessionUnlock()));
 }
 
 #ifndef DISABLE_DDM
@@ -2325,8 +2325,9 @@ std::shared_ptr<Session> Helper::ensureSession(int id, QString username)
                 if (!session->noTitlebarAtom) {
                     qCWarning(treelandInput) << "Failed to intern atom:" << _DEEPIN_NO_TITLEBAR;
                 }
-                session->settingManager = new SettingManager(session->xwayland->xcbConnection(),
-                                                             session->xwayland);
+                session->settingManager = new SettingManager(session->xwayland->xcbConnection());
+                // TODO: proper destruction of QThread. relying on the QObject tree is crashy.
+                // We are moving session management out of Helper anyways, will fix later.
                 session->settingManagerThread = new QThread(session->xwayland);
 
                 session->settingManager->moveToThread(session->settingManagerThread);

@@ -177,10 +177,14 @@ qt_add_qml_module(libdeckcompositor
         output/outputlifecyclemanager.h
         seat/helper.cpp
         seat/helper.h
+        seat/seatsmanager.cpp
+        seat/seatsmanager.h
         session/session.cpp
         session/session.h
         surface/surfacecontainer.cpp
         surface/surfacecontainer.h
+        surface/seatsurfacemanager.cpp
+        surface/seatsurfacemanager.h
         surface/surfacefilterproxymodel.cpp
         surface/surfacefilterproxymodel.h
         surface/surfaceproxy.cpp

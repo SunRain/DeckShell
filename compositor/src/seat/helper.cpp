@@ -1110,12 +1110,17 @@ void Helper::onSurfaceWrapperAdded(SurfaceWrapper *wrapper)
     if (isXwayland) {
         auto xwaylandSurface = qobject_cast<WXWaylandSurface *>(wrapper->shellSurface());
         auto updateDecorationTitleBar = [this, wrapper, xwaylandSurface]() {
-            WClient *client = wrapper->surface() ? wrapper->surface()->waylandClient() : nullptr;
-            WSocket *socket = client ? client->socket()->rootSocket() : nullptr;
-            auto session = sessionForSocket(socket);
-            WXWayland *xwayland = session ? session->xwayland : nullptr;
+            auto *xwayland = xwaylandSurface->xwayland();
             xcb_connection_t *connection = xwayland ? xwayland->xcbConnection() : nullptr;
-            xcb_atom_t atom = session ? session->noTitlebarAtom : XCB_ATOM_NONE;
+            xcb_atom_t atom;
+            if (xwayland) {
+                if (auto session = sessionForXWayland(xwayland))
+                    atom = session->noTitlebarAtom;
+                else
+                    atom = XCB_ATOM_NONE;
+            } else {
+                atom = XCB_ATOM_NONE;
+            }
             if (!xwaylandSurface->isBypassManager()) {
                 if (atom && connection
                     && !readWindowProperty(connection,

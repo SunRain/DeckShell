@@ -322,7 +322,7 @@ target_link_libraries(libdeckcompositor
         Dtk6::Core
         Dtk6::Declarative
         Dtk6::SystemSettings
-        Waylib::SharedServer
+        WaylibShared::SharedServer
     PRIVATE
         Qt6::Quick
         Qt6::QuickControls2

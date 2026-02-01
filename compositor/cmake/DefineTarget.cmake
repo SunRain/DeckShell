@@ -40,7 +40,7 @@ function(impl_treeland)
             Dtk6::Core
             Dtk6::Declarative
             Dtk6::SystemSettings
-            Waylib::SharedServer
+            WaylibShared::SharedServer
             Qt6::Quick
             Qt6::QuickControls2
             Qt6::QuickPrivate
@@ -57,4 +57,3 @@ function(impl_treeland)
             ${PARSE_ARG_PREFIX_NAME}
     )
 endfunction()
-

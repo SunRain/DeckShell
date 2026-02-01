@@ -13,7 +13,7 @@ impl_treeland(
         ${WAYLAND_PROTOCOLS_OUTPUTDIR}/treeland-wallpaper-color-protocol.c
     LINK
         PkgConfig::WLROOTS
-        Waylib::SharedServer
+        WaylibShared::SharedServer
         Qt6::Core
         Qt6::Gui
         Qt6::Quick

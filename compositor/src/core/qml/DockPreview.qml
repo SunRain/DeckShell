@@ -6,7 +6,7 @@ import QtQuick.Controls
 import QtQuick.Layouts
 import QtQuick.Effects
 
-import Waylib.QuickSharedServer
+import WaylibShared.QuickSharedServer
 import DeckShell.Compositor
 import DeckShell.Compositor.Protocols
 import org.deepin.dtk 1.0 as D

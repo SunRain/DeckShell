@@ -4,7 +4,7 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Shapes
-import Waylib.QuickSharedServer
+import WaylibShared.QuickSharedServer
 import DeckShell.Compositor.Capture
 import DeckShell.Compositor
 import org.deepin.dtk as D

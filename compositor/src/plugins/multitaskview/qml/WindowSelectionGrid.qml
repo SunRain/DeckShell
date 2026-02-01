@@ -4,7 +4,7 @@
 import QtQuick
 import DeckShell.Compositor
 import MultitaskView
-import Waylib.QuickSharedServer
+import WaylibShared.QuickSharedServer
 import QtQuick.Effects
 import QtQuick.Controls
 import org.deepin.dtk as D

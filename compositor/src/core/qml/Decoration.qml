@@ -3,7 +3,7 @@
 
 import QtQuick
 import QtQuick.Effects
-import Waylib.QuickSharedServer
+import WaylibShared.QuickSharedServer
 import DeckShell.Compositor
 
 Item {

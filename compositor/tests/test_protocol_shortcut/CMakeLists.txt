@@ -13,7 +13,7 @@ target_link_libraries(test_protocol_shortcut
         Qt::Test
         Qt::Gui
         Qt::Qml
-        Waylib::SharedServer
+        WaylibShared::SharedServer
 )
 
 add_test(NAME test_protocol_shortcut COMMAND test_protocol_shortcut)

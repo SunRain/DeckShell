@@ -20,7 +20,7 @@ impl_treeland(
         $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>
     LINK
         PkgConfig::WLROOTS
-        Waylib::SharedServer
+        WaylibShared::SharedServer
         Qt6::Core
         Qt6::Gui
         Qt6::Quick

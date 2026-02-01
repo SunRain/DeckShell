@@ -724,9 +724,16 @@ void Helper::onOutputTestOrApply(qw_output_configuration_v1 *config, bool onlyTe
             }
         }
 
-        const bool wasEnabled = state.output->isEnabled();
-        qw_output_state newState;
-        newState.set_enabled(state.enabled);
+        auto outputHelper = renderWindow->getOutputHelper(viewport);
+        if (!outputHelper) {
+            qCWarning(treelandCore) << "No output helper for viewport" << viewport;
+            m_outputManager->sendResult(config, false);
+            m_pendingOutputConfig = {};
+            return;
+        }
+
+        WOutputHelper::ExtraState extraState;
+        wlr_output_state_set_enabled(extraState.get(), state.enabled);
 
         // Only set mode/scale/transform properties when enabling output
         // Reason: wlroots doesn't allow setting these properties on disabled outputs
@@ -734,34 +741,70 @@ void Helper::onOutputTestOrApply(qw_output_configuration_v1 *config, bool onlyTe
         //   1. Properties are saved in QSettings (see onOutputCommitFinished)
         //   2. When re-enabling, properties are loaded from QSettings and applied here
         if (state.enabled) {
-            if (state.mode)
-                newState.set_mode(state.mode);
-            else
-                newState.set_custom_mode(state.customModeSize.width(),
-                                         state.customModeSize.height(),
-                                         state.customModeRefresh);
+            if (state.mode) {
+                wlr_output_state_set_mode(extraState.get(), state.mode);
+            } else {
+                wlr_output_state_set_custom_mode(extraState.get(),
+                                                 state.customModeSize.width(),
+                                                 state.customModeSize.height(),
+                                                 state.customModeRefresh);
+            }
 
-            newState.set_scale(state.scale);
-            newState.set_transform(static_cast<wl_output_transform>(state.transform));
-            newState.set_adaptive_sync_enabled(state.adaptiveSyncEnabled);
+            wlr_output_state_set_scale(extraState.get(), state.scale);
+            wlr_output_state_set_transform(extraState.get(),
+                                          static_cast<wl_output_transform>(state.transform));
+            wlr_output_state_set_adaptive_sync_enabled(extraState.get(), state.adaptiveSyncEnabled);
 
             if (auto outputItem = qobject_cast<WOutputItem*>(viewport->parentItem())) {
-                QMetaObject::invokeMethod(outputItem,
-                                          "setTransform",
-                                          Q_ARG(QVariant,
-                                                QVariant::fromValue(static_cast<WOutput::Transform>(state.transform))));
+                QMetaObject::invokeMethod(outputItem, "setTransform",
+                    Q_ARG(QVariant, QVariant::fromValue(static_cast<WOutput::Transform>(state.transform))));
             }
         }
 
-        bool success = state.output->handle()->commit_state(newState);
+        if (!outputHelper->setExtraState(extraState)) {
+            qCWarning(treelandCore) << "Failed to set extra state for output" << state.output->name();
+            m_outputManager->sendResult(config, false);
+            m_pendingOutputConfig = {};
+            return;
+        }
+
+        auto pendingConfig = m_pendingOutputConfig.config;
+        QPointer<Helper> self(this);
+        outputHelper->scheduleCommitJob(
+            [self, pendingConfig, extraState, renderWindow, viewport](bool success, WOutputHelper::ExtraState committedState) {
+                if (!self) {
+                    return;
+                }
+
+                if (committedState == extraState) {
+                    self->onOutputCommitFinished(pendingConfig, success);
+                    if (success && committedState) {
+                        bool wasStateOnlyCommit = (committedState->committed & (WLR_OUTPUT_STATE_MODE |
+                                                                                WLR_OUTPUT_STATE_SCALE |
+                                                                                WLR_OUTPUT_STATE_TRANSFORM |
+                                                                                WLR_OUTPUT_STATE_ENABLED)) &&
+                                                  !(committedState->committed & WLR_OUTPUT_STATE_BUFFER);
+                        bool isDisable = (committedState->committed & WLR_OUTPUT_STATE_ENABLED) && !committedState->enabled;
+                        if (wasStateOnlyCommit && !isDisable) {
+                            renderWindow->update(viewport);
+                        }
+                    }
+                } else {
+                    qCWarning(treelandCore) << "Commit callback received unexpected state pointer!"
+                                            << "Expected:" << extraState.get()
+                                            << "Got:" << committedState.get();
+                    self->onOutputCommitFinished(pendingConfig, false);
+                }
+            },
+            WOutputHelper::AfterCommitStage
+        );
         m_pendingOutputConfig.pendingCommits++;
-        onOutputCommitFinished(config, success);
         renderWindow->update(viewport);
 
         // Special handling for disabled → enabled transition
         // wlroots doesn't send frame events for disabled outputs,
         // so we need to force render to trigger the commit
-        if (state.enabled && !wasEnabled) {
+        if (state.enabled && !state.output->isEnabled()) {
             renderWindow->render(viewport, true);
         }
     }

@@ -33,9 +33,6 @@
 #include <qwcompositor.h>
 #include <qwxwaylandsurface.h>
 
-#include <wayland-server-core.h>
-#include <wsocket.h>
-
 #include <QPointer>
 #include <QTimer>
 
@@ -46,32 +43,6 @@ QW_USE_NAMESPACE
 WAYLIB_SERVER_USE_NAMESPACE
 
 #define TREELAND_XDG_SHELL_VERSION 5
-
-namespace {
-int pidfdForSurface(WSurface *surface)
-{
-    if (!surface)
-        return -1;
-
-    auto qwSurface = surface->handle();
-    if (!qwSurface)
-        return -1;
-
-    auto wlrSurface = qwSurface->handle();
-    if (!wlrSurface || !wlrSurface->resource)
-        return -1;
-
-    wl_client *client = wl_resource_get_client(wlrSurface->resource);
-    if (!client)
-        return -1;
-
-    auto wclient = WClient::get(client);
-    if (!wclient)
-        return -1;
-
-    return wclient->pidFD();
-}
-}
 
 ShellHandler::ShellHandler(RootSurfaceContainer *rootContainer)
     : m_rootSurfaceContainer(rootContainer)
@@ -265,7 +236,7 @@ void ShellHandler::onXdgToplevelSurfaceAdded(WXdgToplevelSurface *surface)
     // If there are prelaunch wrappers and the resolver is available -> attempt async resolve;
     // remaining logic continues in the callback on success
     if (!m_prelaunchWrappers.isEmpty() && m_appIdResolverManager) {
-        int pidfd = pidfdForSurface(surface->surface());
+        int pidfd = surface->pidFD();
         if (pidfd >= 0) {
             // Register pending before starting async resolve (unified list)
             m_pendingAppIdResolveToplevels.append(surface);
@@ -445,7 +416,7 @@ void ShellHandler::onXWaylandSurfaceAdded(WXWaylandSurface *surface)
             return; // surface destroyed before callback
         // If prelaunch wrappers exist and resolver is available, attempt async resolve; if started, remaining logic handled in callback, then return
         if (!m_prelaunchWrappers.isEmpty() && m_appIdResolverManager) {
-            int pidfd = pidfdForSurface(raw->surface());
+            int pidfd = raw->pidFD();
             if (pidfd >= 0) {
                 m_pendingAppIdResolveToplevels.append(raw);
                 bool started = m_appIdResolverManager->resolvePidfd(

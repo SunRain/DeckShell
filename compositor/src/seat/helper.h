@@ -111,10 +111,10 @@ class LockScreenInterface;
 class ILockScreen;
 #ifndef DISABLE_DDM
 class UserModel;
-class OutputConfigState;
-class OutputLifecycleManager;
 class DDMInterfaceV1;
 #endif
+class OutputConfigState;
+class OutputLifecycleManager;
 class TreelandConfig;
 class TreelandUserConfig;
 class FpsDisplayManager;

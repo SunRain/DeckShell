@@ -1,6 +1,6 @@
 find_package(Qt6 REQUIRED COMPONENTS WaylandClient Widgets DBus)
 find_package(Qt6 COMPONENTS WaylandClientPrivate QUIET)
-find_package(DeckCompositorProtocols REQUIRED)
+find_package(TreelandProtocols REQUIRED)
 find_package(PkgConfig REQUIRED)
 pkg_search_module(WAYLAND_CLIENT REQUIRED IMPORTED_TARGET wayland-client)
 pkg_get_variable(WAYLAND_PROTOCOLS wayland-protocols pkgdatadir)
@@ -18,7 +18,6 @@ qt_generate_wayland_protocol_client_sources(treeland-shortcut
 
 target_link_libraries(treeland-shortcut
     PRIVATE
-        Waylib::SharedServer
         Qt6::Widgets
         Qt6::DBus
         Qt6::WaylandClient

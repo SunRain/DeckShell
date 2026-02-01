@@ -30,8 +30,8 @@
 #include <DisplayManagerSession.h>
 #include <Login1Manager.h>
 #include <Login1Session.h>
-#include <Messages.h>
-#include <SocketWriter.h>
+#include <ddm/common/Messages.h>
+#include <ddm/common/SocketWriter.h>
 #include <security/pam_appl.h>
 #include <pwd.h>
 

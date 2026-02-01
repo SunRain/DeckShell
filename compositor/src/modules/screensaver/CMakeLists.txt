@@ -6,8 +6,8 @@ impl_treeland(
     NAME
         module_screensaver
     SOURCE
-        ${CMAKE_SOURCE_DIR}/src/modules/screensaver/screensaverinterfacev1.h
-        ${CMAKE_SOURCE_DIR}/src/modules/screensaver/screensaverinterfacev1.cpp
+        screensaverinterfacev1.h
+        screensaverinterfacev1.cpp
         ${WAYLAND_PROTOCOLS_OUTPUTDIR}/treeland-screensaver-v1-protocol.c
     INCLUDE
         $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>

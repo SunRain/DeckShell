@@ -109,9 +109,10 @@ find_package(Qt6 CONFIG REQUIRED
 
 pkg_check_modules(WLROOTS REQUIRED IMPORTED_TARGET wlroots-0.19)
 
-# Find Waylib
-# Waylib is built as a submodule, so we don't need to find it
-find_package(Waylib REQUIRED COMPONENTS SharedServer)
+# Find Waylib (allow using submodule build if provided by parent project)
+if (NOT TARGET Waylib::SharedServer)
+    find_package(Waylib REQUIRED COMPONENTS SharedServer)
+endif()
 
 qt_standard_project_setup(REQUIRES 6.8)
 

@@ -11,7 +11,7 @@ endif()
 set(BIN_NAME deckcompositor)
 
 find_package(Dtk6 REQUIRED COMPONENTS Core Declarative SystemSettings Tools)
-if (NOT DISABLE_DDM)
+if (NOT DISABLE_DDM OR EXT_SESSION_LOCK_V1)
     find_package(DDM 0.2.0 REQUIRED COMPONENTS Common)
 endif()
 find_package(QT NAMES Qt6 COMPONENTS Core REQUIRED)
@@ -122,8 +122,6 @@ qt_add_qml_module(libdeckcompositor
         core/windowpicker.cpp
         core/windowpicker.h
         core/windowsizestore.h
-        config/treelandconfig.cpp
-        config/treelandconfig.hpp
         effects/tquickradiuseffect.cpp
         effects/tquickradiuseffect.h
         effects/tquickradiuseffect_p.h
@@ -335,8 +333,8 @@ target_link_libraries(libdeckcompositor
         PkgConfig::WAYLAND
         PkgConfig::LIBINPUT
         PkgConfig::XCB
-        $<$<NOT:$<BOOL:${DISABLE_DDM}>>:DDM::Common>
-        $<$<NOT:$<BOOL:${DISABLE_DDM}>>:PkgConfig::PAM>
+        $<$<OR:$<NOT:$<BOOL:${DISABLE_DDM}>>,$<BOOL:${EXT_SESSION_LOCK_V1}>>:DDM::Common>
+        $<$<OR:$<NOT:$<BOOL:${DISABLE_DDM}>>,$<BOOL:${EXT_SESSION_LOCK_V1}>>:PkgConfig::PAM>
 )
 
 add_subdirectory(plugins)

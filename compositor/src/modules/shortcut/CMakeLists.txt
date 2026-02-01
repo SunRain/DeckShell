@@ -1,6 +1,6 @@
-find_package(DeckCompositorProtocols REQUIRED)
+find_package(TreelandProtocols REQUIRED)
 
-local_qtwayland_server_protocol_treeland(libtreeland
+local_qtwayland_server_protocol_treeland(libdeckcompositor
     PROTOCOL ${TREELAND_PROTOCOLS_DATA_DIR}/treeland-shortcut-manager-v2.xml
     BASENAME treeland-shortcut-manager-v2
 )
@@ -15,7 +15,7 @@ impl_treeland(
         shortcutrunner.cpp
         shortcutcontroller.h
         shortcutcontroller.cpp
-    ${CMAKE_BINARY_DIR}/src/modules/shortcut/wayland-treeland-shortcut-manager-v2-server-protocol.c
+    ${CMAKE_CURRENT_BINARY_DIR}/wayland-treeland-shortcut-manager-v2-server-protocol.c
     INCLUDE
         $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>
     LINK

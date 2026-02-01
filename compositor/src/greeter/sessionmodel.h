@@ -21,7 +21,7 @@
 #ifndef SDDM_SESSIONMODEL_H
 #define SDDM_SESSIONMODEL_H
 
-#include <Session.h>
+#include <ddm/common/Session.h>
 
 #include <QAbstractListModel>
 #include <QHash>

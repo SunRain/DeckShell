@@ -21,7 +21,7 @@
 
 #include "common/treelandlogging.h"
 
-#include <Configuration.h>
+#include <ddm/common/Configuration.h>
 
 #include <DDBusInterface>
 

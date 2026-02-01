@@ -26,6 +26,7 @@
 #include <wxdgpopupsurfaceitem.h>
 
 #include <qwlayershellv1.h>
+#include <qwoutput.h>
 #include <qwoutputlayout.h>
 
 #include <QQmlEngine>
@@ -995,33 +996,30 @@ void Output::setOutputColor(qreal brightness,
                      g,
                      b);
 
-    WOutputHelper::ExtraState newState;
-    auto *viewport = screenViewport();
-    auto *renderWindow = screenViewport()->outputRenderWindow();
-    wlr_output_state_set_gamma_lut(newState.get(), gammaSize,
-                                   r.constData(),
-                                   g.constData(),
-                                   b.constData());
+    qw_output_state newState;
+    if (!newState.set_gamma_lut(gammaSize, r.constData(), g.constData(), b.constData())) {
+        if (resultCallback)
+            resultCallback(false);
+        qCWarning(treelandOutput) << "Failed to build gamma LUT state for output" << output()->name();
+        return;
+    }
 
-    auto *outputHelper = renderWindow->getOutputHelper(viewport);
-    outputHelper->setExtraState(newState);
+    bool success = output()->handle()->commit_state(newState);
+    if (resultCallback)
+        resultCallback(success);
 
-    outputHelper->scheduleCommitJob([this, brightness, colorTemperature, newState, resultCallback](bool success, WOutputHelper::ExtraState state) {
-        if (state == newState) {
-            if (resultCallback)
-                resultCallback(success);
-            if (!success) {
-                qCWarning(treelandOutput) << "Failed to apply brightness and color temperature settings to output"
-                                          << output()->name();
-            } else {
-                config()->setBrightness(brightness);
-                config()->setColorTemperature(colorTemperature);
-            }
-        } else {
-            qCWarning(treelandOutput) << "Commit callback received unexpected state pointer!"
-                                      << "Expected:" << newState.get()
-                                      << "Got:" << state.get();
+    if (!success) {
+        qCWarning(treelandOutput) << "Failed to apply brightness and color temperature settings to output"
+                                  << output()->name();
+        return;
+    }
+
+    config()->setBrightness(brightness);
+    config()->setColorTemperature(colorTemperature);
+
+    if (auto *viewport = screenViewport()) {
+        if (auto *renderWindow = viewport->outputRenderWindow()) {
+            renderWindow->update(viewport);
         }
-    }, WOutputHelper::AfterCommitStage);
-    renderWindow->update(viewport);
+    }
 }

@@ -20,7 +20,7 @@
 
 #include "sessionmodel.h"
 
-#include <Configuration.h>
+#include <ddm/common/Configuration.h>
 
 #include <QFileInfo>
 #include <QFileSystemWatcher>

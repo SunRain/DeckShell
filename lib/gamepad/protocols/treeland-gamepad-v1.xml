@@ -1,0 +1,279 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<protocol name="treeland_gamepad_v1">
+    <copyright><![CDATA[
+    SPDX-FileCopyrightText: 2025 UnionTech Software Technology Co., Ltd.
+    SPDX-License-Identifier: MIT
+    ]]></copyright>
+
+    <interface name="treeland_gamepad_manager_v1" version="2">
+        <description summary="gamepad input protocol manager">
+            This interface provides access to gamepad (game controller) input
+            devices connected to the compositor. It allows clients to receive
+            button, axis, and hat events from gamepads, as well as control
+            vibration feedback.
+
+            Gamepads are identified by device IDs assigned by the compositor.
+            Multiple gamepads can be connected simultaneously.
+
+            Warning! The protocol described in this file is currently in the testing
+            phase. Backward compatible changes may be added together with the
+            corresponding interface version bump. Backward incompatible changes can
+            only be done by creating a new major version of the extension.
+        </description>
+
+        <enum name="capability" bitfield="true" since="2">
+            <description summary="authorized capabilities">
+                Capability flags granted to a client after calling authorize(token).
+            </description>
+            <entry name="listen_background" value="0x1" summary="receive input events even when unfocused"/>
+            <entry name="vibrate_background" value="0x2" summary="request vibration even when unfocused"/>
+            <entry name="write_deadzone" value="0x4" summary="modify global deadzone (affects all clients)"/>
+        </enum>
+
+        <enum name="authorize_error" since="2">
+            <description summary="authorization failure reason"/>
+            <entry name="invalid_token" value="1" summary="token is unknown"/>
+            <entry name="expired_token" value="2" summary="token has expired"/>
+            <entry name="credential_mismatch" value="3" summary="token does not match this client credentials"/>
+        </enum>
+
+        <request name="get_gamepad">
+            <description summary="get gamepad input for a device">
+                Create a gamepad input object for a specific gamepad device.
+                The client must use the device_id received from the gamepad_added event.
+
+                Only focused clients will receive input events from the gamepad.
+            </description>
+            <arg name="id" type="new_id" interface="treeland_gamepad_v1"/>
+            <arg name="device_id" type="int" summary="gamepad device ID"/>
+        </request>
+
+        <event name="gamepad_added">
+            <description summary="new gamepad connected">
+                This event is sent when a new gamepad device is connected to the system.
+                The device_id is a unique identifier for this gamepad that should be used
+                in subsequent get_gamepad requests.
+
+                The name is a human-readable description of the device (e.g., "Xbox Wireless Controller").
+            </description>
+            <arg name="device_id" type="int" summary="unique device identifier"/>
+            <arg name="name" type="string" summary="human-readable device name"/>
+        </event>
+
+        <event name="gamepad_removed">
+            <description summary="gamepad disconnected">
+                This event is sent when a gamepad device is disconnected from the system.
+                Any treeland_gamepad_v1 objects associated with this device become invalid
+                and should be destroyed by the client.
+            </description>
+            <arg name="device_id" type="int" summary="device identifier"/>
+        </event>
+
+        <request name="destroy" type="destructor">
+            <description summary="destroy the gamepad manager">
+                Destroys the treeland_gamepad_manager_v1 object.
+
+                This does not affect any treeland_gamepad_v1 objects created from this manager.
+            </description>
+        </request>
+
+        <request name="authorize" since="2">
+            <description summary="authorize privileged capabilities for this client">
+                Submit a short-lived authorization token obtained from the compositor (e.g. via system D-Bus + polkit).
+
+                On success, the compositor grants one or more capabilities for the lifetime of this Wayland connection.
+            </description>
+            <arg name="token" type="string" summary="authorization token"/>
+        </request>
+
+        <event name="authorized" since="2">
+            <description summary="authorization granted">
+                Sent after authorize(token) succeeds.
+            </description>
+            <arg name="capabilities" type="uint" enum="treeland_gamepad_manager_v1.capability"/>
+        </event>
+
+        <event name="authorization_failed" since="2">
+            <description summary="authorization failed">
+                Sent after authorize(token) fails.
+            </description>
+            <arg name="error" type="uint" enum="treeland_gamepad_manager_v1.authorize_error"/>
+        </event>
+    </interface>
+
+    <interface name="treeland_gamepad_v1" version="2">
+        <description summary="gamepad input device">
+            A treeland_gamepad_v1 object represents a single gamepad device.
+            It provides events for button presses, analog stick movements, and D-pad input.
+
+            The client can also request vibration feedback through this interface.
+
+            Standard button mappings follow Xbox/SDL2 conventions:
+            - Button A (South): 0
+            - Button B (East): 1
+            - Button X (West): 2
+            - Button Y (North): 3
+            - Left Bumper (LB/L1): 4
+            - Right Bumper (RB/R1): 5
+            - Left Trigger (LT/L2): 6
+            - Right Trigger (RT/R2): 7
+            - Select/Back: 8
+            - Start: 9
+            - Left Stick Click (L3): 10
+            - Right Stick Click (R3): 11
+            - Guide/Home: 12
+            - D-Pad Up: 13
+            - D-Pad Down: 14
+            - D-Pad Left: 15
+            - D-Pad Right: 16
+
+            Axis mappings:
+            - Left Stick X: 0
+            - Left Stick Y: 1
+            - Right Stick X: 2
+            - Right Stick Y: 3
+            - Left Trigger: 4
+            - Right Trigger: 5
+        </description>
+
+        <event name="button">
+            <description summary="gamepad button event">
+                Notification of a button press or release event.
+
+                The time argument is a timestamp with millisecond granularity, with an
+                undefined base.
+
+                The button argument is a button code as defined above.
+
+                The state argument indicates whether the button was pressed (1) or released (0).
+            </description>
+            <arg name="time" type="uint" summary="timestamp with millisecond granularity"/>
+            <arg name="button" type="uint" summary="button that produced the event"/>
+            <arg name="state" type="uint" summary="physical state of the button (0=released, 1=pressed)"/>
+        </event>
+
+        <event name="axis">
+            <description summary="gamepad axis motion">
+                Notification of an analog axis movement (e.g., thumbstick or trigger).
+
+                The time argument is a timestamp with millisecond granularity, with an
+                undefined base.
+
+                The axis argument identifies which axis changed (see axis mappings above).
+
+                The value is a fixed-point number in the range [-1.0, 1.0], where:
+                - For sticks: -1.0 is fully left/up, 1.0 is fully right/down, 0.0 is center
+                - For triggers: value range may be [0.0, 1.0] depending on the device
+
+                The compositor applies deadzone filtering before sending this event.
+            </description>
+            <arg name="time" type="uint" summary="timestamp with millisecond granularity"/>
+            <arg name="axis" type="uint" summary="axis that produced the event"/>
+            <arg name="value" type="fixed" summary="normalized axis value [-1.0, 1.0]"/>
+        </event>
+
+        <event name="hat">
+            <description summary="gamepad hat/D-pad event">
+                Notification of a directional pad (hat) state change.
+
+                The time argument is a timestamp with millisecond granularity, with an
+                undefined base.
+
+                The hat argument identifies which hat changed (usually 0 for the main D-pad).
+
+                The value is a bitmask indicating the current direction(s):
+                - 0x00: Center (no direction)
+                - 0x01: Up
+                - 0x02: Right
+                - 0x04: Down
+                - 0x08: Left
+
+                Diagonal directions are combinations (e.g., Up+Right = 0x03).
+            </description>
+            <arg name="time" type="uint" summary="timestamp with millisecond granularity"/>
+            <arg name="hat" type="uint" summary="hat index"/>
+            <arg name="value" type="int" summary="direction bitmask"/>
+        </event>
+
+        <request name="set_vibration">
+            <description summary="start vibration feedback">
+                Request the gamepad to vibrate with specified intensities.
+
+                The weak_magnitude and strong_magnitude arguments control the intensity
+                of the two vibration motors (if available). Values are in the range [0.0, 1.0],
+                where 0.0 is off and 1.0 is maximum intensity.
+
+                The duration_ms argument specifies how long the vibration should last in
+                milliseconds. A value of 0 means vibrate indefinitely until stopped.
+
+                Not all gamepads support vibration. The compositor will silently ignore
+                this request if the device doesn't support it.
+
+                If vibration is already active, this request will override the previous
+                vibration parameters.
+            </description>
+            <arg name="weak_magnitude" type="fixed" summary="weak motor intensity [0.0, 1.0]"/>
+            <arg name="strong_magnitude" type="fixed" summary="strong motor intensity [0.0, 1.0]"/>
+            <arg name="duration_ms" type="int" summary="duration in milliseconds (0 = indefinite)"/>
+        </request>
+
+        <request name="stop_vibration">
+            <description summary="stop vibration feedback">
+                Stop any active vibration on the gamepad immediately.
+
+                This request has no effect if the gamepad is not currently vibrating.
+            </description>
+        </request>
+
+        <request name="release" type="destructor">
+            <description summary="release the gamepad object">
+                Destroys the treeland_gamepad_v1 object and releases the associated resources.
+
+                The client should call this when it no longer needs input from this gamepad,
+                or after receiving a gamepad_removed event for this device.
+
+                Any active vibration will be stopped automatically.
+            </description>
+        </request>
+
+        <enum name="deadzone_error" since="2">
+            <description summary="deadzone request failure reason"/>
+            <entry name="denied" value="1" summary="client is not authorized to modify deadzone"/>
+        </enum>
+
+        <event name="device_info" since="2">
+            <description summary="device information">
+                Provides stable identifiers for this device.
+
+                The guid is an SDL2-style GUID string.
+            </description>
+            <arg name="guid" type="string" summary="device GUID (SDL2 format)"/>
+        </event>
+
+        <request name="set_axis_deadzone" since="2">
+            <description summary="set compositor deadzone for this device">
+                Set axis deadzone for this device in the compositor.
+
+                This affects all clients (global input semantics) and therefore requires authorization.
+            </description>
+            <arg name="axis" type="uint" summary="axis index"/>
+            <arg name="deadzone" type="fixed" summary="deadzone value [0.0, 1.0]"/>
+        </request>
+
+        <event name="axis_deadzone_applied" since="2">
+            <description summary="deadzone applied">
+                Sent after set_axis_deadzone succeeds.
+            </description>
+            <arg name="axis" type="uint" summary="axis index"/>
+            <arg name="deadzone" type="fixed" summary="deadzone value [0.0, 1.0]"/>
+        </event>
+
+        <event name="axis_deadzone_failed" since="2">
+            <description summary="deadzone request failed">
+                Sent after set_axis_deadzone fails.
+            </description>
+            <arg name="axis" type="uint" summary="axis index"/>
+            <arg name="error" type="uint" enum="treeland_gamepad_v1.deadzone_error"/>
+        </event>
+    </interface>
+</protocol>

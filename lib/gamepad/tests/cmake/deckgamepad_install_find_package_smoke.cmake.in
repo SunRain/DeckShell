@@ -1,0 +1,183 @@
+set(source_root "@CMAKE_SOURCE_DIR@")
+set(build_root "@CMAKE_BINARY_DIR@")
+set(generator "@CMAKE_GENERATOR@")
+set(qml_install_dir_rel "@CMAKE_INSTALL_QMLDIR@")
+set(enable_qml "@DECKGAMEPAD_BUILD_QML_MODULE@")
+
+set(gamepad_source_dir "${source_root}")
+set(consumer_source_dir "")
+if(EXISTS "${source_root}/tests/smoke/gamepad_consumer/CMakeLists.txt")
+    set(consumer_source_dir "${source_root}/tests/smoke/gamepad_consumer")
+elseif(EXISTS "${source_root}/compositor/tests/smoke/gamepad_consumer/CMakeLists.txt")
+    set(consumer_source_dir "${source_root}/compositor/tests/smoke/gamepad_consumer")
+else()
+    message(FATAL_ERROR "[smoke] consumer project not found under: ${source_root}")
+endif()
+
+set(qml_consumer_source_dir "")
+if(EXISTS "${source_root}/tests/smoke/gamepad_qml_consumer/CMakeLists.txt")
+    set(qml_consumer_source_dir "${source_root}/tests/smoke/gamepad_qml_consumer")
+elseif(EXISTS "${source_root}/compositor/tests/smoke/gamepad_qml_consumer/CMakeLists.txt")
+    set(qml_consumer_source_dir "${source_root}/compositor/tests/smoke/gamepad_qml_consumer")
+endif()
+
+set(smoke_root "${build_root}/_smoke_deckgamepad")
+set(gamepad_build_dir "${smoke_root}/gamepad-build")
+set(gamepad_install_dir "${smoke_root}/gamepad-install")
+set(consumer_build_dir "${smoke_root}/consumer-build")
+set(gamepad_qml_build_dir "${smoke_root}/gamepad-qml-build")
+set(gamepad_qml_install_dir "${smoke_root}/gamepad-qml-install")
+set(qml_consumer_build_dir "${smoke_root}/qml-consumer-build")
+
+file(MAKE_DIRECTORY "${smoke_root}")
+
+message(STATUS "[smoke] configuring DeckShellGamepad (treeland OFF)")
+execute_process(
+    COMMAND "@CMAKE_COMMAND@" -S "${gamepad_source_dir}" -B "${gamepad_build_dir}" -G "${generator}"
+        -DBUILD_TESTING=OFF
+        -DDECKSHELL_BUILD_COMPOSITOR=OFF
+        -DDECKGAMEPAD_BUILD_TREELAND_CLIENT=OFF
+        -DDECKGAMEPAD_BUILD_QML_MODULE=OFF
+        -DBUILD_GAMEPAD_EXAMPLES=OFF
+        -DBUILD_SHARED_LIBS=OFF
+        -DCMAKE_INSTALL_PREFIX=${gamepad_install_dir}
+    RESULT_VARIABLE rv
+)
+if(NOT rv EQUAL 0)
+    message(FATAL_ERROR "[smoke] configure failed: ${rv}")
+endif()
+
+message(STATUS "[smoke] building+installing DeckShellGamepad")
+execute_process(
+    COMMAND "@CMAKE_COMMAND@" --build "${gamepad_build_dir}" --target install
+    RESULT_VARIABLE rv
+)
+if(NOT rv EQUAL 0)
+    message(FATAL_ERROR "[smoke] build/install failed: ${rv}")
+endif()
+
+message(STATUS "[smoke] configuring consumer project")
+execute_process(
+    COMMAND "@CMAKE_COMMAND@" -S "${consumer_source_dir}" -B "${consumer_build_dir}" -G "${generator}"
+        -DCMAKE_PREFIX_PATH=${gamepad_install_dir}
+    RESULT_VARIABLE rv
+)
+if(NOT rv EQUAL 0)
+    message(FATAL_ERROR "[smoke] consumer configure failed: ${rv}")
+endif()
+
+message(STATUS "[smoke] building consumer project")
+execute_process(
+    COMMAND "@CMAKE_COMMAND@" --build "${consumer_build_dir}"
+    RESULT_VARIABLE rv
+)
+if(NOT rv EQUAL 0)
+    message(FATAL_ERROR "[smoke] consumer build failed: ${rv}")
+endif()
+
+file(GLOB exe_candidates
+    "${consumer_build_dir}/gamepad_consumer"
+    "${consumer_build_dir}/*/gamepad_consumer"
+)
+
+list(LENGTH exe_candidates exe_count)
+if(exe_count EQUAL 0)
+    message(FATAL_ERROR "[smoke] consumer executable not found under: ${consumer_build_dir}")
+endif()
+
+list(GET exe_candidates 0 consumer_exe)
+message(STATUS "[smoke] running consumer executable: ${consumer_exe}")
+execute_process(
+    COMMAND "${consumer_exe}"
+    RESULT_VARIABLE rv
+)
+if(NOT rv EQUAL 0)
+    message(FATAL_ERROR "[smoke] consumer run failed: ${rv}")
+endif()
+
+message(STATUS "[smoke] OK")
+
+if(enable_qml)
+    message(STATUS "[smoke] configuring DeckShellGamepad (treeland OFF, qml ON)")
+    execute_process(
+        COMMAND "@CMAKE_COMMAND@" -S "${gamepad_source_dir}" -B "${gamepad_qml_build_dir}" -G "${generator}"
+            -DBUILD_TESTING=OFF
+            -DDECKSHELL_BUILD_COMPOSITOR=OFF
+            -DDECKGAMEPAD_BUILD_TREELAND_CLIENT=OFF
+            -DDECKGAMEPAD_BUILD_QML_MODULE=ON
+            -DBUILD_GAMEPAD_EXAMPLES=OFF
+            -DBUILD_SHARED_LIBS=OFF
+            -DCMAKE_INSTALL_QMLDIR=${qml_install_dir_rel}
+            -DCMAKE_INSTALL_PREFIX=${gamepad_qml_install_dir}
+        RESULT_VARIABLE rv
+    )
+    if(NOT rv EQUAL 0)
+        message(FATAL_ERROR "[smoke] configure failed (qml): ${rv}")
+    endif()
+
+    message(STATUS "[smoke] building+installing DeckShellGamepad (qml)")
+    execute_process(
+        COMMAND "@CMAKE_COMMAND@" --build "${gamepad_qml_build_dir}" --target install
+        RESULT_VARIABLE rv
+    )
+    if(NOT rv EQUAL 0)
+        message(FATAL_ERROR "[smoke] build/install failed (qml): ${rv}")
+    endif()
+
+    set(qml_import_root "${gamepad_qml_install_dir}/${qml_install_dir_rel}")
+    if(NOT EXISTS "${qml_import_root}/DeckShell/DeckGamepad/qmldir")
+        message(FATAL_ERROR "[smoke] missing installed qmldir: ${qml_import_root}/DeckShell/DeckGamepad/qmldir")
+    endif()
+    if(NOT EXISTS "${qml_import_root}/DeckShell/DeckGamepad/DeckShellGamepadQmlPlugin.qmltypes")
+        message(FATAL_ERROR "[smoke] missing installed typeinfo: ${qml_import_root}/DeckShell/DeckGamepad/DeckShellGamepadQmlPlugin.qmltypes")
+    endif()
+
+    if(qml_consumer_source_dir)
+        message(STATUS "[smoke] configuring qml consumer project")
+        execute_process(
+            COMMAND "@CMAKE_COMMAND@" -S "${qml_consumer_source_dir}" -B "${qml_consumer_build_dir}" -G "${generator}"
+                -DCMAKE_PREFIX_PATH=${gamepad_qml_install_dir}
+            RESULT_VARIABLE rv
+        )
+        if(NOT rv EQUAL 0)
+            message(FATAL_ERROR "[smoke] qml consumer configure failed: ${rv}")
+        endif()
+
+        message(STATUS "[smoke] building qml consumer project")
+        execute_process(
+            COMMAND "@CMAKE_COMMAND@" --build "${qml_consumer_build_dir}"
+            RESULT_VARIABLE rv
+        )
+        if(NOT rv EQUAL 0)
+            message(FATAL_ERROR "[smoke] qml consumer build failed: ${rv}")
+        endif()
+
+        file(GLOB qml_exe_candidates
+            "${qml_consumer_build_dir}/gamepad_qml_consumer"
+            "${qml_consumer_build_dir}/*/gamepad_qml_consumer"
+        )
+
+        list(LENGTH qml_exe_candidates qml_exe_count)
+        if(qml_exe_count EQUAL 0)
+            message(FATAL_ERROR "[smoke] qml consumer executable not found under: ${qml_consumer_build_dir}")
+        endif()
+
+        list(GET qml_exe_candidates 0 qml_consumer_exe)
+        message(STATUS "[smoke] running qml consumer executable: ${qml_consumer_exe}")
+        execute_process(
+            COMMAND "@CMAKE_COMMAND@" -E env
+                "QT_QPA_PLATFORM=offscreen"
+                "QML2_IMPORT_PATH=${qml_import_root}"
+                "DECKGAMEPAD_QML_IMPORT_ROOT=${qml_import_root}"
+                "${qml_consumer_exe}"
+            RESULT_VARIABLE rv
+        )
+        if(NOT rv EQUAL 0)
+            message(FATAL_ERROR "[smoke] qml consumer run failed: ${rv}")
+        endif()
+
+        message(STATUS "[smoke] OK (qml)")
+    else()
+        message(STATUS "[smoke] qml consumer project not found, skipping (qml)")
+    endif()
+endif()

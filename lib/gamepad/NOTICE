@@ -1,0 +1,13 @@
+DeckShellGamepad
+================
+
+本项目包含从上游代码移植/演化而来的实现，主要信息如下：
+
+- 来源提交：qwlroots commit `01adb2350ef31f5a597c255d0f56d1ab04938d72`
+- 原始作者：SunRain <41245110@qq.com>
+- 版权与许可：以源码文件头部 SPDX 声明为准（多数文件为多重许可 `Apache-2.0 OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only`，下游可在每个文件声明的选项中选择其遵循的许可）
+- 第三方内容：
+  - `data/gamecontrollerdb.txt` 来自 SDL GameController DB（版本/许可见 `THIRD_PARTY.md`，当前标记为 TBD，发布前需补齐）
+  - `protocols/treeland-gamepad-v1.xml` 为 vendored 协议文件（MIT，见文件内 SPDX）
+
+本 NOTICE 用于保留来源与归属信息，便于追溯与合规审计。

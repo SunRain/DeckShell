@@ -107,6 +107,7 @@ obj-*-linux-gnu/
 # =============================================================================
 # Cursor AI 编辑器
 .cursor
+.spec-workflow/
 .specstory
 
 # Kilo Code

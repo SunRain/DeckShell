@@ -117,6 +117,12 @@ void init()
         it->second->deleteLater();
         pluginTs.erase(it++);
     }
+#ifndef DISABLE_DDM
+    // UserModel must be deleted before Helper, to remove client surfaces before rendering ends.
+    delete qmlEngine->singletonInstance<UserModel *>("DeckShell.Compositor", "UserModel");
+#endif
+    // Helper must be deleted before QmlEngine, for surfaces to be cleanly removed.
+    qmlEngine->clearSingletons();
 }
 
 #ifndef DISABLE_DDM

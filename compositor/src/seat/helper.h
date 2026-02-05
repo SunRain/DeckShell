@@ -91,6 +91,7 @@ class DDEShellManagerInterfaceV1;
 class DDMInterfaceV1;
 class ForeignToplevelV1;
 class FpsDisplayManager;
+class GreeterProxy;
 class ILockScreen;
 class IMultitaskView;
 class LockScreen;
@@ -106,6 +107,7 @@ class RootSurfaceContainer;
 class ScreensaverInterfaceV1;
 class SessionManager;
 class SettingManager;
+class SessionModel;
 class ShellHandler;
 class ShortcutManagerV2;
 class ShortcutRunner;
@@ -218,10 +220,9 @@ public:
 
     Output* getOutputAtCursor() const;
 
-#ifndef DISABLE_DDM
-    UserModel *userModel() const;
+    inline UserModel *userModel() const { return m_userModel; };
+    inline SessionModel *sessionModel() const { return m_sessionModel; };
     DDMInterfaceV1 *ddmInterfaceV1() const;
-#endif
 
     void activateSession();
     void deactivateSession();
@@ -386,9 +387,7 @@ private:
     QList<qw_idle_inhibitor_v1 *> m_idleInhibitors;
 
     SurfaceWrapper *m_activatedSurface = nullptr;
-#if !defined(DISABLE_DDM) || defined(EXT_SESSION_LOCK_V1)
     LockScreen *m_lockScreen = nullptr;
-#endif
     float m_animationSpeed = 1.0;
     OutputMode m_mode = OutputMode::Extension;
     std::optional<QPointF> m_fakelastPressedPosition;
@@ -401,9 +400,9 @@ private:
     bool m_singleMetaKeyPendingPressed{ false };
 
     IMultitaskView *m_multitaskView{ nullptr };
-#ifndef DISABLE_DDM
     UserModel *m_userModel{ nullptr };
-#endif
+    SessionModel *m_sessionModel{ nullptr };
+    GreeterProxy *m_greeterProxy{ nullptr };
 
     bool m_blockActivateSurface{ false };
 

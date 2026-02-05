@@ -2,10 +2,6 @@ find_package(QT NAMES Qt6 COMPONENTS Core Quick Concurrent REQUIRED)
 find_package(Dtk6 REQUIRED COMPONENTS SystemSettings Declarative)
 
 
-set_source_files_properties(qml/GreeterModel.qml PROPERTIES
-    QT_QML_SINGLETON_TYPE TRUE
-)
-
 qt_add_library(lockscreen SHARED
     lockscreenplugin.h
     lockscreenplugin.cpp
@@ -17,7 +13,6 @@ qt_add_qml_module(lockscreen
         logoprovider.h
         logoprovider.cpp
     QML_FILES
-        qml/GreeterModel.qml
         qml/HintLabel.qml
         qml/LoginAnimation.qml
         qml/QuickAction.qml

@@ -18,7 +18,9 @@
 #include "core/treeland.h"
 #include "core/windowpicker.h"
 #ifndef DISABLE_DDM
+#include "greeter/greeterproxy.h"
 #include "greeter/usermodel.h"
+#include "greeter/sessionmodel.h"
 #endif
 #include "input/inputdevice.h"
 #include "interfaces/multitaskviewinterface.h"
@@ -1161,7 +1163,9 @@ void Helper::init(Treeland::Treeland *treeland)
 
     auto engine = qmlEngine();
 #ifndef DISABLE_DDM
+    m_greeterProxy = engine->singletonInstance<GreeterProxy *>("DeckShell.Compositor", "GreeterProxy");
     m_userModel = engine->singletonInstance<UserModel *>("DeckShell.Compositor", "UserModel");
+    m_sessionModel = engine->singletonInstance<SessionModel *>("DeckShell.Compositor", "SessionModel");
 #endif
 
     engine->setContextForObject(m_renderWindow, engine->rootContext());
@@ -2190,9 +2194,11 @@ void Helper::setLockScreenImpl(ILockScreen *impl)
         return;
     }
 
-    m_lockScreen = new LockScreen(impl, m_rootSurfaceContainer);
+    m_lockScreen = new LockScreen(impl, m_rootSurfaceContainer, m_greeterProxy);
     m_lockScreen->setZ(RootSurfaceContainer::LockScreenZOrder);
     m_lockScreen->setVisible(false);
+
+    m_greeterProxy->setLockScreen(m_lockScreen);
 
     for (auto *output : m_rootSurfaceContainer->outputs()) {
         m_lockScreen->addOutput(output);
@@ -2395,17 +2401,9 @@ void Helper::onPrepareForSleep(bool sleep)
     }
 }
 
-#ifndef DISABLE_DDM
-UserModel *Helper::userModel() const {
-    return m_userModel;
-}
-#endif
-
-#ifndef DISABLE_DDM
 DDMInterfaceV1 *Helper::ddmInterfaceV1() const {
     return m_ddmInterfaceV1;
 }
-#endif
 
 void Helper::activateSession() {
     if (!m_backend->isSessionActive())

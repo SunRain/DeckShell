@@ -49,6 +49,8 @@
 #include "utils/cmdline.h"
 #include "utils/fpsdisplaymanager.h"
 #include "workspace/workspace.h"
+#include "wallpaper/wallpapermanager.h"
+#include "wallpapershellinterfacev1.h"
 
 #include <xcb/xcb.h>
 #include <xcb/xproto.h>
@@ -170,10 +172,12 @@ Helper *Helper::m_instance = nullptr;
 Helper::Helper(QObject *parent)
     : WSeatEventFilter(parent)
     , m_sessionManager(new SessionManager(this))
+    , m_wallpaperManager(new WallpaperManager(this))
     , m_renderWindow(new WOutputRenderWindow(this))
     , m_server(new WServer(this))
     , m_rootSurfaceContainer(new RootSurfaceContainer(m_renderWindow->contentItem()))
 {
+    m_isDDMDisplay = qEnvironmentVariableIsSet("DDM_DISPLAY_MANAGER");
     Q_ASSERT(!m_instance);
     m_instance = this;
 
@@ -419,6 +423,7 @@ void Helper::onOutputAdded(WOutput *output)
         }
     }
     settings.endGroup();
+    m_wallpaperManager->ensureWallpaperConfigForOutput(o);
 }
 
 void Helper::onOutputRemoved(WOutput *output)
@@ -487,6 +492,8 @@ void Helper::onOutputRemoved(WOutput *output)
     }
 
     m_outputManager->removeOutput(output);
+    m_wallpaperManager->removeOutputWallpaper(output->handle()->handle());
+
     delete o;
 }
 
@@ -1235,6 +1242,11 @@ void Helper::init(Treeland::Treeland *treeland)
     m_shellHandler->createComponent(engine, m_renderWindow->contentItem());
     m_shellHandler->initXdgShell(m_server);
     m_shellHandler->initLayerShell(m_server);
+    m_shellHandler->initWallpaperShell(m_server);
+    connect(m_shellHandler->wallpaperShell(),
+            &TreelandWallpaperShellInterfaceV1::wallpaperSurfaceAdded,
+            m_wallpaperManager,
+            &WallpaperManager::handleWallpaperSurfaceAdded);
     m_shellHandler->initInputMethodHelper(m_server, m_seat);
 
     m_foreignToplevel = m_server->attach<WForeignToplevel>();
@@ -1286,6 +1298,20 @@ void Helper::init(Treeland::Treeland *treeland)
                                                   "/" + m_userModel->currentUserName()));
         auto user = m_userModel->currentUser();
         m_personalization->setUserId(user ? user->UID() : getuid());
+        // TODO(YaoBing Xiao): remove "dde"
+        if (m_userModel->currentUserName() == "dde") {
+            return;
+        }
+
+        // TODO(YaoBing Xiao): pre-initialize dconfig, remove isInitializeSucceeded
+        if (m_config->isInitializeSucceeded()) {
+            m_wallpaperManager->updateWallpaperConfig();
+        } else {
+            connect(m_config.get(),
+                    &TreelandUserConfig::configInitializeSucceed,
+                    m_wallpaperManager,
+                    &WallpaperManager::updateWallpaperConfig);
+        }
     };
     connect(m_userModel, &UserModel::currentUserNameChanged, this, updateCurrentUser);
 #endif
@@ -1442,6 +1468,21 @@ void Helper::init(Treeland::Treeland *treeland)
             this,
             &Helper::onExtSessionLock);
 #endif
+
+    m_wallpaperNotifierInterfaceV1 = m_server->attach<TreelandWallpaperNotifierInterfaceV1>();
+    if (isDDMDisplay()) {
+        m_wallpaperNotifierInterfaceV1->setFilter([this](WClient *client) { return m_sessionManager->isDDEUserClient(client); });
+    }
+    connect(m_wallpaperNotifierInterfaceV1,
+            &TreelandWallpaperNotifierInterfaceV1::binded,
+            m_wallpaperManager,
+            &WallpaperManager::onWallpaperNotifierbinded);
+
+    m_wallpaperManagerInterfaceV1 = m_server->attach<TreelandWallpaperManagerInterfaceV1>();
+    connect(m_wallpaperManagerInterfaceV1,
+            &TreelandWallpaperManagerInterfaceV1::wallpaperCreated,
+            m_wallpaperManager,
+            &WallpaperManager::onWallpaperAdded);
 
     m_shortcutManager = m_server->attach<ShortcutManagerV2>();
     connect(m_treeland,
@@ -2161,6 +2202,31 @@ bool Helper::isLaunchpad(WLayerSurface *surface) const
 DDEShellManagerInterfaceV1 *Helper::ddeShellV1() const
 {
     return m_ddeShellV1;
+}
+
+void Helper::setLaunchpadMapped(WOutput *output, bool mapped)
+{
+    Q_EMIT launchpadMappedChanged(output, mapped);
+}
+
+void Helper::showDesktop(WOutput *output)
+{
+    Q_EMIT showDesktopRequested(output);
+}
+
+void Helper::startLockscreen(WOutput *output, bool showAnimation)
+{
+    Q_EMIT startLockscreened(output, showAnimation);
+}
+
+QString Helper::currentWorkspaceWallpaper(WOutput *output)
+{
+    return m_wallpaperManager->currentWorkspaceWallpaper(output);
+}
+
+QString Helper::currentLockScreenWallpaper(WOutput *output)
+{
+    return m_wallpaperManager->currentLockScreenWallpaper(output);
 }
 
 void Helper::handleWindowPicker(WindowPickerInterface *picker)

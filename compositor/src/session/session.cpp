@@ -9,6 +9,7 @@
 #include "seat/helper.h"
 #include "workspace/workspace.h"
 #include "xsettings/settingmanager.h"
+#include "wallpaper/wallpaperlauncher.h"
 
 #include <woutputrenderwindow.h>
 #include <wsocket.h>
@@ -99,6 +100,10 @@ SessionManager::SessionManager(QObject *parent)
 SessionManager::~SessionManager()
 {
     m_sessions.clear();
+    if (m_wallpaperLauncher) {
+        delete m_wallpaperLauncher;
+        m_wallpaperLauncher = nullptr;
+    }
 }
 
 const QList<std::shared_ptr<Session>> &SessionManager::sessions() const
@@ -298,6 +303,11 @@ std::shared_ptr<Session> SessionManager::ensureSession(int id, QString username)
     if (!session->m_socket)
         return nullptr;
 
+    if (!m_wallpaperLauncher) {
+        m_wallpaperLauncher = new WallpaperLauncher(session->socket()->rootSocket());
+        m_wallpaperLauncher->start();
+    }
+
     session->m_xwayland = createXWayland(session->m_socket);
     if (!session->m_xwayland)
         return nullptr;
@@ -381,6 +391,11 @@ std::shared_ptr<Session> SessionManager::sessionForSocket(WSocket *socket) const
             return session;
     }
     return nullptr;
+}
+
+bool SessionManager::isDDEUserClient(WClient *client)
+{
+    return client->socket() == globalSession()->socket();
 }
 
 /**

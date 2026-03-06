@@ -1512,7 +1512,17 @@ void Helper::init(Treeland::Treeland *treeland)
 #ifdef EXT_SESSION_LOCK_V1
     m_sessionLockManager = m_server->attach<WSessionLockManager>();
     if (!m_lockScreen) {
-        setLockScreenImpl(nullptr);
+        m_lockScreen = ensureExternalOnlyLockScreen(m_lockScreen,
+                                                    m_rootSurfaceContainer,
+                                                    this,
+                                                    [this] {
+                                                        setCurrentMode(CurrentMode::Normal);
+                                                        setWorkspaceVisible(true);
+                                                        setNoAnimation(false);
+                                                        if (m_activatedSurface) {
+                                                            m_activatedSurface->setFocus(true, Qt::NoFocusReason);
+                                                        }
+                                                    });
     }
     connect(m_sessionLockManager,
             &WSessionLockManager::lockCreated,
@@ -2330,40 +2340,44 @@ void Helper::setLockScreenImpl(ILockScreen *impl)
 {
 #if !defined(DISABLE_DDM) || defined(EXT_SESSION_LOCK_V1)
     if (!impl) {
-        if (m_lockScreen) {
-            m_lockScreen = nullptr;
-            delete m_lockScreen;
+#ifndef DISABLE_DDM
+        if (m_greeterProxy) {
+            m_greeterProxy->setLockScreen(nullptr);
         }
-        return;
-    }
-
-    m_lockScreen = new LockScreen(impl, m_rootSurfaceContainer, m_greeterProxy);
-    m_lockScreen->setZ(RootSurfaceContainer::LockScreenZOrder);
-    m_lockScreen->setVisible(false);
-
-    m_greeterProxy->setLockScreen(m_lockScreen);
-
-    for (auto *output : m_rootSurfaceContainer->outputs()) {
-        m_lockScreen->addOutput(output);
-    }
-
-    if (auto primaryOutput = m_rootSurfaceContainer->primaryOutput()) {
-        m_lockScreen->setPrimaryOutputName(primaryOutput->output()->name());
-    }
-
-    connect(m_lockScreen, &LockScreen::unlock, this, [this] {
-        setCurrentMode(CurrentMode::Normal);
-        setWorkspaceVisible(true);
-#ifdef EXT_SESSION_LOCK_V1
-        setNoAnimation(false);
 #endif
-        if (m_activatedSurface) {
-            m_activatedSurface->setFocus(true, Qt::NoFocusReason);
-        }
-    });
-    if (!impl) {
+        delete m_lockScreen;
+        m_lockScreen = nullptr;
         return;
     }
+
+#ifndef DISABLE_DDM
+    auto *greeterProxy = m_greeterProxy;
+#else
+    GreeterProxy *greeterProxy = nullptr;
+#endif
+
+    delete m_lockScreen;
+    m_lockScreen = new LockScreen(impl, m_rootSurfaceContainer, greeterProxy);
+
+#ifndef DISABLE_DDM
+    if (m_greeterProxy) {
+        m_greeterProxy->setLockScreen(m_lockScreen);
+    }
+#endif
+
+    initLockScreen(m_lockScreen,
+                   m_rootSurfaceContainer,
+                   this,
+                   [this] {
+                       setCurrentMode(CurrentMode::Normal);
+                       setWorkspaceVisible(true);
+#ifdef EXT_SESSION_LOCK_V1
+                       setNoAnimation(false);
+#endif
+                       if (m_activatedSurface) {
+                           m_activatedSurface->setFocus(true, Qt::NoFocusReason);
+                       }
+                   });
     if (CmdLine::ref().useLockScreen()) {
         showLockScreen(false);
     }

@@ -40,6 +40,9 @@ public:
 
     bool available() const;
     bool isLocked() const;
+#ifdef EXT_SESSION_LOCK_V1
+    bool canAcceptExternalLock() const;
+#endif
     void lock();
     void shutdown();
     void switchUser();
@@ -79,5 +82,6 @@ private:
     std::map<WOutputItem *, std::unique_ptr<WSessionLockSurface, std::function<void(WSessionLockSurface*)>>> m_lockSurfaces;
     std::map<WOutputItem *, std::unique_ptr<QQuickItem, std::function<void(QQuickItem*)>>> m_fallbackItems;
     WSessionLock* m_sessionLock{ nullptr };
+    bool m_externalLockActive{ false };
 #endif
 };

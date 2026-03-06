@@ -8,7 +8,9 @@
 #include "seat/helper.h"
 #include "utils/cmdline.h"
 #include "common/treelandlogging.h"
+#ifndef DISABLE_DDM
 #include "greeter/greeterproxy.h"
+#endif
 
 #ifdef EXT_SESSION_LOCK_V1
 #include <wsessionlock.h>
@@ -42,8 +44,11 @@ void LockScreen::lock()
 
     setVisible(true);
 
-    if (!m_greeterProxy->isLocked())
+#ifndef DISABLE_DDM
+    if (m_greeterProxy && !m_greeterProxy->isLocked()) {
         m_greeterProxy->lock();
+    }
+#endif
 }
 
 void LockScreen::shutdown()
@@ -61,8 +66,11 @@ void LockScreen::shutdown()
 
     setVisible(true);
 
-    if (!m_greeterProxy->showShutdownView())
+#ifndef DISABLE_DDM
+    if (m_greeterProxy && !m_greeterProxy->showShutdownView()) {
         m_greeterProxy->setShowShutdownView(true);
+    }
+#endif
 }
 
 void LockScreen::switchUser()
@@ -80,7 +88,11 @@ void LockScreen::switchUser()
 
     setVisible(true);
 
-    Q_EMIT m_greeterProxy->switchUser();
+#ifndef DISABLE_DDM
+    if (m_greeterProxy) {
+        Q_EMIT m_greeterProxy->switchUser();
+    }
+#endif
 }
 
 void LockScreen::addOutput(Output *output)
@@ -92,6 +104,10 @@ void LockScreen::addOutput(Output *output)
 
     const auto &[_, ok] = m_lockSurfaces.emplace(outputItem, nullptr);
     Q_ASSERT(ok);
+
+    if (m_externalLockActive) {
+        createFallbackItem(outputItem);
+    }
 #endif
 
     if (!m_impl) {
@@ -148,6 +164,21 @@ bool LockScreen::available() const
 {
     return m_impl != nullptr;
 }
+
+#if EXT_SESSION_LOCK_V1
+bool LockScreen::canAcceptExternalLock() const
+{
+    if (m_sessionLock) {
+        return false;
+    }
+
+    if (!isVisible()) {
+        return true;
+    }
+
+    return m_externalLockActive;
+}
+#endif
 
 void LockScreen::setPrimaryOutputName(const QString &primaryOutputName)
 {
@@ -257,12 +288,13 @@ void LockScreen::onOutputGeometryChanged()
 
 void LockScreen::onExternalLock(WSessionLock *lock)
 {
-    if (isVisible()) {
+    if (!canAcceptExternalLock()) {
         lock->finish();
         return;
     }
 
     m_sessionLock = lock;
+    m_externalLockActive = true;
 
     lock->safeConnect(&WSessionLock::surfaceAdded, this, &LockScreen::onLockSurfaceAdded);
     lock->safeConnect(&WSessionLock::surfaceRemoved, this, &LockScreen::onLockSurfaceRemoved);
@@ -271,6 +303,12 @@ void LockScreen::onExternalLock(WSessionLock *lock)
     lock->safeConnect(&WSessionLock::abandoned, this, &LockScreen::onExternalLockAbandoned);
 
     setVisible(true);
+
+    for (auto &[outputItem, surface] : m_lockSurfaces) {
+        if (!surface) {
+            createFallbackItem(outputItem);
+        }
+    }
 }
 
 void LockScreen::onExternalUnlock() {
@@ -284,11 +322,12 @@ void LockScreen::onExternalUnlock() {
     }
     m_fallbackItems.clear();
     m_sessionLock = nullptr;
+    m_externalLockActive = false;
     emit unlock();
 }
 
 void LockScreen::onExternalLockAbandoned() {
-    if (!m_impl || !m_sessionLock) {
+    if (!m_sessionLock || !m_externalLockActive) {
         return;
     }
     if (!isLocked()) {
@@ -305,7 +344,16 @@ void LockScreen::onExternalLockAbandoned() {
     }
     m_fallbackItems.clear();
 
-    m_greeterProxy->lock();
+#ifndef DISABLE_DDM
+    if (m_greeterProxy) {
+        m_greeterProxy->lock();
+        m_externalLockActive = false;
+        return;
+    }
+#endif
+    for (auto &[outputItem, _] : m_lockSurfaces) {
+        createFallbackItem(outputItem);
+    }
 }
 
 void LockScreen::createFallbackItem(WOutputItem *outputItem)

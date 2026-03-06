@@ -135,6 +135,57 @@
 #define EXT_DATA_CONTROL_MANAGER_V1_VERSION 1
 #define WLR_FRACTIONAL_SCALE_V1_VERSION 1
 
+namespace {
+
+#if !defined(DISABLE_DDM) || defined(EXT_SESSION_LOCK_V1)
+template<typename UnlockHandler>
+void initLockScreen(LockScreen *lockScreen,
+                    RootSurfaceContainer *rootSurfaceContainer,
+                    QObject *context,
+                    UnlockHandler &&unlockHandler)
+{
+    Q_ASSERT(lockScreen);
+
+    lockScreen->setZ(RootSurfaceContainer::LockScreenZOrder);
+    lockScreen->setVisible(false);
+
+    for (auto *output : rootSurfaceContainer->outputs()) {
+        lockScreen->addOutput(output);
+    }
+
+    if (auto primaryOutput = rootSurfaceContainer->primaryOutput()) {
+        lockScreen->setPrimaryOutputName(primaryOutput->output()->name());
+    }
+
+    QObject::connect(lockScreen,
+                     &LockScreen::unlock,
+                     context,
+                     std::forward<UnlockHandler>(unlockHandler));
+}
+#endif
+
+#ifdef EXT_SESSION_LOCK_V1
+template<typename UnlockHandler>
+LockScreen *ensureExternalOnlyLockScreen(LockScreen *lockScreen,
+                                         RootSurfaceContainer *rootSurfaceContainer,
+                                         QObject *context,
+                                         UnlockHandler &&unlockHandler)
+{
+    if (lockScreen) {
+        return lockScreen;
+    }
+
+    lockScreen = new LockScreen(nullptr, rootSurfaceContainer, nullptr);
+    initLockScreen(lockScreen,
+                   rootSurfaceContainer,
+                   context,
+                   std::forward<UnlockHandler>(unlockHandler));
+    return lockScreen;
+}
+#endif
+
+} // namespace
+
 static QByteArray readWindowProperty(xcb_connection_t *connection,
                                      xcb_window_t win,
                                      xcb_atom_t atom,
@@ -2020,7 +2071,24 @@ void Helper::onSessionUnlock()
 void Helper::onExtSessionLock(WSessionLock *lock)
 {
 #ifdef EXT_SESSION_LOCK_V1
-    if (m_lockScreen->isLocked()) {
+    if (!m_lockScreen) {
+        m_lockScreen = ensureExternalOnlyLockScreen(m_lockScreen,
+                                                    m_rootSurfaceContainer,
+                                                    this,
+                                                    [this] {
+                                                        setCurrentMode(CurrentMode::Normal);
+                                                        setWorkspaceVisible(true);
+                                                        setNoAnimation(false);
+                                                        if (m_activatedSurface) {
+                                                            m_activatedSurface->setFocus(true, Qt::NoFocusReason);
+                                                        }
+                                                    });
+    }
+    if (!m_lockScreen) {
+        lock->finish();
+        return;
+    }
+    if (!m_lockScreen->canAcceptExternalLock()) {
         lock->finish();
         return;
     }

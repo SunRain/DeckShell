@@ -1,6 +1,6 @@
 include(CMakeParseArguments)
 
-function(impl_treeland)
+function(impl_deckcompositor)
     set(one_value_args NAME)
     set(multi_value_args SOURCE INCLUDE LINK)
 
@@ -56,4 +56,9 @@ function(impl_treeland)
         PRIVATE
             ${PARSE_ARG_PREFIX_NAME}
     )
+endfunction()
+
+function(impl_treeland)
+    # Backward compatible wrapper (avoid CMake function name ambiguity with 3rdparty/waylib-shared).
+    impl_deckcompositor(${ARGV})
 endfunction()

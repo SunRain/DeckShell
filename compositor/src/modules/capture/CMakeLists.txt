@@ -59,7 +59,7 @@ target_link_libraries(${MODULE_NAME}
         Qt6::QuickPrivate
 )
 
-impl_treeland(
+impl_deckcompositor(
     NAME
         module_capture
     LINK

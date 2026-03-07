@@ -2,7 +2,7 @@ find_package(DeckCompositorProtocols REQUIRED)
 
 ws_generate_local(server ${TREELAND_PROTOCOLS_DATA_DIR}/treeland-ddm-v1.xml treeland-ddm-v1-protocol)
 
-impl_treeland(
+impl_deckcompositor(
     NAME
         module_ddm
     SOURCE

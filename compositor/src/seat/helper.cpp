@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0 OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
 
 #include "helper.h"
+
 #ifdef EXT_SESSION_LOCK_V1
 #include "wsessionlock.h"
 #include "wsessionlockmanager.h"
@@ -2064,19 +2065,21 @@ void Helper::onSessionNew(const QString &sessionId, const QDBusObjectPath &sessi
     QDBusConnection::systemBus().connect("org.freedesktop.login1", path, "org.freedesktop.login1.Session", "Unlock", this, SLOT(onSessionUnlock()));
 }
 
-#ifndef DISABLE_DDM
 void Helper::onSessionLock()
 {
+#ifndef DISABLE_DDM
     showLockScreen();
+#endif
 }
 
 void Helper::onSessionUnlock()
 {
+#ifndef DISABLE_DDM
     if (m_lockScreen) {
         m_lockScreen->unlock();
     }
-}
 #endif
+}
 
 void Helper::onExtSessionLock(WSessionLock *lock)
 {
@@ -2558,7 +2561,11 @@ void Helper::onPrepareForSleep(bool sleep)
 }
 
 DDMInterfaceV1 *Helper::ddmInterfaceV1() const {
+#ifdef DISABLE_DDM
+    return nullptr;
+#else
     return m_ddmInterfaceV1;
+#endif
 }
 
 void Helper::activateSession() {

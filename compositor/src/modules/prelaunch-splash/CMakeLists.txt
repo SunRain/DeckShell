@@ -5,7 +5,7 @@ local_qtwayland_server_protocol_treeland(libdeckcompositor
     BASENAME treeland-prelaunch-splash-v2
 )
 
-impl_treeland(
+impl_deckcompositor(
     NAME
         module_prelaunch_splash
     SOURCE

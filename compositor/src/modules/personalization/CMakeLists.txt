@@ -20,7 +20,7 @@ set(SRCS
     ${WAYLAND_PROTOCOLS_OUTPUTDIR}/treeland-personalization-manager-protocol.c
 )
 
-impl_treeland(
+impl_deckcompositor(
     NAME
         module_personalization
     SOURCE

@@ -2,7 +2,7 @@ find_package(DeckCompositorProtocols REQUIRED)
 
 ws_generate_local(server ${TREELAND_PROTOCOLS_DATA_DIR}/treeland-window-management-v1.xml treeland-window-management-protocol)
 
-impl_treeland(
+impl_deckcompositor(
     NAME
         module_windowmanagement
     SOURCE

@@ -5,7 +5,7 @@ local_qtwayland_server_protocol_treeland(libdeckcompositor
     BASENAME treeland-app-id-resolver-v1
 )
 
-impl_treeland(
+impl_deckcompositor(
     NAME
         module_app_id_resolver
     SOURCE

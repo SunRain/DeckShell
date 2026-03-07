@@ -3,7 +3,7 @@ local_qtwayland_server_protocol_treeland(libdeckcompositor
     BASENAME keystate
 )
 
-impl_treeland(
+impl_deckcompositor(
     NAME
         module_keystate
     SOURCE

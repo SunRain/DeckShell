@@ -5,7 +5,7 @@ local_qtwayland_server_protocol_treeland(libdeckcompositor
     BASENAME treeland-output-manager-v1
 )
 
-impl_treeland(
+impl_deckcompositor(
     NAME
         module_outputmanager
     SOURCE

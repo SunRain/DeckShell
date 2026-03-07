@@ -100,6 +100,11 @@ dtk_add_config_to_cpp(
 
 qt_add_library(libdeckcompositor SHARED)
 
+# Backward compatible target name for legacy builds / tests.
+if (NOT TARGET libtreeland)
+    add_library(libtreeland ALIAS libdeckcompositor)
+endif()
+
 set_target_properties(libdeckcompositor PROPERTIES
     OUTPUT_NAME "deckcompositor"
     VERSION ${CMAKE_PROJECT_VERSION}

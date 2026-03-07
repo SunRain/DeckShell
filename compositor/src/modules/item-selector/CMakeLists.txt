@@ -1,4 +1,4 @@
-impl_treeland(
+impl_deckcompositor(
     NAME
         module-itemselector
     SOURCE

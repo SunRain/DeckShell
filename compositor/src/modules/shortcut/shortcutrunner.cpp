@@ -147,11 +147,13 @@ void ShortcutRunner::onActionTrigger(ShortcutAction action, const QString &name,
 #endif
         break;
     case ShortcutAction::ShutdownMenu:
+#ifndef DISABLE_DDM
         if (helper->m_lockScreen && helper->m_lockScreen->available() && helper->currentMode() == Helper::CurrentMode::Normal) {
             helper->setCurrentMode(Helper::CurrentMode::LockScreen);
             helper->m_lockScreen->shutdown();
             helper->setWorkspaceVisible(false);
         }
+#endif
         break;
     case ShortcutAction::Quit:
         Q_EMIT helper->requestQuit();
@@ -379,4 +381,3 @@ void ShortcutRunner::taskswitchAction(bool isRepeat, bool isSameApp, bool isPrev
         QMetaObject::invokeMethod(helper->m_taskSwitch, "next");
     }
 }
-

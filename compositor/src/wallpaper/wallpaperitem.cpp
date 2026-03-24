@@ -173,7 +173,7 @@ void WallpaperItem::updateSurface()
     WallpaperOutputConfig config =
         Helper::instance()->m_wallpaperManager->getOutputConfig(output()->nativeHandle());
     if (wallpaperRole() == Lockscreen) {
-        if (config.lockscreenWallpaper != m_source) {
+        if (config.lockscreenWallpaper != m_source || forceUpdateSource()) {
                 TreelandWallpaperSurfaceInterfaceV1 *interface =
                     TreelandWallpaperSurfaceInterfaceV1::get(config.lockscreenWallpaper);
                 if (!interface) {
@@ -193,7 +193,7 @@ void WallpaperItem::updateSurface()
         }
         for (WallpaperWorkspaceConfig workspaceConfig : std::as_const(config.workspaces)) {
             if (workspaceConfig.workspaceId == workspace()->id() &&
-                workspaceConfig.desktopWallpaper != m_source) {
+                (workspaceConfig.desktopWallpaper != m_source || forceUpdateSource())) {
                 TreelandWallpaperSurfaceInterfaceV1 *interface =
                     TreelandWallpaperSurfaceInterfaceV1::get(workspaceConfig.desktopWallpaper);
                 if (!interface) {
@@ -266,4 +266,19 @@ void WallpaperItem::setDisableUpdate(bool disable)
 
     m_disableUpdate = disable;
     Q_EMIT disableUpdateChanged();
+}
+
+bool WallpaperItem::forceUpdateSource() const
+{
+    return m_forceUpdateSource;
+}
+
+void WallpaperItem::setForceUpdateSource(bool value)
+{
+    if (m_forceUpdateSource == value) {
+        return;
+    }
+
+    m_forceUpdateSource = value;
+    Q_EMIT forceUpdateSourceChanged();
 }

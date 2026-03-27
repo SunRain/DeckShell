@@ -161,6 +161,7 @@ class Helper : public WSeatEventFilter
     Q_PROPERTY(TreelandConfig* globalConfig READ globalConfig CONSTANT FINAL)
     Q_PROPERTY(bool blockActivateSurface READ blockActivateSurface WRITE setBlockActivateSurface NOTIFY blockActivateSurfaceChanged FINAL)
     Q_PROPERTY(bool noAnimation READ noAnimation WRITE setNoAnimation NOTIFY noAnimationChanged FINAL)
+    Q_PROPERTY(RootSurfaceContainer* rootContainer READ rootContainer CONSTANT FINAL)
     QML_ELEMENT
     QML_SINGLETON
 
@@ -270,6 +271,8 @@ public:
     WSeat *currentEventSeat() const { return m_currentEventSeat; }
 
     bool isDDMDisplay() const { return m_isDDMDisplay; }
+
+    RootSurfaceContainer *rootContainer() const { return m_rootSurfaceContainer; }
 public Q_SLOTS:
     void activateSurface(SurfaceWrapper *wrapper, Qt::FocusReason reason = Qt::OtherFocusReason);
     void forceActivateSurface(SurfaceWrapper *wrapper,

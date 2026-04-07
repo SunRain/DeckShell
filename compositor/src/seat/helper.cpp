@@ -1120,7 +1120,7 @@ void Helper::onSurfaceWrapperAdded(SurfaceWrapper *wrapper)
                 return;
             }
 
-            wrapper->resetNoTitleBar();
+            wrapper->setNoTitleBar(false);
             wrapper->setNoDecoration(m_xdgDecorationManager->modeBySurface(wrapper->surface())
                                      != WXdgDecorationManager::Server);
         };

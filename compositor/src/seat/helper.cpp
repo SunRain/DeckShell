@@ -2026,7 +2026,7 @@ bool Helper::afterHandleEvent([[maybe_unused]] WSeat *seat,
 
             if (auto sh = surface->shellSurface();
                 sh && surface->surface() && surface->surface()->mapped()
-                && sh->hasCapability(WToplevelSurface::Capability::Focus)
+                && sh->hasCapability(WToplevelSurface::Capability::Activate)
                 && surface->hasActiveCapability()) {
                 surface->setActivate(true);
                 surface->stackToLast();
@@ -2194,11 +2194,8 @@ void Helper::setActivatedSurface(SurfaceWrapper *newActivateSurface)
         if (newActivateSurface->type() == SurfaceWrapper::Type::XWayland) {
             auto xwaylandSurface =
                 qobject_cast<WXWaylandSurface *>(newActivateSurface->shellSurface());
-            // override_redirect (bypass-manager) windows must not be restacked
-            // via wlr_xwayland_surface_restack, which asserts !override_redirect.
-            if (!xwaylandSurface->isBypassManager()) {
-                xwaylandSurface->restack(nullptr, WXWaylandSurface::XCB_STACK_MODE_ABOVE);
-            }
+            Q_ASSERT(!xwaylandSurface->isBypassManager());
+            xwaylandSurface->restack(nullptr, WXWaylandSurface::XCB_STACK_MODE_ABOVE);
         }
     }
 

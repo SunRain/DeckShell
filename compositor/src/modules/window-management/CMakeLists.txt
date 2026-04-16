@@ -1,15 +1,16 @@
 
-ws_generate_local(server ${DECKCOMPOSITOR_PROTOCOLS_DATA_DIR}/treeland-window-management-v1.xml treeland-window-management-protocol)
+local_qtwayland_server_protocol_treeland(libdeckcompositor
+    PROTOCOL ${DECKCOMPOSITOR_PROTOCOLS_DATA_DIR}/treeland-window-management-v1.xml
+    BASENAME treeland-window-management-v1
+)
 
 impl_deckcompositor(
     NAME
         module_windowmanagement
     SOURCE
-        ${CMAKE_CURRENT_SOURCE_DIR}/windowmanagement.h
-        ${CMAKE_CURRENT_SOURCE_DIR}/impl/window_management_impl.h
-        ${CMAKE_CURRENT_SOURCE_DIR}/windowmanagement.cpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/impl/window_management_impl.cpp
-        ${WAYLAND_PROTOCOLS_OUTPUTDIR}/treeland-window-management-protocol.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/windowmanagementinterfacev1.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/windowmanagementinterfacev1.cpp
+        ${CMAKE_CURRENT_BINARY_DIR}/wayland-treeland-window-management-v1-server-protocol.c
     LINK
         PkgConfig::WLROOTS
         WaylibShared::SharedServer

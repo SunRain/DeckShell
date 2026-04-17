@@ -10,7 +10,7 @@
 #endif
 #include "input/togglablegesture.h"
 #include "modules/shortcut/shortcutmanager.h"
-#include "modules/virtual-output/virtualoutputmanager.h"
+#include "modules/virtual-output/virtualoutputmanagerinterfacev1.h"
 #include "modules/window-management/windowmanagementinterfacev1.h"
 #include "utils/fpsdisplaymanager.h"
 #include "modules/wallpaper/wallpapermanagerinterfacev1.h"
@@ -132,7 +132,7 @@ class TreelandConfig;
 class TreelandUserConfig;
 class treeland_window_picker_v1;
 class UserModel;
-class VirtualOutputV1;
+class VirtualOutputManagerInterfaceV1;
 class WallpaperColorInterfaceV1;
 class WindowManagementInterfaceV1;
 class WindowPickerInterface;
@@ -313,8 +313,8 @@ private:
     void onOutputTestOrApply(qw_output_configuration_v1 *config, bool onlyTest);
     void onSetOutputPowerMode(wlr_output_power_v1_set_mode_event *event);
     void onNewIdleInhibitor(wlr_idle_inhibitor_v1 *inhibitor);
-    void onSetCopyOutput(treeland_virtual_output_v1 *virtual_output);
-    void onRestoreCopyOutput(treeland_virtual_output_v1 *virtual_output);
+    void onSetCopyOutput(VirtualOutputInterfaceV1 *interface);
+    void onRestoreCopyOutput(VirtualOutputInterfaceV1 *interface);
     void onSurfaceWrapperAdded(SurfaceWrapper *wrapper);
     void onSurfaceWrapperAboutToRemove(SurfaceWrapper *wrapper);
     void handleRequestDrag([[maybe_unused]] WSurface *surface);
@@ -411,7 +411,7 @@ private:
     WindowManagementInterfaceV1::DesktopState m_showDesktop = WindowManagementInterfaceV1::DesktopState::Normal;
     DDEShellManagerInterfaceV1 *m_ddeShellV1 = nullptr;
     PrelaunchSplash *m_prelaunchSplash = nullptr; // treeland prelaunch splash protocol
-    VirtualOutputV1 *m_virtualOutput = nullptr;
+    VirtualOutputManagerInterfaceV1 *m_virtualOutputInterfaceV1 = nullptr;
     OutputManagerV1 *m_outputManagerV1 = nullptr;
 #ifndef DISABLE_DDM
     DDMInterfaceV1 *m_ddmInterfaceV1 = nullptr;

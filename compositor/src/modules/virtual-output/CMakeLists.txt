@@ -1,15 +1,16 @@
 
-ws_generate_local(server ${DECKCOMPOSITOR_PROTOCOLS_DATA_DIR}/treeland-virtual-output-manager-v1.xml treeland-virtual-output-manager-protocol)
+local_qtwayland_server_protocol_treeland(libdeckcompositor
+    PROTOCOL ${DECKCOMPOSITOR_PROTOCOLS_DATA_DIR}/treeland-virtual-output-manager-v1.xml
+    BASENAME treeland-virtual-output-manager-v1
+)
 
 impl_deckcompositor(
     NAME
         module_virtualoutput
     SOURCE
-        ${CMAKE_CURRENT_SOURCE_DIR}/virtualoutputmanager.h
-        ${CMAKE_CURRENT_SOURCE_DIR}/impl/virtual_output_manager_impl.h
-        ${CMAKE_CURRENT_SOURCE_DIR}/virtualoutputmanager.cpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/impl/virtual_output_manager_impl.cpp
-        ${WAYLAND_PROTOCOLS_OUTPUTDIR}/treeland-virtual-output-manager-protocol.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/virtualoutputmanagerinterfacev1.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/virtualoutputmanagerinterfacev1.cpp
+        ${CMAKE_CURRENT_BINARY_DIR}/wayland-treeland-virtual-output-manager-v1-server-protocol.c
     LINK
         PkgConfig::WLROOTS
         WaylibShared::SharedServer

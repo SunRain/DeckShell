@@ -1,22 +1,18 @@
 
-ws_generate_local(server ${DECKCOMPOSITOR_PROTOCOLS_DATA_DIR}/treeland-personalization-manager-v1.xml treeland-personalization-manager-protocol)
+local_qtwayland_server_protocol_treeland(libdeckcompositor
+    PROTOCOL ${DECKCOMPOSITOR_PROTOCOLS_DATA_DIR}/treeland-personalization-manager-v1.xml
+    BASENAME treeland-personalization-manager-v1
+)
 
 find_package(Dtk6Core REQUIRED)
 
 set(PUBLIC_HEADERS
-    ${CMAKE_CURRENT_SOURCE_DIR}/personalizationmanager.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/impl/personalization_manager_impl.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/impl/appearance_impl.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/impl/types.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/impl/font_impl.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/personalizationmanagerinterfacev1.h
 )
 
 set(SRCS
-    ${CMAKE_CURRENT_SOURCE_DIR}/personalizationmanager.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/impl/personalization_manager_impl.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/impl/appearance_impl.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/impl/font_impl.cpp
-    ${WAYLAND_PROTOCOLS_OUTPUTDIR}/treeland-personalization-manager-protocol.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/personalizationmanagerinterfacev1.cpp
+    ${CMAKE_CURRENT_BINARY_DIR}/wayland-treeland-personalization-manager-v1-server-protocol.c
 )
 
 impl_deckcompositor(
@@ -25,6 +21,8 @@ impl_deckcompositor(
     SOURCE
         ${PUBLIC_HEADERS}
         ${SRCS}
+    INCLUDE
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>
 )
 
 qt_add_resources(libdeckcompositor "default_background"

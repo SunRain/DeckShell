@@ -10,7 +10,7 @@ impl_deckcompositor(
     SOURCE
         appidresolver.h
         appidresolver.cpp
-    ${CMAKE_CURRENT_BINARY_DIR}/wayland-treeland-app-id-resolver-v1-server-protocol.c
+        ${CMAKE_CURRENT_BINARY_DIR}/wayland-treeland-app-id-resolver-v1-server-protocol.c
     INCLUDE
         $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>
     LINK

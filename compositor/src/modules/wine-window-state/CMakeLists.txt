@@ -9,7 +9,6 @@ impl_deckcompositor(
     SOURCE
         winewindowstate.h
         winewindowstate.cpp
-        ${CMAKE_BINARY_DIR}/protocols/xdg-shell-protocol.c
         ${CMAKE_CURRENT_BINARY_DIR}/wayland-treeland-wine-window-state-v1-server-protocol.c
     INCLUDE
         $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>

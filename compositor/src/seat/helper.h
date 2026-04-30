@@ -132,6 +132,7 @@ class SurfaceContainer;
 class SurfaceWrapper;
 class TreelandConfig;
 class TreelandUserConfig;
+class TreelandRemoteSource;
 class UserModel;
 class VirtualOutputManagerInterfaceV1;
 class WallpaperColorInterfaceV1;
@@ -457,6 +458,9 @@ private:
 
     bool m_noAnimation{ false };
     bool m_isDDMDisplay{ false };
+    void tryInitRemoteSource();
+
+    TreelandRemoteSource *m_treelandRemoteSource = nullptr;
 
     struct PendingOutputConfig {
         qw_output_configuration_v1 *config = nullptr;

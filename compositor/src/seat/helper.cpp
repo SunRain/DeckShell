@@ -43,6 +43,7 @@
 #include "modules/wallpaper-color/wallpapercolorinterfacev1.h"
 #include "modules/input-manager/inputmanagerinterfacev1.h"
 #include "modules/keyboard-state-notify/keyboardstatenotifymanagerinterfacev1.h"
+#include "modules/resource/treelandremotesource.h"
 #include "output/outputconfigstate.h"
 #include "output/output.h"
 #include "output/outputlifecyclemanager.h"
@@ -256,6 +257,7 @@ Helper::Helper(QObject *parent)
 #endif
 
     m_shellHandler = new ShellHandler(m_rootSurfaceContainer, m_server);
+    tryInitRemoteSource();
 
     m_outputConfigState = new OutputConfigState(this);
     m_outputLifecycleManager =
@@ -384,6 +386,15 @@ TreelandUserConfig *Helper::config()
 TreelandConfig *Helper::globalConfig()
 {
     return m_globalConfig.get();
+}
+
+void Helper::tryInitRemoteSource()
+{
+    if (m_treelandRemoteSource)
+        return;
+    if (m_globalConfig->debugSource()) {
+        m_treelandRemoteSource = new TreelandRemoteSource(this);
+    }
 }
 
 bool Helper::isNvidiaCardPresent()
@@ -1405,11 +1416,16 @@ void Helper::init(Treeland::Treeland *treeland)
         if (m_config->isInitializeSucceed()) {
 #endif
             m_wallpaperManager->updateWallpaperConfig();
+            tryInitRemoteSource();
         } else {
             connect(m_config.get(),
                     &TreelandUserConfig::configInitializeSucceed,
                     m_wallpaperManager,
                     &WallpaperManager::updateWallpaperConfig);
+            connect(m_config.get(),
+                    &TreelandUserConfig::configInitializeSucceed,
+                    this,
+                    &Helper::tryInitRemoteSource);
         }
     };
     connect(m_userModel, &UserModel::currentUserNameChanged, this, updateCurrentUser);
@@ -2639,6 +2655,7 @@ void Helper::setLockScreenImpl(ILockScreen *impl)
 
     delete m_lockScreen;
     m_lockScreen = new LockScreen(impl, m_rootSurfaceContainer, greeterProxy);
+    m_lockScreen->setObjectName(QStringLiteral("LockScreenContainer"));
 
 #ifndef DISABLE_DDM
     if (m_greeterProxy) {

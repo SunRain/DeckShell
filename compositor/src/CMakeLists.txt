@@ -15,7 +15,7 @@ if (NOT DISABLE_DDM)
     find_package(DDM 0.2.0 REQUIRED COMPONENTS Common)
 endif()
 find_package(QT NAMES Qt6 COMPONENTS Core REQUIRED)
-find_package(Qt6 CONFIG REQUIRED ShaderTools Concurrent)
+find_package(Qt6 CONFIG REQUIRED ShaderTools Concurrent RemoteObjects Network)
 find_package(Qt6 COMPONENTS Quick QuickControls2 REQUIRED)
 if(Qt6_VERSION VERSION_GREATER_EQUAL 6.10)
     find_package(Qt6 REQUIRED COMPONENTS QuickPrivate)
@@ -177,6 +177,8 @@ qt_add_qml_module(libdeckcompositor
         interfaces/multitaskviewinterface.h
         interfaces/plugininterface.h
         interfaces/proxyinterface.h
+        modules/resource/treelandremotesource.cpp
+        modules/resource/treelandremotesource.h
         output/output.cpp
         output/output.h
         output/backlight.h
@@ -276,6 +278,10 @@ set_property(TARGET libdeckcompositor APPEND PROPERTY AUTOMOC_MOC_OPTIONS
     "-b;${CMAKE_CURRENT_BINARY_DIR}/outputconfig.hpp"
 )
 
+qt_add_repc_sources(libdeckcompositor
+    modules/resource/treelandwindowtree.rep
+)
+
 target_compile_definitions(libdeckcompositor
     PRIVATE
     WLR_USE_UNSTABLE
@@ -373,6 +379,8 @@ target_link_libraries(libdeckcompositor
         Qt6::QuickPrivate
         Qt6::DBus
         Qt6::Concurrent
+        Qt6::RemoteObjects
+        Qt6::Network
         PkgConfig::PIXMAN
         PkgConfig::WAYLAND
         PkgConfig::LIBINPUT

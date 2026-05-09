@@ -135,6 +135,7 @@
 #include <linux/input.h>
 #include <pwd.h>
 #include <sys/ioctl.h>
+#include <unistd.h>
 #include <utility>
 #include <wayland-util.h>
 

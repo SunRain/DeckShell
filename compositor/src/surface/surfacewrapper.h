@@ -149,7 +149,7 @@ public:
     WSurfaceItem *surfaceItem() const;
     QQuickItem *prelaunchSplash() const;
     QString appId() const;
-    bool resize(const QSizeF &size);
+    bool resize(const QSizeF &size, bool tryExec = false);
     void close();
 
     QRectF titlebarGeometry() const;

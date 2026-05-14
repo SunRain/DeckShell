@@ -557,18 +557,6 @@ void SurfaceWrapper::startPrelaunchSplashHideSequence()
         return;
     }
 
-    // Wait until surfaceItem has computed a valid scene-space implicit size.
-    // For XWayland, this happens in updateSurfaceState() after the first surface commit;
-    // for other types it may be deferred until componentComplete + first polish.
-    if (!m_surfaceItem->isReady()) {
-        connect(m_surfaceItem,
-                &WSurfaceItem::readyChanged,
-                this,
-                &SurfaceWrapper::startPrelaunchSplashHideSequence,
-                Qt::SingleShotConnection);
-        return;
-    }
-
     // Use surfaceItem's scene-space implicit size: for XWayland, surf->size() is
     // buffer-space and differs from scene-space after DPR scaling via surfaceSizeRatio.
     const QSizeF targetImplicitSize(m_surfaceItem->implicitWidth(),
@@ -704,13 +692,13 @@ QString SurfaceWrapper::appId() const
     return QString();
 }
 
-bool SurfaceWrapper::resize(const QSizeF &size)
+bool SurfaceWrapper::resize(const QSizeF &size, bool tryExec)
 {
     // No surfaceItem in prelaunch mode -> return false
     if (!m_surfaceItem)
         return false;
 
-    return m_surfaceItem->resizeSurface(size);
+    return m_surfaceItem->resizeSurface(size, tryExec);
 }
 
 void SurfaceWrapper::close()
@@ -1375,8 +1363,8 @@ void SurfaceWrapper::onAnimationReady()
     Q_ASSERT(m_pendingState != m_surfaceState);
     Q_ASSERT(m_pendingGeometry.isValid());
 
-    if (!resize(m_pendingGeometry.size())) {
-        // abort change state if resize failed
+    if (!resize(m_pendingGeometry.size(), true)) {
+        // abort change state if cannot resize
         m_geometryAnimation->disconnect(this);
         m_geometryAnimation->deleteLater();
         m_geometryAnimation = nullptr;
@@ -1386,6 +1374,7 @@ void SurfaceWrapper::onAnimationReady()
     QPointF alignedPos = alignToPixelGrid(m_pendingGeometry.topLeft());
     setPosition(alignedPos);
     doSetSurfaceState(m_pendingState);
+    resize(m_pendingGeometry.size());
 }
 
 void SurfaceWrapper::onAnimationFinished()

@@ -557,6 +557,13 @@ void Helper::onOutputRemoved(WOutput *output)
 
         for (int i = 0; i < m_outputList.size(); i++) {
             Output *copyOutput = m_outputList.at(i);
+
+            if (copyOutput->isPrimary()) {
+                if (!primaryCandidate)
+                    primaryCandidate = copyOutput;
+                continue;
+            }
+
             Output *normalOutput = createNormalOutput(copyOutput->output());
             normalOutput->enable();
 
@@ -582,6 +589,7 @@ void Helper::onOutputRemoved(WOutput *output)
         }
 
         for (auto oldOutput : oldOutputsToDelete) {
+            m_rootSurfaceContainer->removeOutput(oldOutput);
             delete oldOutput;
         }
 

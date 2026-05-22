@@ -131,12 +131,14 @@
 #include <QtConcurrent>
 #include <rhi/qrhi.h>
 
+#include <algorithm>
 #include <functional>
 #include <linux/input.h>
 #include <pwd.h>
 #include <sys/ioctl.h>
 #include <unistd.h>
 #include <utility>
+#include <vector>
 #include <wayland-util.h>
 
 #define EXT_DATA_CONTROL_MANAGER_V1_VERSION 1
@@ -1559,6 +1561,20 @@ void Helper::init(Treeland::Treeland *treeland)
             &WXdgDecorationManager::surfaceModeChanged,
             this,
             &Helper::onSurfaceModeChanged);
+
+    m_xdgDialogManagerV1 = m_server->attach<WXdgDialogManagerV1>();
+    connect(m_xdgDialogManagerV1,
+            &WXdgDialogManagerV1::surfaceModalChanged,
+            this,
+            [this](WXdgToplevelSurface *toplevel, bool modal) {
+                if (auto *wrapper = m_rootSurfaceContainer->getSurface(toplevel)) {
+                    wrapper->setModal(modal);
+                } else {
+                    qCWarning(lcTlShell) << "xdg-dialog-v1: no wrapper for toplevel" << toplevel;
+                }
+            });
+
+    m_xdgToplevelTagManagerV1 = m_server->attach<WXdgToplevelTagManagerV1>();
 
     auto gammaControlManager = qw_gamma_control_manager_v1::create(*m_server->handle());
     connect(gammaControlManager,

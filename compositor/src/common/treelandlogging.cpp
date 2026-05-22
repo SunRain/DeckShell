@@ -69,3 +69,4 @@ Q_LOGGING_CATEGORY(treelandXsettings, "treeland.xsettings")
 
 // Activation module
 Q_LOGGING_CATEGORY(treelandActivation, "treeland.activation")
+Q_LOGGING_CATEGORY(lcTlShell, "treeland.shell")

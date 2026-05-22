@@ -27,6 +27,8 @@
 #include <wqmlcreator.h>
 #include <wseat.h>
 #include <wxdgdecorationmanager.h>
+#include <wxdgdialogmanagerv1.h>
+#include <wxdgtopleveltagmanager.h>
 
 #include <QList>
 #include <QMap>
@@ -292,6 +294,7 @@ Q_SIGNALS:
     void launchpadMappedChanged(WOutput *output, bool mapped);
     void showDesktopRequested(WOutput *output);
     void startLockscreened(WOutput *output, bool showAnimation);
+    void modifierKeyReleased(QKeyEvent *event);
 
 private Q_SLOTS:
     void onShowDesktop();
@@ -398,6 +401,8 @@ private:
     ActivationManagerInterfaceV1 *m_activationManagerV1 = nullptr;
     ShellHandler *m_shellHandler = nullptr;
     WXdgDecorationManager *m_xdgDecorationManager = nullptr;
+    WXdgDialogManagerV1 *m_xdgDialogManagerV1 = nullptr;
+    WXdgToplevelTagManagerV1 *m_xdgToplevelTagManagerV1 = nullptr;
     WForeignToplevel *m_foreignToplevel = nullptr;
     WExtForeignToplevelListV1 *m_extForeignToplevelListV1 = nullptr;
     ShortcutManagerV2 *m_shortcutManager = nullptr;

@@ -83,6 +83,7 @@ class SurfaceWrapper : public QQuickItem
     Q_PROPERTY(bool isActivated READ isActivated NOTIFY isActivatedChanged FINAL)
 
 public:
+    void setModal(bool modal);
     enum class Type
     {
         XdgToplevel,

@@ -73,6 +73,8 @@ Q_DECLARE_LOGGING_CATEGORY(treelandXsettings)
 
 // Activation module
 Q_DECLARE_LOGGING_CATEGORY(treelandActivation)
+// inputManager
+Q_DECLARE_LOGGING_CATEGORY(treelandInputManager)
 
 Q_DECLARE_LOGGING_CATEGORY(lcTlShell)
 #endif // TREELAND_LOGGING_H

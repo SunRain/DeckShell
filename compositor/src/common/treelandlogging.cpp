@@ -69,4 +69,6 @@ Q_LOGGING_CATEGORY(treelandXsettings, "treeland.xsettings")
 
 // Activation module
 Q_LOGGING_CATEGORY(treelandActivation, "treeland.activation")
+// inputManager
+Q_LOGGING_CATEGORY(treelandInputManager, "treeland.input.manager")
 Q_LOGGING_CATEGORY(lcTlShell, "treeland.shell")

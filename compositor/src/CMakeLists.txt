@@ -93,6 +93,13 @@ dtk_add_config_to_cpp(
 )
 
 dtk_add_config_to_cpp(
+    SEAT_USER_CONFIG
+    "${PROJECT_SOURCE_DIR}/misc/dconfig/org.deepin.dde.treeland.user.seat.json"
+    OUTPUT_FILE_NAME "seatuserconfig.hpp"
+    CLASS_NAME "SeatUserDConfig"
+)
+
+dtk_add_config_to_cpp(
     APP_CONFIG
     "${PROJECT_SOURCE_DIR}/misc/dconfig/org.deepin.dde.treeland.app.json"
     OUTPUT_FILE_NAME "appconfig.hpp"
@@ -123,6 +130,7 @@ qt_add_qml_module(libdeckcompositor
         ${TREELAND_USER_CONFIG}
         ${OUTPUT_CONFIG}
         ${APP_CONFIG}
+        ${SEAT_USER_CONFIG}
         common/treelandlogging.cpp
         common/treelandlogging.h
         core/layersurfacecontainer.cpp

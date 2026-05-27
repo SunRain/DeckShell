@@ -48,7 +48,6 @@ public:
     WInputDevice *keyboardForSeat(WSeat *seat) const;
 
     static WAYLIB_SERVER_NAMESPACE::WCursor *createCursor(QObject *parent);
-    void setScrollFactor(WSeat *seat, qreal factor);
 
     // Device assignment
     void assignDeviceToSeat(WInputDevice *device, const QString &seatName);

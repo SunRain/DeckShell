@@ -170,6 +170,8 @@ qt_add_qml_module(libdeckcompositor
         input/inputdevice.h
         input/togglablegesture.cpp
         input/togglablegesture.h
+        input/inputmanager.cpp
+        input/inputmanager.h
         interfaces/baseplugininterface.h
         interfaces/lockscreeninterface.h
         interfaces/multitaskviewinterface.h

@@ -9,8 +9,6 @@
 #include <wcursor.h>
 #include <woutputlayout.h>
 #include <qwinputdevice.h>
-#include <qwcursor.h>
-#include <qwpointer.h>
 
 #include <QFile>
 #include <QJsonDocument>
@@ -21,10 +19,6 @@
 #include <QScopeGuard>
 
 #include <libudev.h>
-
-extern "C" {
-#include <wlr/types/wlr_pointer.h>
-}
 
 namespace {
 
@@ -59,68 +53,6 @@ QString inputDevicePath(WInputDevice *device)
     return {};
 }
 
-class ManagedSeat final : public WSeat
-{
-public:
-    using WSeat::WSeat;
-
-    void notifyAxis(WCursor *cursor,
-                    WInputDevice *device,
-                    const wlr_pointer_axis_event *event,
-                    qreal factor)
-    {
-        WSeat::notifyAxis(cursor,
-                          device,
-                          event->source,
-                          event->orientation == WL_POINTER_AXIS_HORIZONTAL_SCROLL
-                              ? Qt::Horizontal
-                              : Qt::Vertical,
-                          event->relative_direction,
-                          event->delta * factor,
-                          event->delta_discrete,
-                          event->time_msec);
-    }
-};
-
-class ManagedCursor final : public WCursor
-{
-public:
-    using WCursor::WCursor;
-
-    void installAxisHandler()
-    {
-        auto *cursorHandle = handle();
-        QObject::disconnect(cursorHandle, &qw_cursor::notify_axis, this, nullptr);
-        QObject::connect(cursorHandle,
-                         &qw_cursor::notify_axis,
-                         this,
-                         [this](wlr_pointer_axis_event *event) {
-                             auto *managedSeat = dynamic_cast<ManagedSeat *>(seat());
-                             if (!managedSeat)
-                                 return;
-
-                             auto *pointer = qw_pointer::from(event->pointer);
-                             managedSeat->notifyAxis(this,
-                                                     WInputDevice::fromHandle(pointer),
-                                                     event,
-                                                     m_scrollFactor);
-                         });
-    }
-
-    void setScrollFactor(qreal factor)
-    {
-        m_scrollFactor = factor;
-    }
-
-private:
-    qreal m_scrollFactor = 1.0;
-};
-
-ManagedCursor *managedCursor(WCursor *cursor)
-{
-    return dynamic_cast<ManagedCursor *>(cursor);
-}
-
 } // namespace
 
 SeatsManager::SeatsManager(WServer *server, QObject *parent)
@@ -152,7 +84,7 @@ WSeat *SeatsManager::createSeat(const QString &name, bool isFallback)
         return m_seats[name];
     }
 
-    WSeat *seat = new ManagedSeat(name);
+    WSeat *seat = new WSeat(name);
     m_seats[name] = seat;
 
     if (isFallback) {
@@ -264,16 +196,7 @@ WInputDevice *SeatsManager::keyboardForSeat(WSeat *seat) const
 
 WCursor *SeatsManager::createCursor(QObject *parent)
 {
-    return new ManagedCursor(parent);
-}
-
-void SeatsManager::setScrollFactor(WSeat *seat, qreal factor)
-{
-    if (!seat)
-        return;
-
-    if (auto *cursor = managedCursor(seat->cursor()))
-        cursor->setScrollFactor(factor);
+    return new WCursor(parent);
 }
 
 void SeatsManager::assignDeviceToSeat(WInputDevice *device, const QString &seatName)
@@ -743,9 +666,6 @@ void SeatsManager::setupAllSeats(QQuickWindow *renderWindow,
                 seat->setCursor(cursor);
             }
         }
-        if (auto *cursor = managedCursor(seat->cursor()))
-            cursor->installAxisHandler();
-
         seat->setKeyboardFocusWindow(renderWindow);
 
         if (!seat->eventFilter()) {
@@ -848,7 +768,6 @@ void SeatsManager::assignDevice(WInputDevice *device,
             cursor->setLayout(layout);
         }
         assignedSeat->setCursor(cursor);
-        managedCursor(cursor)->installAxisHandler();
     }
 
     // Setup keyboard focus window for keyboard devices

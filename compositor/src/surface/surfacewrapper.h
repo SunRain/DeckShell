@@ -302,6 +302,7 @@ public Q_SLOTS:
     void updateSurfaceSizeRatio();
 
 Q_SIGNALS:
+    void windowMenuRequested(QPointF pos);
     void hasInitializeContainerChanged();
     void boundingRectChanged();
     void ownsOutputChanged();

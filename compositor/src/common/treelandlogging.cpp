@@ -74,3 +74,4 @@ Q_LOGGING_CATEGORY(treelandInputManager, "treeland.input.manager")
 // key notify
 Q_LOGGING_CATEGORY(treelandKeyboardNotify, "treeland.keyboard.state.notify")
 Q_LOGGING_CATEGORY(lcTlShell, "treeland.shell")
+Q_LOGGING_CATEGORY(lcTlSurface, "treeland.surface")

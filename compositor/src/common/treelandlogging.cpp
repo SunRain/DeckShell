@@ -71,4 +71,6 @@ Q_LOGGING_CATEGORY(treelandXsettings, "treeland.xsettings")
 Q_LOGGING_CATEGORY(treelandActivation, "treeland.activation")
 // inputManager
 Q_LOGGING_CATEGORY(treelandInputManager, "treeland.input.manager")
+// key notify
+Q_LOGGING_CATEGORY(treelandKeyboardNotify, "treeland.keyboard.state.notify")
 Q_LOGGING_CATEGORY(lcTlShell, "treeland.shell")

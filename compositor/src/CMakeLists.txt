@@ -392,7 +392,9 @@ target_link_libraries(libdeckcompositor
 
 add_subdirectory(plugins)
 add_subdirectory(modules)
-add_subdirectory(treeland-shortcut)
+if(NOT DISABLE_BUILTIN_SHORTCUTS)
+    add_subdirectory(treeland-shortcut)
+endif()
 add_subdirectory(treeland-screensaver)
 
 qt_add_executable(${BIN_NAME}

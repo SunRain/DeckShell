@@ -32,6 +32,7 @@
 
 #include <QList>
 #include <QMap>
+#include <qevent.h>
 
 #include <optional>
 

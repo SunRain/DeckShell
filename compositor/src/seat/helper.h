@@ -336,6 +336,7 @@ private:
     friend class SessionManager;
     friend class WallpaperManager;
     friend class WallpaperItem;
+    friend class WallpaperSwitcherItem;
     friend class InputManager;
 
     void allowNonDrmOutputAutoChangeMode(WOutput *output);

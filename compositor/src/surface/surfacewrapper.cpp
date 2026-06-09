@@ -63,6 +63,8 @@ SurfaceWrapper::SurfaceWrapper(QmlEngine *qmlEngine,
     , m_blur(false)
     , m_isActivated(false)
     , m_attention(false)
+    , m_resizable(false)
+    , m_maximizable(false)
     , m_appId(appId)
 {
     QQmlEngine::setContextForObject(this, qmlEngine->rootContext());
@@ -96,6 +98,8 @@ SurfaceWrapper::SurfaceWrapper(SurfaceWrapper *original, QQuickItem *parent)
     , m_blur(false)
     , m_isActivated(false)
     , m_attention(false)
+    , m_resizable(false)
+    , m_maximizable(false)
     , m_appId(original->m_appId)
 {
     QQmlEngine::setContextForObject(this, m_engine->rootContext());
@@ -162,6 +166,8 @@ SurfaceWrapper::SurfaceWrapper(QmlEngine *qmlEngine,
     , m_blur(false)
     , m_isActivated(false)
     , m_attention(false)
+    , m_resizable(false)
+    , m_maximizable(false)
     , m_appId(appId)
 {
     QQmlEngine::setContextForObject(this, qmlEngine->rootContext());
@@ -337,6 +343,16 @@ void SurfaceWrapper::setup()
         });
     }
 
+    if (m_type == Type::XdgToplevel || m_type == Type::XWayland) {
+        m_shellSurface->safeConnect(&WToplevelSurface::minimumSizeChanged,
+                                    this,
+                                    &SurfaceWrapper::updateSizeCapabilities);
+        m_shellSurface->safeConnect(&WToplevelSurface::maximumSizeChanged,
+                                    this,
+                                    &SurfaceWrapper::updateSizeCapabilities);
+    }
+    updateSizeCapabilities();
+
     if (!m_prelaunchSplash) {
         setImplicitSize(m_surfaceItem->implicitWidth(), m_surfaceItem->implicitHeight());
         connect(m_surfaceItem, &WSurfaceItem::implicitWidthChanged, this, [this] {
@@ -424,11 +440,17 @@ void SurfaceWrapper::setup()
         connect(xwaylandSurface,
                 &WXWaylandSurface::bypassManagerChanged,
                 this,
-                updateX11shouldSkipDock);
+                [this, updateX11shouldSkipDock]() {
+                    updateX11shouldSkipDock();
+                    updateSizeCapabilities();
+                });
         connect(xwaylandSurface,
                 &WXWaylandSurface::windowTypesChanged,
                 this,
-                updateX11shouldSkipDock);
+                [this, updateX11shouldSkipDock]() {
+                    updateX11shouldSkipDock();
+                    updateSizeCapabilities();
+                });
         updateX11shouldSkipDock();
     }
 }
@@ -542,18 +564,6 @@ void SurfaceWrapper::startPrelaunchSplashHideSequence()
     }
     if (m_geometryAnimation) {
         qCDebug(treelandSurface) << "prelaunch splash transition already prepared or running, skip";
-        return;
-    }
-
-    // Wait until surfaceItem has computed a valid scene-space implicit size.
-    // For XWayland, this happens in updateSurfaceState() after the first surface commit;
-    // for other types it may be deferred until componentComplete + first polish.
-    if (!m_surfaceItem->isReady()) {
-        connect(m_surfaceItem,
-                &WSurfaceItem::readyChanged,
-                this,
-                &SurfaceWrapper::startPrelaunchSplashHideSequence,
-                Qt::SingleShotConnection);
         return;
     }
 
@@ -1615,7 +1625,8 @@ void SurfaceWrapper::requestCancelMinimize(bool onAnimation)
 
 void SurfaceWrapper::requestMaximize()
 {
-    if (m_surfaceState == State::Minimized || m_surfaceState == State::Fullscreen)
+    if (m_surfaceState == State::Minimized || m_surfaceState == State::Fullscreen
+        || !isMaximizable())
         return;
 
     setSurfaceState(State::Maximized);
@@ -1986,6 +1997,16 @@ bool SurfaceWrapper::showOnWorkspace(int workspaceIndex) const
     return showOnAllWorkspace();
 }
 
+bool SurfaceWrapper::isResizable() const
+{
+    return m_resizable;
+}
+
+bool SurfaceWrapper::isMaximizable() const
+{
+    return m_maximizable;
+}
+
 bool SurfaceWrapper::blur() const
 {
     return m_blur;
@@ -2078,6 +2099,26 @@ void SurfaceWrapper::updateExplicitAlwaysOnTop()
     setZ(m_explicitAlwaysOnTop ? ALWAYSONTOPLAYER : 0);
     for (const auto &sub : std::as_const(m_subSurfaces))
         sub->updateExplicitAlwaysOnTop();
+}
+
+void SurfaceWrapper::updateSizeCapabilities()
+{
+    if (!m_shellSurface) {
+        return;
+    }
+
+    const bool resizable = m_shellSurface->hasCapability(WToplevelSurface::Capability::Resize);
+    const bool maximizable = m_shellSurface->hasCapability(WToplevelSurface::Capability::Maximized);
+
+    if (m_resizable != resizable) {
+        m_resizable = resizable;
+        Q_EMIT resizableChanged();
+    }
+
+    if (m_maximizable != maximizable) {
+        m_maximizable = maximizable;
+        Q_EMIT maximizableChanged();
+    }
 }
 
 void SurfaceWrapper::updateHasActiveCapability(ActiveControlState state, bool value)

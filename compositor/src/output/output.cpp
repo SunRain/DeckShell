@@ -470,11 +470,16 @@ void Output::removeSurface(SurfaceWrapper *surface)
     surface->disconnect(this);
 
     if (surface->type() == SurfaceWrapper::Type::Layer) {
+        bool exclusiveZoneRemoved = false;
         if (auto ss = surface->shellSurface()) {
             ss->safeDisconnect(this);
-            removeExclusiveZone(ss);
+            exclusiveZoneRemoved = removeExclusiveZone(ss);
         }
-        arrangeAllSurfaces();
+        arrangeLayerSurfaces();
+        if (exclusiveZoneRemoved) {
+            arrangeNonLayerSurfaces(ArrangeReason::LayerSurfaceRemoved);
+            Q_EMIT exclusiveZoneChanged();
+        }
     }
 }
 

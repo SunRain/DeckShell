@@ -157,7 +157,6 @@ void InputManager::onMousePointerConfigCreated(PointerDeviceConfigurationV1 *con
 
     PointerDeviceConfigurationV1::FeatureFlags features;
     features.setFlag(PointerDeviceConfigurationV1::ScrollFactor);
-    features.setFlag(PointerDeviceConfigurationV1::NaturalScroll);
     features.setFlag(PointerDeviceConfigurationV1::EventsMode);
 
     const auto inputDevices = Helper::instance()->backend()->inputDeviceList();
@@ -175,6 +174,10 @@ void InputManager::onMousePointerConfigCreated(PointerDeviceConfigurationV1 *con
             libinput_device_get_udev_device(inputDevice);
         if (!udev_device_get_property_value(udevDevice, "ID_INPUT_MOUSE")) {
             continue;
+        }
+
+        if (libinput_device_config_scroll_has_natural_scroll(inputDevice)) {
+            features.setFlag(PointerDeviceConfigurationV1::NaturalScroll);
         }
 
         if (libinput_device_config_left_handed_is_available(inputDevice)) {
@@ -297,7 +300,6 @@ void InputManager::onTouchpadPointerConfigCreated(PointerDeviceConfigurationV1 *
 {
     PointerDeviceConfigurationV1::FeatureFlags features;
     features.setFlag(PointerDeviceConfigurationV1::ScrollFactor);
-    features.setFlag(PointerDeviceConfigurationV1::NaturalScroll);
     features.setFlag(PointerDeviceConfigurationV1::EventsMode);
 
     const auto inputDevices = Helper::instance()->backend()->inputDeviceList();
@@ -315,6 +317,10 @@ void InputManager::onTouchpadPointerConfigCreated(PointerDeviceConfigurationV1 *
             libinput_device_get_udev_device(inputDevice);
         if (!udev_device_get_property_value(udevDevice, "ID_INPUT_TOUCHPAD")) {
             continue;
+        }
+
+        if (libinput_device_config_scroll_has_natural_scroll(inputDevice)) {
+            features.setFlag(PointerDeviceConfigurationV1::NaturalScroll);
         }
 
         if (libinput_device_config_left_handed_is_available(inputDevice)) {

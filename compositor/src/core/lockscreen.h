@@ -84,4 +84,5 @@ private:
     WSessionLock* m_sessionLock{ nullptr };
     bool m_externalLockActive{ false };
 #endif
+    QString m_primaryOutputName;
 };

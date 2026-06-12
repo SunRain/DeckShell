@@ -579,6 +579,18 @@ void SurfaceWrapper::startPrelaunchSplashHideSequence()
         return;
     }
 
+    // Wait until surfaceItem has computed a valid scene-space implicit size.
+    // For XWayland, this happens in updateSurfaceState() after the first surface commit;
+    // for other types it may be deferred until componentComplete + first polish.
+    if (!m_surfaceItem->isReady()) {
+        connect(m_surfaceItem,
+                &WSurfaceItem::readyChanged,
+                this,
+                &SurfaceWrapper::startPrelaunchSplashHideSequence,
+                Qt::SingleShotConnection);
+        return;
+    }
+
     // Use surfaceItem's scene-space implicit size: for XWayland, surf->size() is
     // buffer-space and differs from scene-space after DPR scaling via surfaceSizeRatio.
     const QSizeF targetImplicitSize(m_surfaceItem->implicitWidth(),
@@ -1583,15 +1595,21 @@ void SurfaceWrapper::startShowDesktopAnimation(bool show)
 
 qreal SurfaceWrapper::radius() const
 {
-    if (m_radius > 1)
-        return m_radius;
-
-    if (m_type == Type::XdgToplevel)
-        return Helper::instance()->config()->windowRadius();
+    // TODO: move to dconfig
+    if (m_type == Type::InputPopup)
+        return 0;
     if (m_type == Type::XdgPopup)
-        return Helper::instance()->config()->popupRadius();
+        return 8;
 
-    return 0;
+    qreal radius = m_radius;
+
+    // TODO: Handle: XdgToplevel, popup, InputPopup, XWayland (bypass, window type:
+    // menu/normal/popup)
+    if (radius < 1 && m_type != Type::Layer) {
+        radius = Helper::instance()->config()->windowRadius();
+    }
+
+    return radius;
 }
 
 void SurfaceWrapper::setRadius(qreal newRadius)

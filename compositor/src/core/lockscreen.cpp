@@ -250,7 +250,7 @@ void LockScreen::onLockSurfaceAdded(WSessionLockSurface *surface)
 
     wrapper->setHasInitializeContainer(true);
 
-    connect(wrapper, &SurfaceWrapper::requestActive, this, [wrapper] {
+    connect(wrapper, &SurfaceWrapper::activationRequested, this, [wrapper] {
         Helper::instance()->activateSurface(wrapper);
     });
 }

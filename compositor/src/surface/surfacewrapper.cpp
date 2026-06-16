@@ -295,31 +295,31 @@ void SurfaceWrapper::setup()
 
     if (!m_isProxy) {
         m_shellSurface->safeConnect(&WToplevelSurface::requestMinimize, this, [this]() {
-            requestMinimize();
+            minimize();
         });
         m_shellSurface->safeConnect(&WToplevelSurface::requestCancelMinimize, this, [this]() {
-            requestCancelMinimize();
+            restoreFromMinimized();
         });
         m_shellSurface->safeConnect(&WToplevelSurface::requestMaximize,
                                     this,
-                                    &SurfaceWrapper::requestMaximize);
+                                    &SurfaceWrapper::maximize);
         m_shellSurface->safeConnect(&WToplevelSurface::requestCancelMaximize,
                                     this,
-                                    &SurfaceWrapper::requestCancelMaximize);
-        m_shellSurface->safeConnect(&WToplevelSurface::requestMove,
-                                    this,
-                                    &SurfaceWrapper::requestMove);
+                                    &SurfaceWrapper::unmaximize);
+        m_shellSurface->safeConnect(&WToplevelSurface::requestMove, this, [this]() {
+            Q_EMIT moveRequested();
+        });
         m_shellSurface->safeConnect(&WToplevelSurface::requestResize,
                                     this,
                                     [this](WSeat *, Qt::Edges edge, quint32) {
-                                        Q_EMIT requestResize(edge);
+                                        Q_EMIT resizeRequested(edge);
                                     });
         m_shellSurface->safeConnect(&WToplevelSurface::requestFullscreen,
                                     this,
-                                    &SurfaceWrapper::requestFullscreen);
+                                    &SurfaceWrapper::enterFullscreen);
         m_shellSurface->safeConnect(&WToplevelSurface::requestCancelFullscreen,
                                     this,
-                                    &SurfaceWrapper::requestCancelFullscreen);
+                                    &SurfaceWrapper::leaveFullscreen);
 
         if (m_type == Type::XdgToplevel) {
             m_shellSurface->safeConnect(&WToplevelSurface::requestShowWindowMenu,
@@ -579,18 +579,6 @@ void SurfaceWrapper::startPrelaunchSplashHideSequence()
         return;
     }
 
-    // Wait until surfaceItem has computed a valid scene-space implicit size.
-    // For XWayland, this happens in updateSurfaceState() after the first surface commit;
-    // for other types it may be deferred until componentComplete + first polish.
-    if (!m_surfaceItem->isReady()) {
-        connect(m_surfaceItem,
-                &WSurfaceItem::readyChanged,
-                this,
-                &SurfaceWrapper::startPrelaunchSplashHideSequence,
-                Qt::SingleShotConnection);
-        return;
-    }
-
     // Use surfaceItem's scene-space implicit size: for XWayland, surf->size() is
     // buffer-space and differs from scene-space after DPR scaling via surfaceSizeRatio.
     const QSizeF targetImplicitSize(m_surfaceItem->implicitWidth(),
@@ -739,7 +727,7 @@ void SurfaceWrapper::close()
 {
     if (m_type == Type::SplashScreen) {
         // For splash screens, emit a signal to request closure
-        Q_EMIT requestCloseSplash();
+        Q_EMIT splashCloseRequested();
     } else if (m_shellSurface) {
         // For normal surfaces, call the shell surface's close method
         m_shellSurface->close();
@@ -1620,7 +1608,7 @@ void SurfaceWrapper::setRadius(qreal newRadius)
     Q_EMIT radiusChanged();
 }
 
-void SurfaceWrapper::requestMinimize(bool onAnimation)
+void SurfaceWrapper::minimize(bool onAnimation)
 {
     if (m_surfaceState == State::Minimized)
         return;
@@ -1629,7 +1617,7 @@ void SurfaceWrapper::requestMinimize(bool onAnimation)
         startMinimizeAnimation(iconGeometry(), CLOSE_ANIMATION);
 }
 
-void SurfaceWrapper::requestCancelMinimize(bool onAnimation)
+void SurfaceWrapper::restoreFromMinimized(bool onAnimation)
 {
     if (m_surfaceState != State::Minimized && m_hideByshowDesk)
         return;
@@ -1641,7 +1629,7 @@ void SurfaceWrapper::requestCancelMinimize(bool onAnimation)
         startMinimizeAnimation(iconGeometry(), OPEN_ANIMATION);
 }
 
-void SurfaceWrapper::requestMaximize()
+void SurfaceWrapper::maximize()
 {
     if (m_surfaceState == State::Minimized || m_surfaceState == State::Fullscreen
         || !isMaximizable())
@@ -1650,7 +1638,7 @@ void SurfaceWrapper::requestMaximize()
     setSurfaceState(State::Maximized);
 }
 
-void SurfaceWrapper::requestCancelMaximize()
+void SurfaceWrapper::unmaximize()
 {
     if (m_surfaceState != State::Maximized)
         return;
@@ -1658,15 +1646,15 @@ void SurfaceWrapper::requestCancelMaximize()
     setSurfaceState(State::Normal);
 }
 
-void SurfaceWrapper::requestToggleMaximize()
+void SurfaceWrapper::toggleMaximized()
 {
     if (m_surfaceState == State::Maximized)
-        requestCancelMaximize();
+        unmaximize();
     else
-        requestMaximize();
+        maximize();
 }
 
-void SurfaceWrapper::requestFullscreen()
+void SurfaceWrapper::enterFullscreen()
 {
     if (m_surfaceState == State::Minimized)
         return;
@@ -1674,7 +1662,7 @@ void SurfaceWrapper::requestFullscreen()
     setSurfaceState(State::Fullscreen);
 }
 
-void SurfaceWrapper::requestCancelFullscreen()
+void SurfaceWrapper::leaveFullscreen()
 {
     if (m_surfaceState != State::Fullscreen)
         return;
@@ -1682,7 +1670,7 @@ void SurfaceWrapper::requestCancelFullscreen()
     setSurfaceState(m_previousSurfaceState);
 }
 
-void SurfaceWrapper::requestClose()
+void SurfaceWrapper::closeSurface()
 {
     // No shellSurface in prelaunch mode -> early return
     if (!m_shellSurface)
@@ -2145,9 +2133,9 @@ void SurfaceWrapper::updateHasActiveCapability(ActiveControlState state, bool va
     m_hasActiveCapability.setFlag(state, value);
     if (oldValue != hasActiveCapability()) {
         if (hasActiveCapability())
-            Q_EMIT requestActive();
+            Q_EMIT activationRequested();
         else
-            Q_EMIT requestInactive();
+            Q_EMIT inactivationRequested();
     }
 }
 

@@ -155,6 +155,7 @@ class Treeland;
 class Helper : public WSeatEventFilter
 {
     friend class RootSurfaceContainer;
+    friend class ShellHandler;
     friend class ShortcutRunner;
     Q_OBJECT
     Q_PROPERTY(RootSurfaceContainer* rootSurfaceContainer READ rootSurfaceContainer CONSTANT FINAL)

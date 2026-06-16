@@ -162,7 +162,7 @@ void initLockScreen(LockScreen *lockScreen,
     lockScreen->setZ(RootSurfaceContainer::LockScreenZOrder);
     lockScreen->setVisible(false);
 
-    for (auto *output : rootSurfaceContainer->outputs()) {
+    for (auto *output : std::as_const(rootSurfaceContainer->outputs())) {
         lockScreen->addOutput(output);
     }
 
@@ -294,7 +294,8 @@ Helper::Helper(QObject *parent)
         if (!wrapper) {
             // Qt focus lost (e.g. focus item became null) — clear Wayland keyboard focus
             // on all seats to avoid stale focus state.
-            for (auto *seat : m_seatManager->seats()) {
+            const auto seats = m_seatManager->seats();
+            for (auto *seat : seats) {
                 if (auto *seatContainer = m_rootSurfaceContainer->getSeatContainer(seat)) {
                     seatContainer->setKeyboardFocusSurface(nullptr);
                 }
@@ -309,7 +310,8 @@ Helper::Helper(QObject *parent)
                 seatContainer->setKeyboardFocusSurface(wrapper);
             }
         } else {
-            for (auto *seat : m_seatManager->seats()) {
+            const auto seats = m_seatManager->seats();
+            for (auto *seat : seats) {
                 if (!seat || !seat->isValid()) {
                     continue;
                 }
@@ -368,7 +370,7 @@ Helper::~Helper()
     // destroy before m_rootSurfaceContainer
     delete m_shellHandler;
     if (m_rootSurfaceContainer) {
-        for (auto s : m_rootSurfaceContainer->surfaces()) {
+        for (auto s : std::as_const(m_rootSurfaceContainer->surfaces())) {
             if (auto c = s->container())
                 c->removeSurface(s);
         }
@@ -441,7 +443,7 @@ bool Helper::isNvidiaCardPresent()
 
 void Helper::setWorkspaceVisible(bool visible)
 {
-    for (auto *surface : m_rootSurfaceContainer->surfaces()) {
+    for (auto *surface : std::as_const(m_rootSurfaceContainer->surfaces())) {
         if (surface->type() == SurfaceWrapper::Type::Layer) {
             surface->setHideByLockScreen(m_currentMode == CurrentMode::LockScreen);
         }
@@ -628,7 +630,7 @@ void Helper::onOutputRemoved(WOutput *output)
             m_rootSurfaceContainer->removeOutput(o);
         }
 
-        for (auto oldOutput : oldOutputsToDelete) {
+        for (auto oldOutput : std::as_const(oldOutputsToDelete)) {
             m_rootSurfaceContainer->removeOutput(oldOutput);
             delete oldOutput;
         }
@@ -1081,7 +1083,7 @@ void Helper::onShowDesktop()
 void Helper::onSetCopyOutput(VirtualOutputInterfaceV1 *interface)
 {
     Output *mirrorOutput = nullptr;
-    for (Output *output : m_outputList) {
+    for (Output *output : std::as_const(m_outputList)) {
         if (!interface->outputList().contains(output->output()->name())) {
             QString screen = output->output()->name() + " does not exist!";
             interface->sendError(VirtualOutputInterfaceV1::INVALID_OUTPUT, screen);
@@ -1545,7 +1547,8 @@ void Helper::init(Treeland::Treeland *treeland)
     });
 
     // Setup drag request handling for all seats
-    for (auto *seat : m_seatManager->seats()) {
+    const auto seats = m_seatManager->seats();
+    for (auto *seat : seats) {
         disconnect(seat, &WSeat::requestDrag, this, nullptr);
         connect(seat, &WSeat::requestDrag, this, [this, seat](WSurface *surface) {
             handleRequestDragForSeat(seat, surface);
@@ -1599,7 +1602,7 @@ void Helper::init(Treeland::Treeland *treeland)
     static const auto isXWaylandClient =
         [sessionManager = QPointer(m_sessionManager)](WClient *client) {
             if (sessionManager) {
-                for (auto session : sessionManager->sessions()) {
+                for (const auto &session : std::as_const(sessionManager->sessions())) {
                     if (session && session->xwayland() && session->xwayland()->waylandClient() == client)
                         return true;
                 }
@@ -2087,7 +2090,8 @@ bool Helper::afterHandleEvent([[maybe_unused]] WSeat *seat,
 
         WSeat *eventSeat = getSeatForEvent(event);
         if (eventSeat && surface) {
-            for (auto *seat : m_seatManager->seats()) {
+            const auto seats = m_seatManager->seats();
+            for (auto *seat : seats) {
                 if (seat != eventSeat && surface) {
                     auto *container = m_rootSurfaceContainer->getSeatContainer(seat);
                     if (container && container->moveResizeState().surface == surface) {
@@ -2327,7 +2331,8 @@ void Helper::setActivatedSurface(SurfaceWrapper *newActivateSurface)
 
 void Helper::setCursorPosition(const QPointF &position)
 {
-    for (auto *seat : m_seatManager->seats()) {
+    const auto seats = m_seatManager->seats();
+    for (auto *seat : seats) {
         m_rootSurfaceContainer->endMoveResizeForSeat(seat);
     }
     m_seat->setCursorPosition(position);
@@ -2804,7 +2809,7 @@ void Helper::restoreFromShowDesktop(SurfaceWrapper *activeSurface)
 Output *Helper::getOutputAtCursor() const
 {
     QPoint cursorPos = QCursor::pos();
-    for (auto output : m_outputList) {
+    for (auto output : std::as_const(m_outputList)) {
         QRectF outputGeometry(output->outputItem()->position(), output->outputItem()->size());
         if (outputGeometry.contains(cursorPos)) {
             return output;

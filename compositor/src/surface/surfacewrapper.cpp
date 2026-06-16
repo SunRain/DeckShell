@@ -579,6 +579,18 @@ void SurfaceWrapper::startPrelaunchSplashHideSequence()
         return;
     }
 
+    // Wait until surfaceItem has computed a valid scene-space implicit size.
+    // For XWayland, this happens in updateSurfaceState() after the first surface commit;
+    // for other types it may be deferred until componentComplete + first polish.
+    if (!m_surfaceItem->isReady()) {
+        connect(m_surfaceItem,
+                &WSurfaceItem::readyChanged,
+                this,
+                &SurfaceWrapper::startPrelaunchSplashHideSequence,
+                Qt::SingleShotConnection);
+        return;
+    }
+
     // Use surfaceItem's scene-space implicit size: for XWayland, surf->size() is
     // buffer-space and differs from scene-space after DPR scaling via surfaceSizeRatio.
     const QSizeF targetImplicitSize(m_surfaceItem->implicitWidth(),
@@ -924,8 +936,8 @@ void SurfaceWrapper::setOutputs(const QList<WOutput *> &outputs)
         qCDebug(treelandSurface) << "SurfaceWrapper::setOutputs called but surface() is null!";
         return;
     }
-    auto oldOutputs = surface()->outputs();
-    for (auto output : oldOutputs) {
+    const auto oldOutputs = surface()->outputs();
+    for (auto output : std::as_const(oldOutputs)) {
         if (outputs.contains(output)) {
             continue;
         }

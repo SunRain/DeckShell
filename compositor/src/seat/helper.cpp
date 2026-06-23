@@ -542,7 +542,6 @@ void Helper::onOutputAdded(WOutput *output)
     }
 
     o->enable();
-    m_outputManager->newOutput(output);
 
     QString cache_location = QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation);
     QSettings settings(cache_location + "/output.ini", QSettings::IniFormat);
@@ -577,6 +576,7 @@ void Helper::onOutputAdded(WOutput *output)
         }
     }
     settings.endGroup();
+    m_outputManager->newOutput(output);
     m_wallpaperManager->ensureWallpaperConfigForOutput(o);
 }
 

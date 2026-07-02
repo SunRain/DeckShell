@@ -2632,27 +2632,12 @@ void Helper::handleRequestDrag([[maybe_unused]] WSurface *surface)
 #ifndef DISABLE_DDM
 void Helper::handleLockScreen(LockScreenInterface *lockScreen)
 {
-    connect(lockScreen, &LockScreenInterface::shutdown, this, [this]() {
-        if (m_lockScreen && m_lockScreen->available() && currentMode() == Helper::CurrentMode::Normal) {
-            setCurrentMode(CurrentMode::LockScreen);
-            m_lockScreen->shutdown();
-            setWorkspaceVisible(false);
-        }
-    });
+    connect(lockScreen, &LockScreenInterface::shutdown, this, &Helper::showShutdownMenu);
     connect(lockScreen, &LockScreenInterface::lock, this, [this]() {
-        if (m_lockScreen && m_lockScreen->available() && currentMode() == Helper::CurrentMode::Normal) {
-            setCurrentMode(CurrentMode::LockScreen);
-            m_lockScreen->lock();
-            setWorkspaceVisible(false);
-        }
+        if (isNormalOrMultitaskview())
+            showLockScreen(false);
     });
-    connect(lockScreen, &LockScreenInterface::switchUser, this, [this]() {
-        if (m_lockScreen && m_lockScreen->available() && currentMode() == Helper::CurrentMode::Normal) {
-            setCurrentMode(CurrentMode::LockScreen);
-            m_lockScreen->switchUser();
-            setWorkspaceVisible(false);
-        }
-    });
+    connect(lockScreen, &LockScreenInterface::switchUser, this, &Helper::showSwitchUser);
 }
 #endif
 
@@ -2708,15 +2693,7 @@ void Helper::onExtSessionLock(WSessionLock *lock)
 
     m_lockScreen->onExternalLock(lock);
 
-    setCurrentMode(CurrentMode::LockScreen);
-
-    if (m_multitaskView) {
-        m_multitaskView->immediatelyExit();
-    }
-
-    deleteTaskSwitch();
-
-    setWorkspaceVisible(false);
+    prepareLockScreenTransition();
 
     lock->safeConnect(&WSessionLock::abandoned, this, [this]() {
         m_lockScreenGraceTimer->stop();
@@ -2997,25 +2974,30 @@ void Helper::setCurrentMode(CurrentMode mode)
     Q_EMIT currentModeChanged();
 }
 
+void Helper::prepareLockScreenTransition()
+{
+    if (m_multitaskView) {
+        m_multitaskView->immediatelyExit();
+    }
+    deleteTaskSwitch();
+    setCurrentMode(CurrentMode::LockScreen);
+    setWorkspaceVisible(false);
+}
+
 void Helper::showLockScreen(bool switchToGreeter)
 {
-#ifndef DISABLE_DDM
+#if !defined(DISABLE_DDM) || defined(EXT_SESSION_LOCK_V1)
+    if (!isLockScreenAvailable()) {
+        return;
+    }
     if (m_lockScreen->isLocked()) {
         return;
     }
 
-
-    if (m_multitaskView) {
-        m_multitaskView->immediatelyExit();
-    }
-
-    deleteTaskSwitch();
-    setWorkspaceVisible(false);
-
-    setCurrentMode(CurrentMode::LockScreen);
+    prepareLockScreenTransition();
     m_lockScreen->lock();
 
-    // send DDM switch to greeter mode
+#ifndef DISABLE_DDM
     if (switchToGreeter) {
         QThreadPool::globalInstance()->start([]() {
             QDBusInterface interface("org.freedesktop.DisplayManager",
@@ -3025,6 +3007,44 @@ void Helper::showLockScreen(bool switchToGreeter)
             interface.call("SwitchToGreeter");
         });
     }
+#else
+    Q_UNUSED(switchToGreeter)
+#endif
+#else
+    Q_UNUSED(switchToGreeter)
+#endif
+}
+
+bool Helper::isLockScreenAvailable() const
+{
+#if !defined(DISABLE_DDM) || defined(EXT_SESSION_LOCK_V1)
+    return m_lockScreen && m_lockScreen->available();
+#else
+    return false;
+#endif
+}
+
+void Helper::showShutdownMenu()
+{
+#if !defined(DISABLE_DDM) || defined(EXT_SESSION_LOCK_V1)
+    if (!isLockScreenAvailable() || !isNormalOrMultitaskview()) {
+        return;
+    }
+
+    prepareLockScreenTransition();
+    m_lockScreen->shutdown();
+#endif
+}
+
+void Helper::showSwitchUser()
+{
+#if !defined(DISABLE_DDM) || defined(EXT_SESSION_LOCK_V1)
+    if (!isLockScreenAvailable() || !isNormalOrMultitaskview()) {
+        return;
+    }
+
+    prepareLockScreenTransition();
+    m_lockScreen->switchUser();
 #endif
 }
 

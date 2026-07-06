@@ -295,6 +295,7 @@ public Q_SLOTS:
     void activateSurface(SurfaceWrapper *wrapper, Qt::FocusReason reason = Qt::OtherFocusReason);
     void forceActivateSurface(SurfaceWrapper *wrapper,
                               Qt::FocusReason reason = Qt::OtherFocusReason);
+    void requestKeyboardFocus(SurfaceWrapper *wrapper, Qt::FocusReason reason = Qt::OtherFocusReason);
     void fakePressSurfaceBottomRightToReszie(SurfaceWrapper *surface);
     bool surfaceBelongsToCurrentSession(SurfaceWrapper *wrapper);
 
@@ -355,7 +356,6 @@ private:
     SurfaceWrapper *keyboardFocusSurface() const;
     SurfaceWrapper *activatedSurface() const;
     void setActivatedSurface(SurfaceWrapper *newActivateSurface);
-    void requestKeyboardFocus(SurfaceWrapper *wrapper, Qt::FocusReason reason);
     void onActivatedSurfaceFocusCapabilityChanged();
 
     void setCursorPosition(const QPointF &position);

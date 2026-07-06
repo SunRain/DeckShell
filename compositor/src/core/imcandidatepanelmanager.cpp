@@ -163,9 +163,12 @@ void IMCandidatePanelManager::applyInitialPositionAtCursor()
 
     QPointF pos;
     auto wrapperPos = focusWrapper->mapToGlobal(QPointF(0, 0));
-    pos.setX(wrapperPos.x() + cursorRect.x());
-    pos.setY(wrapperPos.y() + cursorRect.y() + cursorRect.height()
-             + focusWrapper->titlebarGeometry().height());
+    auto *shellSurface = focusWrapper->shellSurface();
+    const QPointF contentOffset = shellSurface
+        ? shellSurface->getContentGeometry().topLeft() : QPointF(0, 0);
+    pos.setX(wrapperPos.x() + cursorRect.x() - contentOffset.x());
+    pos.setY(wrapperPos.y() + cursorRect.y() - contentOffset.y()
+             + cursorRect.height() + focusWrapper->titlebarGeometry().height());
 
     arrangeIMCandidatePanels(output, pos);
 }
@@ -194,7 +197,6 @@ void IMCandidatePanelManager::onIMCandidatePanelGeometryChanged()
     auto *focusWrapper = focusSurface ? rootContainer->getSurface(focusSurface) : nullptr;
     if (!focusWrapper)
         return;
-
     auto *output = focusWrapper->ownsOutput();
     if (!output)
         return;

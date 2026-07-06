@@ -355,6 +355,8 @@ private:
     SurfaceWrapper *keyboardFocusSurface() const;
     SurfaceWrapper *activatedSurface() const;
     void setActivatedSurface(SurfaceWrapper *newActivateSurface);
+    void requestKeyboardFocus(SurfaceWrapper *wrapper, Qt::FocusReason reason);
+    void onActivatedSurfaceFocusCapabilityChanged();
 
     void setCursorPosition(const QPointF &position);
 
@@ -362,7 +364,7 @@ private:
     bool afterHandleEvent(WSeat *seat, WSurface *watched, QObject *shellObject,
                          QObject *eventObject, QInputEvent *event) override;
     bool unacceptedEvent(WSeat *seat, QWindow *window, QInputEvent *event) override;
-
+    void onRenderWindowActiveFocusItemChanged();
     void handleLeftButtonStateChanged(const QInputEvent *event);
     void handleWhellValueChanged(const QInputEvent *event);
     bool doGesture(QInputEvent *event);

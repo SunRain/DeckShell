@@ -297,10 +297,15 @@ public:
     RootSurfaceContainer *rootContainer() const { return m_rootSurfaceContainer; }
     inline WBackend *backend() const { return m_backend; }
 public Q_SLOTS:
-    void activateSurface(SurfaceWrapper *wrapper, Qt::FocusReason reason = Qt::OtherFocusReason);
+    void activateSurface(SurfaceWrapper *wrapper,
+                         Qt::FocusReason reason = Qt::OtherFocusReason,
+                         WSeat *seat = nullptr);
     void forceActivateSurface(SurfaceWrapper *wrapper,
-                              Qt::FocusReason reason = Qt::OtherFocusReason);
-    void requestKeyboardFocus(SurfaceWrapper *wrapper, Qt::FocusReason reason = Qt::OtherFocusReason);
+                              Qt::FocusReason reason = Qt::OtherFocusReason,
+                              WSeat *seat = nullptr);
+    void requestKeyboardFocus(SurfaceWrapper *wrapper,
+                              Qt::FocusReason reason = Qt::OtherFocusReason,
+                              WSeat *seat = nullptr);
     void fakePressSurfaceBottomRightToReszie(SurfaceWrapper *surface);
     bool surfaceBelongsToCurrentSession(SurfaceWrapper *wrapper);
 
@@ -360,7 +365,7 @@ private:
 
     SurfaceWrapper *keyboardFocusSurface() const;
     SurfaceWrapper *activatedSurface() const;
-    void setActivatedSurface(SurfaceWrapper *newActivateSurface);
+    void setActivatedSurface(SurfaceWrapper *newActivateSurface, WSeat *seat = nullptr);
     void onActivatedSurfaceFocusCapabilityChanged();
 
     void setCursorPosition(const QPointF &position);
@@ -415,7 +420,7 @@ private:
     RootSurfaceContainer *m_rootSurfaceContainer = nullptr;
 
     // wayland helper
-    WSeat *m_seat = nullptr;
+    WSeat *m_primarySeat = nullptr;
     WBackend *m_backend = nullptr;
     qw_renderer *m_renderer = nullptr;
     qw_allocator *m_allocator = nullptr;

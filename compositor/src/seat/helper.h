@@ -30,6 +30,7 @@
 #include <wxdgdialogmanagerv1.h>
 #include <wxdgtopleveltagmanager.h>
 
+#include <QSet>
 #include <QList>
 #include <QMap>
 #include <qevent.h>
@@ -148,6 +149,7 @@ class InputManager;
 
 struct wlr_ext_foreign_toplevel_image_capture_source_manager_v1_request;
 struct wlr_idle_inhibitor_v1;
+struct wlr_output;
 struct wlr_output_power_v1_set_mode_event;
 namespace Treeland {
 class Treeland;
@@ -464,6 +466,9 @@ private:
     // private data
     QList<Output *> m_outputList;
     OutputConfigState *m_outputConfigState = nullptr;
+    // outputs disabled by output_power (should be re-enabled on input)
+    QSet<wlr_output *> m_powerOffOutputs;
+
     OutputLifecycleManager *m_outputLifecycleManager = nullptr;
     QPointer<QQuickItem> m_taskSwitch;
     QList<qw_idle_inhibitor_v1 *> m_idleInhibitors;

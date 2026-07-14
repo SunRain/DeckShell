@@ -2407,12 +2407,15 @@ SurfaceWrapper *Helper::activatedSurface() const
 void Helper::setActivatedSurface(SurfaceWrapper *newActivateSurface, WSeat *seat)
 {
     if (!m_rootSurfaceContainer) {
+        qCWarning(lcTlCore) << "Cannot set activated surface: root surface container is null";
         return;
     }
 
     WSeat *targetSeat = seat ? seat : m_primarySeat;
     auto *seatContainer = m_rootSurfaceContainer->getSeatContainerOrDefault(targetSeat);
     if (!seatContainer) {
+        qCWarning(lcTlCore) << "Cannot set activated surface: no seat container for seat"
+                            << targetSeat;
         return;
     }
 
@@ -2447,6 +2450,8 @@ void Helper::setActivatedSurface(SurfaceWrapper *newActivateSurface, WSeat *seat
         workspace()->pushActivedSurface(newActivateSurface);
     }
 
+    // SeatSurfaceManager emits activatedSurfaceChanged, and RootSurfaceContainer forwards
+    // it for the primary seat. Do not emit Helper::activatedSurfaceChanged again here.
     seatContainer->setActivatedSurface(newActivateSurface, Qt::OtherFocusReason);
 
     if (isPrimarySeat && newActivateSurface) {
@@ -2454,9 +2459,6 @@ void Helper::setActivatedSurface(SurfaceWrapper *newActivateSurface, WSeat *seat
         newActivateSurface->setActivate(true);
     }
 
-    if (isPrimarySeat && oldPrimarySurface != activatedSurface()) {
-        Q_EMIT activatedSurfaceChanged();
-    }
 }
 
 void Helper::onRenderWindowActiveFocusItemChanged()

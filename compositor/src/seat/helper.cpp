@@ -2493,17 +2493,11 @@ void Helper::requestKeyboardFocus(SurfaceWrapper *wrapper, Qt::FocusReason reaso
     if (!seat)
         seat = m_primarySeat;
 
-    if (wrapper) {
-        wrapper->setFocus(true, reason);
-    }
-    // Old surface focus clearing is delegated to SeatSurfaceManager::setKeyboardFocusSurface,
-    // which handles multi-seat arbitration.
-
-    // Delegate to SeatSurfaceManager which handles Wayland focus, multi-seat arbitration,
-    // and interaction metadata in one place.
+    // Delegate to SeatSurfaceManager which handles keyboardFocusPriority checks,
+    // Qt focus management, Wayland focus, multi-seat arbitration, and interaction metadata.
     auto *seatContainer = m_rootSurfaceContainer->getSeatContainer(seat);
     Q_ASSERT(seatContainer);
-    seatContainer->setKeyboardFocusSurface(wrapper);
+    seatContainer->setKeyboardFocusSurface(wrapper, reason);
 }
 
 void Helper::setCursorPosition(const QPointF &position)

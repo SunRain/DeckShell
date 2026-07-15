@@ -3,7 +3,6 @@ find_package(Qt6 REQUIRED COMPONENTS Core Gui WaylandClient Quick)
 if(Qt6_VERSION VERSION_GREATER_EQUAL 6.10)
     find_package(Qt6 REQUIRED COMPONENTS WaylandClientPrivate QuickPrivate)
 endif()
-find_package(DeckCompositorProtocols REQUIRED)
 pkg_check_modules(EGL REQUIRED IMPORTED_TARGET egl gl glesv2)
 qt_add_executable(test-capture
     main.cpp
@@ -31,7 +30,7 @@ qt_add_resources(test-capture "test_capture_assets"
 
 qt6_generate_wayland_protocol_client_sources(test-capture
     FILES
-        ${TREELAND_PROTOCOLS_DATA_DIR}/treeland-capture-unstable-v1.xml
+        ${DECKCOMPOSITOR_PROTOCOLS_DATA_DIR}/treeland-capture-unstable-v1.xml
 )
 
 target_link_libraries(test-capture

@@ -1,6 +1,5 @@
-find_package(DeckCompositorProtocols REQUIRED)
 
-ws_generate_local(server ${TREELAND_PROTOCOLS_DATA_DIR}/treeland-virtual-output-manager-v1.xml treeland-virtual-output-manager-protocol)
+ws_generate_local(server ${DECKCOMPOSITOR_PROTOCOLS_DATA_DIR}/treeland-virtual-output-manager-v1.xml treeland-virtual-output-manager-protocol)
 
 impl_deckcompositor(
     NAME

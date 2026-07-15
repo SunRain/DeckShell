@@ -2,7 +2,6 @@ find_package(Qt6 REQUIRED COMPONENTS WaylandClient Widgets DBus)
 if(Qt6_VERSION VERSION_GREATER_EQUAL 6.10)
     find_package(Qt6 REQUIRED COMPONENTS WaylandClientPrivate)
 endif()
-find_package(TreelandProtocols REQUIRED)
 find_package(PkgConfig REQUIRED)
 pkg_search_module(WAYLAND_CLIENT REQUIRED IMPORTED_TARGET wayland-client)
 pkg_get_variable(WAYLAND_PROTOCOLS wayland-protocols pkgdatadir)
@@ -15,7 +14,7 @@ qt_add_executable(treeland-shortcut
 
 qt_generate_wayland_protocol_client_sources(treeland-shortcut
     FILES
-        ${TREELAND_PROTOCOLS_DATA_DIR}/treeland-shortcut-manager-v2.xml
+        ${DECKCOMPOSITOR_PROTOCOLS_DATA_DIR}/treeland-shortcut-manager-v2.xml
 )
 
 target_link_libraries(treeland-shortcut

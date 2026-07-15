@@ -1,6 +1,5 @@
-find_package(DeckCompositorProtocols REQUIRED)
 
-ws_generate_local(server ${TREELAND_PROTOCOLS_DATA_DIR}/treeland-foreign-toplevel-manager-v1.xml treeland-foreign-toplevel-manager-protocol)
+ws_generate_local(server ${DECKCOMPOSITOR_PROTOCOLS_DATA_DIR}/treeland-foreign-toplevel-manager-v1.xml treeland-foreign-toplevel-manager-protocol)
 
 impl_deckcompositor(
     NAME

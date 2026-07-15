@@ -1,7 +1,6 @@
-find_package(TreelandProtocols REQUIRED)
 
 local_qtwayland_server_protocol_treeland(libdeckcompositor
-    PROTOCOL ${TREELAND_PROTOCOLS_DATA_DIR}/treeland-shortcut-manager-v2.xml
+    PROTOCOL ${DECKCOMPOSITOR_PROTOCOLS_DATA_DIR}/treeland-shortcut-manager-v2.xml
     BASENAME treeland-shortcut-manager-v2
 )
 

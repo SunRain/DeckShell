@@ -1,7 +1,6 @@
-find_package(TreelandProtocols 0.5.5 REQUIRED)
 
 local_qtwayland_server_protocol_treeland(libdeckcompositor
-    PROTOCOL ${TREELAND_PROTOCOLS_DATA_DIR}/treeland-prelaunch-splash-v2.xml
+    PROTOCOL ${DECKCOMPOSITOR_PROTOCOLS_DATA_DIR}/treeland-prelaunch-splash-v2.xml
     BASENAME treeland-prelaunch-splash-v2
 )
 

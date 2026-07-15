@@ -1,12 +1,11 @@
-find_package(TreelandProtocols REQUIRED)
 
 local_qtwayland_server_protocol_treeland(libdeckcompositor
-    PROTOCOL ${TREELAND_PROTOCOLS_DATA_DIR}/treeland-wallpaper-manager-unstable-v1.xml
+    PROTOCOL ${DECKCOMPOSITOR_PROTOCOLS_DATA_DIR}/treeland-wallpaper-manager-unstable-v1.xml
     BASENAME treeland-wallpaper-manager-unstable-v1
 )
 
 local_qtwayland_server_protocol_treeland(libdeckcompositor
-    PROTOCOL ${TREELAND_PROTOCOLS_DATA_DIR}/treeland-wallpaper-shell-unstable-v1.xml
+    PROTOCOL ${DECKCOMPOSITOR_PROTOCOLS_DATA_DIR}/treeland-wallpaper-shell-unstable-v1.xml
     BASENAME treeland-wallpaper-shell-unstable-v1
 )
 

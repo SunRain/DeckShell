@@ -22,6 +22,10 @@ include(GNUInstallDirs)
 # Macros
 include(FeatureSummary)
 
+if(NOT DEFINED DECKCOMPOSITOR_PROTOCOLS_DATA_DIR)
+    find_package(DeckCompositorProtocols 0.5.5 REQUIRED)
+endif()
+
 include(cmake/DefineTarget.cmake)
 
 # Include Wayland scanner helpers

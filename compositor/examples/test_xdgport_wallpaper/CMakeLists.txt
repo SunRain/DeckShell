@@ -3,7 +3,6 @@ set(CMAKE_AUTOUIC ON)
 set(BIN_NAME test-xdg-wallpaper)
 
 find_package(Qt6 REQUIRED COMPONENTS Widgets)
-find_package(DeckCompositorProtocols REQUIRED)
 
 qt_add_executable(${BIN_NAME}
     main.cpp

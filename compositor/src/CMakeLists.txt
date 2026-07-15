@@ -257,6 +257,10 @@ qt_add_qml_module(libdeckcompositor
         ${PROJECT_BINARY_DIR}/qt/qml/DeckShell/Compositor
 )
 
+set_property(TARGET libdeckcompositor APPEND PROPERTY AUTOMOC_MOC_OPTIONS
+    "-b;${CMAKE_CURRENT_BINARY_DIR}/outputconfig.hpp"
+)
+
 target_compile_definitions(libdeckcompositor
     PRIVATE
     WLR_USE_UNSTABLE

@@ -1,6 +1,5 @@
-find_package(TreelandProtocols 0.5.3 REQUIRED)
 
-ws_generate_local(server ${TREELAND_PROTOCOLS_DATA_DIR}/treeland-screensaver-v1.xml treeland-screensaver-v1-protocol)
+ws_generate_local(server ${DECKCOMPOSITOR_PROTOCOLS_DATA_DIR}/treeland-screensaver-v1.xml treeland-screensaver-v1-protocol)
 
 impl_deckcompositor(
     NAME

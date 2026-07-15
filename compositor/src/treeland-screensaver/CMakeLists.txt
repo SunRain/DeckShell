@@ -1,20 +1,19 @@
 pkg_search_module(WAYLAND_CLIENT REQUIRED IMPORTED_TARGET wayland-client)
-find_package(TreelandProtocols REQUIRED)
 
 set(TREELAND_SCREENSAVER_SOURCE ${CMAKE_CURRENT_BINARY_DIR}/treeland-screensaver-v1.c)
 set(TREELAND_SCREENSAVER_HEADER ${CMAKE_CURRENT_BINARY_DIR}/treeland-screensaver-v1.h)
 
 add_custom_command(
     OUTPUT ${TREELAND_SCREENSAVER_HEADER}
-    COMMAND wayland-scanner client-header < ${TREELAND_PROTOCOLS_DATA_DIR}/treeland-screensaver-v1.xml > ${TREELAND_SCREENSAVER_HEADER}
-    DEPENDS ${TREELAND_PROTOCOLS_DATA_DIR}/treeland-screensaver-v1.xml
+    COMMAND wayland-scanner client-header < ${DECKCOMPOSITOR_PROTOCOLS_DATA_DIR}/treeland-screensaver-v1.xml > ${TREELAND_SCREENSAVER_HEADER}
+    DEPENDS ${DECKCOMPOSITOR_PROTOCOLS_DATA_DIR}/treeland-screensaver-v1.xml
     COMMENT "Generating treeland-screensaver-v1.h"
 )
 
 add_custom_command(
     OUTPUT ${TREELAND_SCREENSAVER_SOURCE}
-    COMMAND wayland-scanner private-code < ${TREELAND_PROTOCOLS_DATA_DIR}/treeland-screensaver-v1.xml > ${TREELAND_SCREENSAVER_SOURCE}
-    DEPENDS ${TREELAND_PROTOCOLS_DATA_DIR}/treeland-screensaver-v1.xml
+    COMMAND wayland-scanner private-code < ${DECKCOMPOSITOR_PROTOCOLS_DATA_DIR}/treeland-screensaver-v1.xml > ${TREELAND_SCREENSAVER_SOURCE}
+    DEPENDS ${DECKCOMPOSITOR_PROTOCOLS_DATA_DIR}/treeland-screensaver-v1.xml
     COMMENT "Generating treeland-screensaver-v1.c"
 )
 

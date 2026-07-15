@@ -1,5 +1,4 @@
 find_package(Qt6 REQUIRED COMPONENTS WaylandClient Widgets)
-find_package(TreelandProtocols REQUIRED)
 
 qt_add_executable(test-set-xwindow-position
     main.cpp
@@ -7,7 +6,7 @@ qt_add_executable(test-set-xwindow-position
 
 qt_generate_wayland_protocol_client_sources(test-set-xwindow-position
     FILES
-    ${TREELAND_PROTOCOLS_DATA_DIR}/treeland-dde-shell-v1.xml
+    ${DECKCOMPOSITOR_PROTOCOLS_DATA_DIR}/treeland-dde-shell-v1.xml
     NO_INCLUDE_CORE_ONLY
 )
 

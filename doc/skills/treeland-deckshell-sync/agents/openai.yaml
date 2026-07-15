@@ -1,0 +1,4 @@
+interface:
+  display_name: "Treeland → DeckShell 同步"
+  short_description: "确定性审计并同步 Treeland 提交区间到 DeckShell"
+  default_prompt: "使用 $treeland-deckshell-sync 将 treeland/master 的显式提交区间按路径白名单、依赖剥离、幂等追溯和冻结 worktree 门禁同步到 DeckShell 本地目标分支；完成 verify、构建和 CTest 后只做本地 fast-forward，不执行远程 push。"

@@ -1,7 +1,6 @@
-find_package(DeckCompositorProtocols REQUIRED)
 
 local_qtwayland_server_protocol_treeland(libdeckcompositor
-    PROTOCOL ${TREELAND_PROTOCOLS_DATA_DIR}/treeland-dde-shell-v1.xml
+    PROTOCOL ${DECKCOMPOSITOR_PROTOCOLS_DATA_DIR}/treeland-dde-shell-v1.xml
     BASENAME treeland-dde-shell-v1
 )
 

@@ -2,7 +2,6 @@ find_package(Qt6 REQUIRED COMPONENTS WaylandClient Quick)
 if(Qt6_VERSION VERSION_GREATER_EQUAL 6.10)
     find_package(Qt6 REQUIRED COMPONENTS WaylandClientPrivate)
 endif()
-find_package(DeckCompositorProtocols REQUIRED)
 
 set(BIN_NAME test-window-picker)
 
@@ -25,7 +24,7 @@ qt_add_qml_module(${BIN_NAME}
 qt_generate_wayland_protocol_client_sources(${BIN_NAME}
     NO_INCLUDE_CORE_ONLY
     FILES
-        ${TREELAND_PROTOCOLS_DATA_DIR}/treeland-dde-shell-v1.xml
+        ${DECKCOMPOSITOR_PROTOCOLS_DATA_DIR}/treeland-dde-shell-v1.xml
 )
 
 target_link_libraries(${BIN_NAME}

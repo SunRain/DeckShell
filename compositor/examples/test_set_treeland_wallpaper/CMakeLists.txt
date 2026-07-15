@@ -1,7 +1,6 @@
 find_package(QT NAMES Qt6 REQUIRED COMPONENTS Core)
 find_package(Qt6 REQUIRED COMPONENTS WaylandClient Quick Core Gui)
 find_package(Dtk6 REQUIRED COMPONENTS Declarative)
-find_package(DeckCompositorProtocols REQUIRED)
 find_package(PkgConfig REQUIRED)
 pkg_get_variable(WAYLAND_PROTOCOLS wayland-protocols pkgdatadir)
 
@@ -16,7 +15,7 @@ qt_add_executable(${BIN_NAME}
 
 qt_generate_wayland_protocol_client_sources(${BIN_NAME}
     FILES
-        ${TREELAND_PROTOCOLS_DATA_DIR}/treeland-personalization-manager-v1.xml
+        ${DECKCOMPOSITOR_PROTOCOLS_DATA_DIR}/treeland-personalization-manager-v1.xml
 )
 
 set(QML_FILES

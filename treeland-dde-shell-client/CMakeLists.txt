@@ -4,6 +4,10 @@ project(DDEShellClient VERSION 1.0.0 LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+if(NOT DEFINED DECKCOMPOSITOR_PROTOCOLS_DATA_DIR)
+    find_package(DeckCompositorProtocols 0.5.5 REQUIRED)
+endif()
+
 # Qt6 packages
 find_package(Qt6 REQUIRED COMPONENTS
     Core

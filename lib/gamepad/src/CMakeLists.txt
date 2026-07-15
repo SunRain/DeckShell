@@ -208,9 +208,9 @@ if(DECKGAMEPAD_BUILD_TREELAND_CLIENT)
     set(TREELAND_GAMEPAD_PROTOCOL_XML "${CMAKE_CURRENT_SOURCE_DIR}/../protocols/treeland-gamepad-v1.xml"
         CACHE FILEPATH "Path to treeland-gamepad-v1.xml (Treeland client only)")
 
-    if(NOT EXISTS "${TREELAND_GAMEPAD_PROTOCOL_XML}" AND DEFINED TREELAND_PROTOCOLS_DATA_DIR)
-        if(EXISTS "${TREELAND_PROTOCOLS_DATA_DIR}/treeland-gamepad-v1.xml")
-            set(TREELAND_GAMEPAD_PROTOCOL_XML "${TREELAND_PROTOCOLS_DATA_DIR}/treeland-gamepad-v1.xml")
+    if(NOT EXISTS "${TREELAND_GAMEPAD_PROTOCOL_XML}" AND DEFINED DECKCOMPOSITOR_PROTOCOLS_DATA_DIR)
+        if(EXISTS "${DECKCOMPOSITOR_PROTOCOLS_DATA_DIR}/treeland-gamepad-v1.xml")
+            set(TREELAND_GAMEPAD_PROTOCOL_XML "${DECKCOMPOSITOR_PROTOCOLS_DATA_DIR}/treeland-gamepad-v1.xml")
         endif()
     endif()
 

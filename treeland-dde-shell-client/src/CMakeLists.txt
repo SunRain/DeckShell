@@ -11,7 +11,8 @@ qt_add_library(ddeshellclient SHARED
 
 # 生成 Wayland 协议客户端代码
 qt_generate_wayland_protocol_client_sources(ddeshellclient
-    FILES ${TREELAND_PROTOCOLS_DATA_DIR}/treeland-dde-shell-v1.xml
+    NO_INCLUDE_CORE_ONLY
+    FILES ${DECKCOMPOSITOR_PROTOCOLS_DATA_DIR}/treeland-dde-shell-v1.xml
 )
 
 # 显式添加生成的 C 协议文件到库源文件

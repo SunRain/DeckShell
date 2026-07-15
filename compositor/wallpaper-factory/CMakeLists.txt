@@ -5,7 +5,6 @@ find_package(Qt6 REQUIRED COMPONENTS WaylandClient Quick)
 if(Qt6_VERSION VERSION_GREATER_EQUAL 6.10)
     find_package(Qt6 REQUIRED COMPONENTS WaylandClientPrivate QuickPrivate)
 endif()
-find_package(TreelandProtocols REQUIRED)
 pkg_check_modules(MPV REQUIRED IMPORTED_TARGET mpv)
 
 qt_add_executable(${BIN_NAME}
@@ -14,7 +13,7 @@ qt_add_executable(${BIN_NAME}
 
 qt6_generate_wayland_protocol_client_sources(${BIN_NAME}
     FILES
-        ${TREELAND_PROTOCOLS_DATA_DIR}/treeland-wallpaper-shell-unstable-v1.xml
+        ${DECKCOMPOSITOR_PROTOCOLS_DATA_DIR}/treeland-wallpaper-shell-unstable-v1.xml
 )
 
 qt_add_qml_module(${BIN_NAME}

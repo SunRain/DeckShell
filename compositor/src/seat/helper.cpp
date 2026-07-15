@@ -1813,7 +1813,7 @@ void Helper::init(Treeland::Treeland *treeland)
     connect(m_activationManagerV1,
             &ActivationManagerInterfaceV1::activateRequested,
             this,
-            [this](ActivationManagerInterfaceV1::TokenDisposition disposition, WSurface *wsurface) {
+            [this](ActivationManagerInterfaceV1::TokenDisposition disposition, WSurface *wsurface, WSeat *seat) {
                 auto wrapper = m_rootSurfaceContainer->getSurface(wsurface);
                 if (!wrapper) {
                     qCWarning(lcTlCore) << "Activation request for unknown surface!";
@@ -1832,8 +1832,7 @@ void Helper::init(Treeland::Treeland *treeland)
                 }
                 switch (disposition) {
                 case ActivationManagerInterfaceV1::TokenDisposition::Active:
-                    // TODO: activate the surface on the seat associated with the token
-                    forceActivateSurface(wrapper, Qt::OtherFocusReason);
+                    forceActivateSurface(wrapper, Qt::OtherFocusReason, seat);
                     break;
                 case ActivationManagerInterfaceV1::TokenDisposition::Attention:
                     wrapper->setAttention(true);

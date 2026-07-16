@@ -131,8 +131,6 @@ qt_add_qml_module(libdeckcompositor
         common/treelandlogging.h
         core/layersurfacecontainer.cpp
         core/layersurfacecontainer.h
-        core/popupfocusmanager.cpp
-        core/popupfocusmanager.h
         core/qmlengine.cpp
         core/qmlengine.h
         core/rootsurfacecontainer.cpp

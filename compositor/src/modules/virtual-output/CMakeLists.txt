@@ -11,7 +11,7 @@ impl_deckcompositor(
         ${CMAKE_CURRENT_SOURCE_DIR}/virtualoutputmanagerinterfacev1.cpp
         ${CMAKE_CURRENT_BINARY_DIR}/wayland-treeland-virtual-output-manager-v1-server-protocol.c
     LINK
-        PkgConfig::WLROOTS
+        Wlroots::wlroots
         WaylibShared::SharedServer
         Qt6::Core
         Qt6::Gui

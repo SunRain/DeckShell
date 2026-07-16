@@ -3,14 +3,12 @@ name: Build waylib on Arch Linux (independent)
 on:
   push:
     paths:
-      - 'waylib/**'
-      - 'qwlroots/**'
+      - '3rdparty/waylib-shared'
       - '.github/workflows/waylib-archlinux-build.yml'
 
   pull_request:
     paths:
-      - 'waylib/**'
-      - 'qwlroots/**'
+      - '3rdparty/waylib-shared'
       - '.github/workflows/waylib-archlinux-build.yml'
 
 jobs:
@@ -25,28 +23,40 @@ jobs:
           pacman --noconfirm --noprogressbar -Syu
       - name: Install dependencies
         run: |
-          pacman -Syu --noconfirm --noprogressbar base-devel qt6-base qt6-declarative cmake pkgconfig pixman vulkan-headers wlroots0.19 wayland-protocols wlr-protocols git
-          pacman -Syu --noconfirm --noprogressbar clang ninja make
+          # Vendored waylib-wlroots deps from Arch wlroots0.19 package metadata
+          # 独立子项目保留既有公共 pkg-config 合同；完整 C/P 构建使用子模块 R。
+          pacman -Syu --noconfirm --noprogressbar base-devel \
+            qt6-base qt6-declarative cmake pkgconfig ninja clang make git \
+            pixman wayland wayland-protocols wlr-protocols wlroots0.19 \
+            libxcb libx11 libxkbcommon libdrm libinput seatd \
+            libdisplay-info libliftoff lcms2 \
+            mesa libglvnd vulkan-headers vulkan-icd-loader \
+            glslang hwdata systemd \
+            xcb-util-errors xcb-util-renderutil xcb-util-wm \
+            xorg-xwayland
           pacman -Syu --noconfirm --noprogressbar fakeroot meson sudo
 
       - uses: actions/checkout@v4
+        # 远端运行前须另行配置可访问的 wlroots 子模块 URL。
+        with:
+          submodules: recursive
 
       - name: Create qwlroots symlink for waylib
         run: |
-          cd waylib
+          cd 3rdparty/waylib-shared/waylib
           ln -sf ../qwlroots qwlroots
           echo "✅ Created symlink: waylib/qwlroots -> ../qwlroots"
           ls -la qwlroots
 
       - name: Configure and Build waylib with ci preset
-        working-directory: waylib
+        working-directory: 3rdparty/waylib-shared/waylib
         run: |
           echo "Working directory:" $PWD
           cmake --preset ci -DWITH_SUBMODULE_QWLROOTS=ON
           cmake --build --preset ci
 
       - name: Install waylib to staging directory
-        working-directory: waylib
+        working-directory: 3rdparty/waylib-shared/waylib
         run: |
           echo "Installing waylib to staging directory..."
           mkdir -p /tmp/waylib-install

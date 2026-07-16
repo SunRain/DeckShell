@@ -111,7 +111,9 @@ find_package(PkgConfig REQUIRED)
 find_package(Qt6 CONFIG REQUIRED
     Core DBus Gui Qml Quick QuickControls2 LinguistTools Test QuickTest QuickPrivate)
 
-pkg_check_modules(WLROOTS REQUIRED IMPORTED_TARGET wlroots-0.19)
+if(NOT TARGET Wlroots::wlroots)
+    message(FATAL_ERROR "DeckCompositor requires the local waylib-shared wlroots target")
+endif()
 
 # Find WaylibShared (allow using submodule build if provided by parent project)
 if (NOT TARGET WaylibShared::SharedServer)

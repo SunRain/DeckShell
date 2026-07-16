@@ -17,7 +17,7 @@ impl_deckcompositor(
     INCLUDE
         $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>
     LINK
-        PkgConfig::WLROOTS
+        Wlroots::wlroots
         WaylibShared::SharedServer
         Qt6::Core
         Qt6::Gui

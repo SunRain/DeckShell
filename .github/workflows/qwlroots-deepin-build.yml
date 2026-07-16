@@ -3,12 +3,12 @@ name: Build qwlroots on Deepin crimson (independent)
 on:
   push:
     paths:
-      - 'qwlroots/**'
+      - '3rdparty/waylib-shared'
       - '.github/workflows/qwlroots-deepin-build.yml'
 
   pull_request:
     paths:
-      - 'qwlroots/**'
+      - '3rdparty/waylib-shared'
       - '.github/workflows/qwlroots-deepin-build.yml'
 
 jobs:
@@ -17,9 +17,12 @@ jobs:
     container: linuxdeepin/deepin:crimson
     steps:
       - uses: actions/checkout@v4
+        # 远端运行前须另行配置可访问的 wlroots 子模块 URL。
+        with:
+          submodules: recursive
 
       - name: Install build dependencies
-        working-directory: qwlroots
+        working-directory: 3rdparty/waylib-shared/qwlroots
         run: |
           # Add deepin community repository to install wlr-protocols
           echo "deb [trusted=yes] http://mirrors.kernel.org/deepin/beige/ crimson main commercial community" > /etc/apt/sources.list
@@ -39,7 +42,7 @@ jobs:
           mk-build-deps --install --remove --tool='apt-get -o Debug::pkgProblemResolver=yes --no-install-recommends --yes' debian/control
 
       - name: Build qwlroots deb package
-        working-directory: qwlroots
+        working-directory: 3rdparty/waylib-shared/qwlroots
         run: |
           dpkg-buildpackage -uc -us -b
           echo "✅ qwlroots deb package built successfully!"

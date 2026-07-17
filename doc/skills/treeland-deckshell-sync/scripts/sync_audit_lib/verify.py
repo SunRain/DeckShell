@@ -5,7 +5,10 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from .common import Policy, match_path, parse_name_status_z, run_git
+from .adaptation import verify_adaptation_fields
+from .artifacts import verify_legacy_artifact, verify_strict_artifact
+from .common import Policy, match_path
+from .target import inspect_target_commit
 
 
 def _target_roots(
@@ -51,47 +54,12 @@ def classify_target_path(path: str, policy: Policy, inventory: dict[str, Any]) -
     return "allowed" if match_path(path, directories, files) else "unknown"
 
 
-def _artifact_finding(entry: dict[str, Any], field: str) -> str | None:
-    value = entry.get(field)
-    if not isinstance(value, str) or not value:
-        return f"missing evidence field {field} for {entry.get('source_commit')}"
-    path = Path(value)
-    if not path.is_absolute():
-        return f"evidence path must be absolute: {field}: {value}"
-    if not path.is_file() or path.stat().st_size == 0:
-        return f"evidence artifact missing or empty: {field}: {value}"
-    return None
-
-
-def _actual_target_paths(repo: Path, target: str) -> tuple[list[str], bool]:
-    parent_line = str(run_git(repo, "rev-list", "--parents", "-n", "1", target)).strip()
-    if len(parent_line.split()) != 2:
-        return [], False
-    raw = run_git(
-        repo,
-        "diff-tree",
-        "--no-commit-id",
-        "--name-status",
-        "-r",
-        "--find-renames",
-        "--find-copies",
-        "-z",
-        f"{target}^",
-        target,
-        text=False,
-    )
-    changes = parse_name_status_z(bytes(raw))
-    paths = [
-        path
-        for change in changes
-        for path in (change.old_path, change.new_path)
-        if path
-    ]
-    return list(dict.fromkeys(paths)), True
-
-
 def _verify_action_evidence(
-    entry: dict[str, Any], actual_paths: list[str], expected_paths: set[str]
+    entry: dict[str, Any],
+    actual_paths: list[str],
+    expected_paths: set[str],
+    strict: bool,
+    evidence_root: Path | None,
 ) -> list[str]:
     findings: list[str] = []
     source = entry.get("source_commit")
@@ -108,9 +76,17 @@ def _verify_action_evidence(
             findings.append(f"missing adaptation_notes for {source}")
     if action == "empty":
         required.append("equivalence_proof")
-    findings.extend(
-        filter(None, (_artifact_finding(entry, field) for field in required))
-    )
+    for field in required:
+        if strict:
+            findings.extend(
+                verify_strict_artifact(
+                    evidence_root, entry.get(field), field, str(source)
+                )
+            )
+        else:
+            findings.extend(
+                verify_legacy_artifact(entry.get(field), field, str(source))
+            )
     if action == "applied" and set(actual_paths) != expected_paths:
         findings.append(f"applied target paths differ from inventory: {source}")
     if action == "empty" and actual_paths:
@@ -125,11 +101,17 @@ def _verify_mapping(
     inventory_by_source: dict[str, dict[str, Any]],
     evidence_by_pair: dict[tuple[str, str], list[dict[str, Any]]],
     mapping: dict[str, Any],
+    evidence_schema_version: int,
+    required_evidence_schema: int | None,
+    evidence_root: Path | None,
 ) -> list[str]:
     source, target = mapping["source_commit"], mapping["target_commit"]
-    actual_paths, single_parent = _actual_target_paths(repo, target)
-    if not single_parent:
+    target_changes = inspect_target_commit(repo, target)
+    if not target_changes["single_parent"]:
         return [f"target commit is not a single-parent commit: {target}"]
+    actual_paths = target_changes["all_paths"]
+    actual_statuses = target_changes["statuses"]
+    parent = target_changes["parent"]
 
     findings = []
     for path in actual_paths:
@@ -141,8 +123,67 @@ def _verify_mapping(
         findings.append(f"expected exactly one evidence entry: {source} -> {target}")
         return findings
     expected_paths = set(inventory_by_source.get(source, {}).get("target_paths", []))
-    findings.extend(_verify_action_evidence(pair_evidence[0], actual_paths, expected_paths))
+    evidence_entry = pair_evidence[0]
+    findings.extend(
+        _verify_action_evidence(
+            evidence_entry,
+            actual_paths,
+            expected_paths,
+            required_evidence_schema == 2,
+            evidence_root,
+        )
+    )
+    if evidence_schema_version == 2:
+        findings.extend(
+            verify_adaptation_fields(
+                repo,
+                target,
+                evidence_entry,
+                actual_paths,
+                expected_paths,
+                actual_statuses=actual_statuses,
+                parent=parent,
+                strict=required_evidence_schema == 2,
+                evidence_root=evidence_root,
+            )
+        )
     return findings
+
+
+def _evidence_schema_version(evidence: dict[str, Any]) -> tuple[int, list[str]]:
+    version = evidence.get("schema_version", 1)
+    if type(version) is int and version in {1, 2}:
+        return version, []
+    return 1, [f"unsupported evidence schema_version: {version}"]
+
+
+def _trace_findings(
+    inventory: dict[str, Any], traces: dict[str, Any]
+) -> list[str]:
+    expected_sources = [
+        item["source_commit"]
+        for item in inventory.get("commits", [])
+        if item["classification"] not in {"dependency-only", "blocked"}
+    ]
+    complete = (
+        traces.get("state") == "already-synced"
+        and traces.get("mapped_source_commits") == expected_sources
+    )
+    findings = [] if complete else [
+        "trace audit does not contain the complete ordered source mapping"
+    ]
+    return findings + traces.get("blocked_reasons", [])
+
+
+def _index_evidence(
+    evidence: dict[str, Any],
+) -> dict[tuple[str, str], list[dict[str, Any]]]:
+    indexed: dict[tuple[str, str], list[dict[str, Any]]] = {}
+    for item in evidence.get("entries", []):
+        indexed.setdefault(
+            (item.get("source_commit"), item.get("target_commit")), []
+        ).append(item)
+    return indexed
 
 
 def verify_sync(
@@ -151,32 +192,25 @@ def verify_sync(
     inventory: dict[str, Any],
     traces: dict[str, Any],
     evidence: dict[str, Any],
+    required_evidence_schema: int | None = None,
+    evidence_root: Path | None = None,
 ) -> dict[str, Any]:
     """Verify target commits, target paths, trace order, and action evidence."""
 
-    findings: list[str] = []
-    expected_sources = [
-        item["source_commit"]
-        for item in inventory.get("commits", [])
-        if item["classification"] not in {"dependency-only", "blocked"}
-    ]
-    trace_complete = (
-        traces.get("state") == "already-synced"
-        and traces.get("mapped_source_commits") == expected_sources
-    )
-    if not trace_complete:
-        findings.append("trace audit does not contain the complete ordered source mapping")
-    findings.extend(traces.get("blocked_reasons", []))
-
+    evidence_schema_version, findings = _evidence_schema_version(evidence)
+    if (
+        required_evidence_schema is not None
+        and evidence_schema_version != required_evidence_schema
+    ):
+        findings.append(
+            "strict evidence schema "
+            f"{required_evidence_schema} required; got {evidence_schema_version}"
+        )
+    findings.extend(_trace_findings(inventory, traces))
     inventory_by_source = {
         item["source_commit"]: item for item in inventory.get("commits", [])
     }
-    evidence_by_pair: dict[tuple[str, str], list[dict[str, Any]]] = {}
-    for item in evidence.get("entries", []):
-        evidence_by_pair.setdefault(
-            (item.get("source_commit"), item.get("target_commit")), []
-        ).append(item)
-
+    evidence_by_pair = _index_evidence(evidence)
     for mapping in traces.get("mappings", []):
         findings.extend(
             _verify_mapping(
@@ -186,6 +220,9 @@ def verify_sync(
                 inventory_by_source,
                 evidence_by_pair,
                 mapping,
+                evidence_schema_version,
+                required_evidence_schema,
+                evidence_root,
             )
         )
 
@@ -197,7 +234,10 @@ def verify_sync(
         findings.append(f"evidence contains unmapped pairs: {sorted(extra_pairs)}")
     findings = list(dict.fromkeys(findings))
     return {
-        "schema_version": 1,
+        "schema_version": 2,
+        "report_schema_version": 2,
+        "evidence_schema_version": evidence_schema_version,
+        "strict_evidence_schema_required": required_evidence_schema,
         "outcome": "blocked" if findings else "pass",
         "verified_mappings": len(traces.get("mappings", [])),
         "findings": findings,

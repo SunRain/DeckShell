@@ -82,6 +82,8 @@ def build_parser() -> argparse.ArgumentParser:
     verify.add_argument("--inventory", type=Path, required=True)
     verify.add_argument("--traces", type=Path, required=True)
     verify.add_argument("--evidence", type=Path, required=True)
+    verify.add_argument("--evidence-root", type=Path)
+    verify.add_argument("--require-evidence-schema", type=int, choices=(1, 2))
     verify.add_argument("--output", type=Path)
     return parser
 
@@ -108,6 +110,8 @@ def main(argv: list[str] | None = None) -> int:
                 _read_json(args.inventory),
                 _read_json(args.traces),
                 _read_json(args.evidence),
+                required_evidence_schema=args.require_evidence_schema,
+                evidence_root=args.evidence_root,
             )
     except (OSError, ValueError, subprocess.CalledProcessError) as error:
         result = {

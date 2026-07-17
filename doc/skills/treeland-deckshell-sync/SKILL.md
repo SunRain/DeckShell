@@ -228,13 +228,24 @@ path-audit.txt
 - <实际 drop path；无则 none>
 [treeland-sync] path mapping:
 - <该提交实际使用的映射；无则 none>
+[treeland-sync] adaptation paths:
+- modified|omitted|materialized: <目标仓库相对路径；可多行；无则 none>
 [treeland-sync] adaptation notes:
 - <说明；无则 none>
 
 Treeland-Commit: <完整 treeland SHA>
 ```
 
-不要固定写入该提交未使用的 `src/** -> compositor/src/**`。mixed 另加依赖剥离说明。每次提交后立即保存来源 → 目标 SHA。
+不要固定写入该提交未使用的 `src/** -> compositor/src/**`。mixed 的依赖剥离只由 `drop files` 表达；只有 `action=adapted` 才在 adaptation notes 解释 DeckShell 合同适配。每次提交后立即保存来源 → 目标 SHA。
+
+`adaptation paths` 是机器可核验的路径清单，不得把路径混入普通说明：
+
+- `modified`：路径出现在目标提交实际 diff 中，且内容因 DeckShell 合同适配而不同。
+- `omitted`：路径属于 inventory 的预期目标路径，但因适配没有出现在目标提交实际 diff 中。
+- `materialized`：路径出现在目标提交实际 diff 中，且目标侧没有可直接沿用的既有基线，由适配显式创建。
+- 同一路径只能出现一次，不能同时声明为多个 kind；路径必须属于 inventory 预期路径或目标提交实际路径。
+- `adapted` 必须至少列出一项；`applied`、`empty` 固定写 `- none`。
+- `adaptation notes` 只解释“为什么这样适配”，不重复承担文件清单职责；`applied`、`empty` 固定写 `- none`。
 
 ## 8. 证据验证
 
@@ -242,22 +253,46 @@ Treeland-Commit: <完整 treeland SHA>
 
 ```json
 {
+  "schema_version": 2,
   "entries": [
     {
       "source_commit": "<sha>",
       "target_commit": "<sha>",
       "action": "applied|adapted|empty",
-      "mapped_patch": "<absolute path to filtered.patch>",
-      "staged_diff": "<absolute path; applied/adapted>",
-      "commit_diff": "<absolute path>",
-      "path_audit": "<absolute path>",
-      "difference_report": "<absolute path; adapted>",
+      "mapped_patch": {"path": "<relative path>", "size": 1, "sha256": "<64 hex>"},
+      "staged_diff": {"path": "<relative path; applied/adapted>", "size": 1, "sha256": "<64 hex>"},
+      "commit_diff": {"path": "<relative path>", "size": 1, "sha256": "<64 hex>"},
+      "path_audit": {"path": "<relative path>", "size": 1, "sha256": "<64 hex>"},
+      "difference_report": {"path": "<relative path; adapted>", "size": 1, "sha256": "<64 hex>"},
+      "adaptation_paths": [
+        {
+          "kind": "modified|omitted|materialized",
+          "path": "<DeckShell 目标仓库相对路径>",
+          "target_status": "A|M|D|R|C|omitted",
+          "source_status": "A|M|D|R|C",
+          "parent_exists": false,
+          "proof": [{"path": "<relative path>", "size": 1, "sha256": "<64 hex>"}],
+          "review_state": "approved"
+        }
+      ],
       "adaptation_notes": "<non-empty; adapted>",
       "equivalence_proof": "<absolute path; empty>"
     }
   ]
 }
 ```
+
+evidence 兼容规则：
+
+- 缺少 `schema_version` 或值为 `1` 时仅可按旧规则复核已经完成的同步历史，不得作为迁移完成证据。
+- `schema_version: 2` 时，`adapted` 必须提供非空 `adaptation_paths` 和非空 `adaptation_notes`。
+- `schema_version: 2` 的 `applied`、`empty` 不得携带非空 `adaptation_paths`；`adaptation_notes` 使用 `none` 或留空，并与提交消息中的 `- none` 对齐。
+- `modified`、`materialized` 路径必须出现在目标提交实际路径中。
+- `omitted` 路径必须属于 inventory 预期目标路径，且不得出现在目标提交实际路径中。
+- 提交消息中的 `adaptation paths`、`adaptation notes` 必须与 evidence 的结构化值顺序一致；缺失、重复、非法 kind、重复路径或不一致均 BLOCKED。
+- 迁移验证必须显式传入 `--require-evidence-schema 2 --evidence-root <root>`；相对 artifact 必须位于 root 内，是普通文件，且大小和 SHA-256 匹配。
+- strict v2 的每条 adaptation path 必须带 target/source status、真实 parent-tree 事实、非空 proof 和 `review_state=approved`；`materialized` 只允许目标状态 `A` 且父树不存在。
+- 路径顺序固定为 `omitted`、`materialized`、`modified`，同 kind 按 UTF-8 字节序排列；paths 字段必须位于 notes 字段之前。
 
 在工作分支 HEAD 或 already-synced 冻结目标上重跑 traces，再验证：
 
@@ -267,10 +302,12 @@ python3 "<skill_dir>/scripts/sync_audit.py" verify \
   --inventory "<scratch_dir>/inventory.json" \
   --traces "<scratch_dir>/traces-after.json" \
   --evidence "<scratch_dir>/evidence.json" \
+  --evidence-root "<persistent_evidence_root>" \
+  --require-evidence-schema 2 \
   --output "<scratch_dir>/verify.json"
 ```
 
-`verify` 必须证明：完整有序映射、单父提交、目标路径合法、applied 路径精确、adapted/empty 证据存在且非空。`outcome != pass` 时禁止构建收口。
+`verify` 必须分别报告 `report_schema_version`、`evidence_schema_version` 和 `strict_evidence_schema_required`，并证明完整有序映射、单父提交、目标路径合法、applied 路径精确、adapted/empty 证据完整，以及 schema v2 的 adaptation 路径语义和提交消息一致性。`outcome != pass` 时禁止构建收口。
 
 ## 9. 冻结构建与测试
 
@@ -311,7 +348,7 @@ git -C "<target_worktree>" merge --ff-only "<work_branch>"
 - 子模块为空、gitlink 不匹配或固定对象不可取得。
 - 目标提交触达 excluded/unknown 路径。
 - applied 实际路径与 inventory 不一致。
-- adapted 存在未解释差异；empty 缺少等价证明。
+- adapted 存在未解释差异、缺少 adaptation paths/notes、路径语义非法或提交消息与 evidence 不一致；empty 缺少等价证明。
 - trace 重复、错序或一个目标提交匹配多个 inventory 来源。
 - 构建或测试回归。
 - fast-forward 前目标分支移动或目标工作树不干净。
@@ -325,7 +362,7 @@ git -C "<target_worktree>" merge --ff-only "<work_branch>"
 3. inventory 数量、顺序 SHA-256、review approvals 和跳过清单。
 4. new-sync/already-synced/partial-prefix/blocked 状态。
 5. 完整来源 → 目标映射、new/legacy trace。
-6. 每个 mixed 的 drop paths；每个 adapted/empty 的证据路径。
+6. 每个 mixed 的 drop paths；每个 adapted 的 adaptation paths/notes；每个 adapted/empty 的证据路径。
 7. verify、子模块、配置、构建和两级 CTest 结果。
 8. 最终本地分支和 HEAD。
 9. `remote_push: no`。

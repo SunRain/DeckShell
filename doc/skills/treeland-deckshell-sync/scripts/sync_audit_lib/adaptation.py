@@ -109,12 +109,11 @@ def _verify_path_semantics(
     expected_paths: set[str],
 ) -> list[str]:
     findings = []
-    known_paths = actual_paths | expected_paths
     for item in paths:
         kind, path = item["kind"], item["path"]
-        if path not in known_paths:
+        if path not in expected_paths:
             findings.append(
-                "adaptation path is outside inventory and target commit: "
+                "adaptation path is outside inventory target paths: "
                 f"{source}: {path}"
             )
         if kind in {"modified", "materialized"} and path not in actual_paths:

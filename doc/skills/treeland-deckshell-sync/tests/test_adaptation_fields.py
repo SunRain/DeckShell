@@ -383,6 +383,7 @@ class _AdaptationFixture:
                     "target_paths": [
                         "compositor/src/feature.txt",
                         "compositor/src/omitted.txt",
+                        "compositor/src/new.txt",
                     ],
                 }
             ],

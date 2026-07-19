@@ -11,6 +11,7 @@ description: 将 DeckShell 仓库远端 `treeland/master` 的显式提交区间�
 
 - 来源固定为 remote `treeland`、branch `master`、ref `refs/remotes/treeland/master`。
 - 非 dependency-only 来源提交保持 1:1 目标提交和唯一 Treeland 追溯。
+- 每个 retained 来源路径只对应 path policy 计算出的唯一规范目标路径；不存在隐式兄弟文件、一对多实现路径或由目标提交自授权的额外路径。
 - 路径只能命中 `mapped`、`root-owned`、`excluded` 或已批准的 `review-only`；`unknown` 必须阻断。
 - `waylib`、`waylib/**`、`qwlroots`、`qwlroots/**` 不进入目标提交。
 - 所有审计和构建使用冻结 SHA 的隔离 worktree。
@@ -123,6 +124,7 @@ inventory 使用 NUL 分隔解析普通文件、rename 和 copy，并输出：
 - dependency-only、mixed、other 数量；
 - 每个 old/new path 的分类和目标路径；
 - `mapped_source_paths`、`root_source_paths`、drop paths、target paths；
+- `target_paths` 是该来源提交可触达的唯一规范目标路径集合；
 - review-only/unknown 阻断原因。
 
 `outcome != pass`、存在 merge commit、unknown 或未批准 review-only 时停止。
@@ -195,6 +197,25 @@ git -C "<frozen_worktree>" submodule status --recursive
 - 空路径列表不生成、不应用补丁。
 - 不先应用完整提交再回退 excluded 路径。
 
+### 目标路径权威门禁
+
+每个来源提交的 inventory `target_paths` 是该提交唯一的目标路径权威：
+
+- 目标提交的所有 old/new 实际路径都必须属于 `target_paths`；额外路径统一报告 `target-path-expansion` 并 BLOCKED。
+- `adaptation_paths` 只能解释 `target_paths` 内的 `modified`、`omitted`、`materialized`，不能用目标提交刚触达的兄弟文件反向扩大授权范围。
+- 规范目标路径在目标父树中不存在时，可以在同一规范路径使用 `materialized`；“规范路径缺失”本身不等于结构漂移。
+- DeckShell 本地独有的测试客户端、fixture、辅助类和适配器可以继续独立存在，但本次同步提交不得触达它们，也不得把 mapped 上游实现责任迁入其中。
+- 具有上游对应路径的生产文件和测试文件都受本门禁约束，不能按“测试辅助文件”豁免。
+
+如果 mapped 补丁只能通过修改兄弟文件、把规范路径标记为 omitted/empty 或继续维护一对多实现才能落地，则人工判定为 `target-structure-drift`，立即停止当前回放，不创建该来源提交。恢复流程固定为：
+
+1. 在本次冻结同步工作树之外，准备独立的 DeckShell 结构对齐变更。
+2. 恢复上游规范文件形状，同时保留已经确认的行为修复和测试覆盖。
+3. 完成产品构建、测试和差异审计，并将结构对齐结果形成干净的新目标基线。
+4. 从新目标基线重新生成 inventory、traces 和冻结 worktree，再重新回放来源区间。
+
+不得把结构对齐夹入 Treeland 1:1 映射提交，不得用 `adapted` 或 `empty` 隐藏目标结构漂移。
+
 应用前后保存到 `scratch_dir/<source_sha>/`：
 
 ```text
@@ -210,10 +231,12 @@ path-audit.txt
 动作分类：
 
 - `applied`：两个补丁无冲突应用，且没有人工修改；实际目标路径必须等于 inventory target paths。
-- `adapted`：发生冲突或 DeckShell 合同适配；额外保存 `difference-report.md` 并逐项解释差异。
-- `empty`：只在目标树已等价包含过滤补丁时使用；保存非空 `equivalence-proof.md`，不能把普通 apply 失败视为等价。
+- `adapted`：发生冲突或 DeckShell 合同适配；实际目标路径必须是 inventory target paths 的子集，额外保存 `difference-report.md` 并逐项解释差异。
+- `empty`：只在目标树已等价包含过滤补丁时使用；保存非空 `equivalence-proof.md`，不能把普通 apply 失败、兄弟文件存在相似代码或实现已迁移到未映射路径视为等价。
 
-冲突适配只能修改当前提交批准的目标路径。禁止夹带重构、无关修复、excluded 路径或未知根路径。
+`equivalence-proof.md` 必须采用一种明确证明路线：精确补丁等价记录冻结 SHA、mapped filtered patch 哈希及 `git apply --reverse --check` 命令和结果；适配后行为等价记录来源 hunk 到规范目标实现的逐项映射、无法精确 reverse-check 的原因，以及针对性测试命令和结果。两种路线都不得引用 inventory 外路径承担等价实现。
+
+冲突适配只能修改当前提交 inventory 批准的目标路径。禁止夹带重构、无关修复、excluded 路径、未知根路径或本地独有文件。
 
 ## 7. 创建规范追溯提交
 
@@ -243,7 +266,7 @@ Treeland-Commit: <完整 treeland SHA>
 - `modified`：路径出现在目标提交实际 diff 中，且内容因 DeckShell 合同适配而不同。
 - `omitted`：路径属于 inventory 的预期目标路径，但因适配没有出现在目标提交实际 diff 中。
 - `materialized`：路径出现在目标提交实际 diff 中，且目标侧没有可直接沿用的既有基线，由适配显式创建。
-- 同一路径只能出现一次，不能同时声明为多个 kind；路径必须属于 inventory 预期路径或目标提交实际路径。
+- 同一路径只能出现一次，不能同时声明为多个 kind；路径必须属于 inventory 预期目标路径。
 - `adapted` 必须至少列出一项；`applied`、`empty` 固定写 `- none`。
 - `adaptation notes` 只解释“为什么这样适配”，不重复承担文件清单职责；`applied`、`empty` 固定写 `- none`。
 
@@ -276,7 +299,7 @@ Treeland-Commit: <完整 treeland SHA>
         }
       ],
       "adaptation_notes": "<non-empty; adapted>",
-      "equivalence_proof": "<absolute path; empty>"
+      "equivalence_proof": {"path": "<relative path; empty>", "size": 1, "sha256": "<64 hex>"}
     }
   ]
 }
@@ -287,12 +310,15 @@ evidence 兼容规则：
 - 缺少 `schema_version` 或值为 `1` 时仅可按旧规则复核已经完成的同步历史，不得作为迁移完成证据。
 - `schema_version: 2` 时，`adapted` 必须提供非空 `adaptation_paths` 和非空 `adaptation_notes`。
 - `schema_version: 2` 的 `applied`、`empty` 不得携带非空 `adaptation_paths`；`adaptation_notes` 使用 `none` 或留空，并与提交消息中的 `- none` 对齐。
-- `modified`、`materialized` 路径必须出现在目标提交实际路径中。
+- 所有 adaptation path 必须属于 inventory 预期目标路径；目标提交实际路径超出该集合时，无论 evidence 如何声明都以 `target-path-expansion` BLOCKED。
+- `modified`、`materialized` 路径必须同时属于 inventory 预期目标路径并出现在目标提交实际路径中。
 - `omitted` 路径必须属于 inventory 预期目标路径，且不得出现在目标提交实际路径中。
 - 提交消息中的 `adaptation paths`、`adaptation notes` 必须与 evidence 的结构化值顺序一致；缺失、重复、非法 kind、重复路径或不一致均 BLOCKED。
 - 迁移验证必须显式传入 `--require-evidence-schema 2 --evidence-root <root>`；相对 artifact 必须位于 root 内，是普通文件，且大小和 SHA-256 匹配。
 - strict v2 的每条 adaptation path 必须带 target/source status、真实 parent-tree 事实、非空 proof 和 `review_state=approved`；`materialized` 只允许目标状态 `A` 且父树不存在。
 - 路径顺序固定为 `omitted`、`materialized`、`modified`，同 kind 按 UTF-8 字节序排列；paths 字段必须位于 notes 字段之前。
+- strict v2 只机器验证 `equivalence_proof` 的路径、文件类型、大小和 SHA-256；证明正文是否完成精确 reverse-check 或行为等价映射仍必须逐项复核，不能把工件存在误报为语义等价。
+- 当前 evidence schema v2 不提供一对多 relocation 授权。未来确需保留永久目标实现迁移时，必须显式升级 schema、声明来源到目标关系和独立批准证据，不得复用普通 `adapted` 绕过本门禁。
 
 在工作分支 HEAD 或 already-synced 冻结目标上重跑 traces，再验证：
 
@@ -307,7 +333,7 @@ python3 "<skill_dir>/scripts/sync_audit.py" verify \
   --output "<scratch_dir>/verify.json"
 ```
 
-`verify` 必须分别报告 `report_schema_version`、`evidence_schema_version` 和 `strict_evidence_schema_required`，并证明完整有序映射、单父提交、目标路径合法、applied 路径精确、adapted/empty 证据完整，以及 schema v2 的 adaptation 路径语义和提交消息一致性。`outcome != pass` 时禁止构建收口。
+`verify` 必须分别报告 `report_schema_version`、`evidence_schema_version`、`strict_evidence_schema_required`、`target_path_authority` 和 `target_path_expansions`，并证明完整有序映射、单父提交、目标路径合法、applied 路径精确、adapted 无目标路径扩张、adapted/empty 证据完整，以及 schema v2 的 adaptation 路径语义和提交消息一致性。`outcome != pass` 或 `target_path_authority != pass` 时禁止构建收口。
 
 ## 9. 冻结构建与测试
 
@@ -347,6 +373,8 @@ git -C "<target_worktree>" merge --ff-only "<work_branch>"
 - worktree、scratch、build 路径重叠或冻结 HEAD 不匹配。
 - 子模块为空、gitlink 不匹配或固定对象不可取得。
 - 目标提交触达 excluded/unknown 路径。
+- 目标提交实际 old/new 路径超出 inventory target paths，或 evidence adaptation path 试图引用该额外路径。
+- mapped 实现责任已迁入兄弟文件或本地独有文件，形成 `target-structure-drift`。
 - applied 实际路径与 inventory 不一致。
 - adapted 存在未解释差异、缺少 adaptation paths/notes、路径语义非法或提交消息与 evidence 不一致；empty 缺少等价证明。
 - trace 重复、错序或一个目标提交匹配多个 inventory 来源。
@@ -363,6 +391,7 @@ git -C "<target_worktree>" merge --ff-only "<work_branch>"
 4. new-sync/already-synced/partial-prefix/blocked 状态。
 5. 完整来源 → 目标映射、new/legacy trace。
 6. 每个 mixed 的 drop paths；每个 adapted 的 adaptation paths/notes；每个 adapted/empty 的证据路径。
-7. verify、子模块、配置、构建和两级 CTest 结果。
-8. 最终本地分支和 HEAD。
-9. `remote_push: no`。
+7. `target_path_authority`、完整 `target_path_expansions` 和发现结构漂移时采用的新基线恢复记录。
+8. verify、子模块、配置、构建和两级 CTest 结果。
+9. 最终本地分支和 HEAD。
+10. `remote_push: no`。

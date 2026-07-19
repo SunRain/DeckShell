@@ -54,10 +54,26 @@ def classify_target_path(path: str, policy: Policy, inventory: dict[str, Any]) -
     return "allowed" if match_path(path, directories, files) else "unknown"
 
 
+def _target_path_expansions(
+    source: str,
+    target: str,
+    actual_paths: list[str],
+    expected_paths: set[str],
+) -> list[dict[str, str]]:
+    return [
+        {"source_commit": source, "target_commit": target, "path": path}
+        for path in sorted(
+            set(actual_paths).difference(expected_paths),
+            key=lambda item: item.encode("utf-8"),
+        )
+    ]
+
+
 def _verify_action_evidence(
     entry: dict[str, Any],
     actual_paths: list[str],
     expected_paths: set[str],
+    target_path_expansions: list[dict[str, str]],
     strict: bool,
     evidence_root: Path | None,
 ) -> list[str]:
@@ -66,6 +82,10 @@ def _verify_action_evidence(
     action = entry.get("action")
     if action not in {"applied", "adapted", "empty"}:
         return [f"invalid action for {source}: {action}"]
+    findings.extend(
+        f"target-path-expansion for {source}: {item['path']}"
+        for item in target_path_expansions
+    )
     required = ["mapped_patch", "commit_diff", "path_audit"]
     if action in {"applied", "adapted"}:
         required.append("staged_diff")
@@ -104,14 +124,16 @@ def _verify_mapping(
     evidence_schema_version: int,
     required_evidence_schema: int | None,
     evidence_root: Path | None,
-) -> list[str]:
+) -> tuple[list[str], list[dict[str, str]]]:
     source, target = mapping["source_commit"], mapping["target_commit"]
     target_changes = inspect_target_commit(repo, target)
     if not target_changes["single_parent"]:
-        return [f"target commit is not a single-parent commit: {target}"]
+        return [f"target commit is not a single-parent commit: {target}"], []
     actual_paths = target_changes["all_paths"]
     actual_statuses = target_changes["statuses"]
     parent = target_changes["parent"]
+    expected_paths = set(inventory_by_source.get(source, {}).get("target_paths", []))
+    expansions = _target_path_expansions(source, target, actual_paths, expected_paths)
 
     findings = []
     for path in actual_paths:
@@ -121,14 +143,14 @@ def _verify_mapping(
     pair_evidence = evidence_by_pair.get((source, target), [])
     if len(pair_evidence) != 1:
         findings.append(f"expected exactly one evidence entry: {source} -> {target}")
-        return findings
-    expected_paths = set(inventory_by_source.get(source, {}).get("target_paths", []))
+        return findings, expansions
     evidence_entry = pair_evidence[0]
     findings.extend(
         _verify_action_evidence(
             evidence_entry,
             actual_paths,
             expected_paths,
+            expansions,
             required_evidence_schema == 2,
             evidence_root,
         )
@@ -147,7 +169,7 @@ def _verify_mapping(
                 evidence_root=evidence_root,
             )
         )
-    return findings
+    return findings, expansions
 
 
 def _evidence_schema_version(evidence: dict[str, Any]) -> tuple[int, list[str]]:
@@ -186,6 +208,55 @@ def _index_evidence(
     return indexed
 
 
+def _verify_mappings(
+    repo: Path,
+    policy: Policy,
+    inventory: dict[str, Any],
+    traces: dict[str, Any],
+    evidence: dict[str, Any],
+    evidence_schema_version: int,
+    required_evidence_schema: int | None,
+    evidence_root: Path | None,
+) -> tuple[list[str], list[dict[str, str]]]:
+    inventory_by_source = {
+        item["source_commit"]: item for item in inventory.get("commits", [])
+    }
+    evidence_by_pair = _index_evidence(evidence)
+    findings: list[str] = []
+    expansions: list[dict[str, str]] = []
+    for mapping in traces.get("mappings", []):
+        mapping_findings, mapping_expansions = _verify_mapping(
+            repo,
+            policy,
+            inventory,
+            inventory_by_source,
+            evidence_by_pair,
+            mapping,
+            evidence_schema_version,
+            required_evidence_schema,
+            evidence_root,
+        )
+        findings.extend(mapping_findings)
+        expansions.extend(mapping_expansions)
+
+    expected_pairs = {
+        (item["source_commit"], item["target_commit"])
+        for item in traces.get("mappings", [])
+    }
+    extra_pairs = set(evidence_by_pair).difference(expected_pairs)
+    if extra_pairs:
+        findings.append(f"evidence contains unmapped pairs: {sorted(extra_pairs)}")
+    return findings, expansions
+
+
+def _target_path_authority_blocked(findings: list[str]) -> bool:
+    prefixes = (
+        "target-path-expansion for ",
+        "adaptation path is outside inventory target paths: ",
+    )
+    return any(finding.startswith(prefixes) for finding in findings)
+
+
 def verify_sync(
     repo: Path,
     policy: Policy,
@@ -207,37 +278,27 @@ def verify_sync(
             f"{required_evidence_schema} required; got {evidence_schema_version}"
         )
     findings.extend(_trace_findings(inventory, traces))
-    inventory_by_source = {
-        item["source_commit"]: item for item in inventory.get("commits", [])
-    }
-    evidence_by_pair = _index_evidence(evidence)
-    for mapping in traces.get("mappings", []):
-        findings.extend(
-            _verify_mapping(
-                repo,
-                policy,
-                inventory,
-                inventory_by_source,
-                evidence_by_pair,
-                mapping,
-                evidence_schema_version,
-                required_evidence_schema,
-                evidence_root,
-            )
-        )
-
-    expected_pairs = {
-        (item["source_commit"], item["target_commit"]) for item in traces.get("mappings", [])
-    }
-    extra_pairs = set(evidence_by_pair).difference(expected_pairs)
-    if extra_pairs:
-        findings.append(f"evidence contains unmapped pairs: {sorted(extra_pairs)}")
+    mapping_findings, target_path_expansions = _verify_mappings(
+        repo,
+        policy,
+        inventory,
+        traces,
+        evidence,
+        evidence_schema_version,
+        required_evidence_schema,
+        evidence_root,
+    )
+    findings.extend(mapping_findings)
     findings = list(dict.fromkeys(findings))
     return {
         "schema_version": 2,
         "report_schema_version": 2,
         "evidence_schema_version": evidence_schema_version,
         "strict_evidence_schema_required": required_evidence_schema,
+        "target_path_authority": "blocked"
+        if target_path_expansions or _target_path_authority_blocked(findings)
+        else "pass",
+        "target_path_expansions": target_path_expansions,
         "outcome": "blocked" if findings else "pass",
         "verified_mappings": len(traces.get("mappings", [])),
         "findings": findings,

@@ -94,13 +94,16 @@ class StrictTargetChangeTests(unittest.TestCase):
             self._git(repo, "add", canonical_path)
         self._git(repo, "commit", "-m", "canonical change", "-m", message)
 
+        expected_paths = [canonical_path]
+        if operation == "rename":
+            expected_paths.insert(0, original)
         inventory = {
             "approved_review": [],
             "commits": [
                 {
                     "source_commit": source,
                     "classification": "other",
-                    "target_paths": [canonical_path],
+                    "target_paths": expected_paths,
                 }
             ],
         }

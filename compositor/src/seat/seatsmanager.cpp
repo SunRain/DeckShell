@@ -205,37 +205,36 @@ void SeatsManager::assignDeviceToSeat(WInputDevice *device, const QString &seatN
         return;
     }
 
-    if (auto *currentSeat = m_deviceCache.value(device)) {
-        if (currentSeat->name() == seatName) {
-            qCDebug(lcTlSeat) << "Device" << inputDeviceName(device)
-                              << "already assigned to seat" << seatName;
-            return;
-        }
+    WSeat *targetSeat = m_seats.value(seatName);
+    if (!targetSeat)
+        targetSeat = fallbackSeat();
+    if (!targetSeat) {
+        qCWarning(lcTlSeat) << "Cannot assign device" << inputDeviceName(device)
+                            << "- no seats available";
+        return;
+    }
 
+    WSeat *currentSeat = m_deviceCache.value(device, device->seat());
+    if (currentSeat == targetSeat) {
+        m_deviceCache[device] = targetSeat;
+        qCDebug(lcTlSeat) << "Device" << inputDeviceName(device) << "already assigned to seat"
+                          << targetSeat->name();
+        return;
+    }
+
+    if (currentSeat) {
         currentSeat->detachInputDevice(device);
-        m_deviceCache.remove(device);
         qCDebug(lcTlSeat) << "Device" << inputDeviceName(device) << "detached from seat"
                           << currentSeat->name();
     }
 
-    WSeat *targetSeat = nullptr;
-    if (m_seats.contains(seatName)) {
-        targetSeat = m_seats[seatName];
-        targetSeat->attachInputDevice(device);
-        qCDebug(lcTlSeat) << "Device" << inputDeviceName(device) << "assigned to seat"
-                          << seatName;
-    } else if (fallbackSeat()) {
-        targetSeat = fallbackSeat();
-        targetSeat->attachInputDevice(device);
-        qCDebug(lcTlSeat) << "Device" << inputDeviceName(device)
-                          << "assigned to fallback seat";
-    } else {
-        qCWarning(lcTlSeat) << "Cannot assign device" << inputDeviceName(device)
-                            << "- no seats available";
-    }
+    targetSeat->attachInputDevice(device);
+    m_deviceCache[device] = targetSeat;
+    qCDebug(lcTlSeat) << "Device" << inputDeviceName(device) << "assigned to seat"
+                      << targetSeat->name();
 
-    if (targetSeat)
-        m_deviceCache[device] = targetSeat;
+    if (currentSeat)
+        Q_EMIT deviceReassigned(device, currentSeat, targetSeat);
 }
 
 WSeat *SeatsManager::autoAssignDevice(WInputDevice *device)
@@ -741,9 +740,9 @@ void SeatsManager::assignDevice(WInputDevice *device,
     }
 
     // Filter out system buttons
-    if (deviceType == WInputDevice::Type::Keyboard &&
-        (deviceName.contains("Power Button") || deviceName.contains("Sleep Button") ||
-         deviceName.contains("Lid Switch") || deviceName.contains("Video Bus"))) {
+    if (deviceType == WInputDevice::Type::Keyboard
+        && (deviceName.contains("Power Button") || deviceName.contains("Sleep Button")
+            || deviceName.contains("Lid Switch"))) {
         return;
     }
 

@@ -4,6 +4,7 @@
 #include "dockpreviewcontextv1.h"
 #include "foreigntoplevelhandlev1.h"
 #include "foreigntoplevelmanagerv1.h"
+#include "foreigntoplevelstatecodec.h"
 #include "common/treelandlogging.h"
 #include "core/rootsurfacecontainer.h"
 #include "seat/helper.h"
@@ -35,31 +36,6 @@
 
 namespace {
 constexpr char DockPreviewContextPropertyName[] = "treelandDockPreviewContextV1";
-
-QByteArray encodeStates(ForeignToplevelHandleV1::States states)
-{
-    QByteArray ba;
-    auto push = [&](uint32_t v) {
-        ba.append(reinterpret_cast<const char *>(&v), sizeof(v));
-    };
-
-    if (states.testFlag(ForeignToplevelHandleV1::State::Maximized))
-        push(TREELAND_FOREIGN_TOPLEVEL_HANDLE_V1_STATE_MAXIMIZED);
-
-    if (states.testFlag(ForeignToplevelHandleV1::State::Minimized))
-        push(TREELAND_FOREIGN_TOPLEVEL_HANDLE_V1_STATE_MINIMIZED);
-
-    if (states.testFlag(ForeignToplevelHandleV1::State::Activated))
-        push(TREELAND_FOREIGN_TOPLEVEL_HANDLE_V1_STATE_ACTIVATED);
-
-    if (states.testFlag(ForeignToplevelHandleV1::State::Fullscreen))
-        push(TREELAND_FOREIGN_TOPLEVEL_HANDLE_V1_STATE_FULLSCREEN);
-
-    if (states.testFlag(ForeignToplevelHandleV1::State::Attention))
-        push(static_cast<uint32_t>(ForeignToplevelHandleV1::State::Attention));
-
-    return ba;
-}
 }
 
 class SurfaceEntry
@@ -389,6 +365,7 @@ QByteArrayView ForeignToplevelManagerInterfaceV1::interfaceName() const
 void ForeignToplevelManagerInterfaceV1::create(WServer *server)
 {
     d->init(server->handle()->handle(), InterfaceVersion);
+    Q_ASSERT_X(d->global(), Q_FUNC_INFO, "failed to create foreign-toplevel global");
     d->event_loop = wl_display_get_event_loop(server->handle()->handle());
 }
 
@@ -998,7 +975,8 @@ void ForeignToplevelHandleV1::send_closed()
 
 void ForeignToplevelHandleV1::send_state()
 {
-    d->send_state(encodeStates(d->state));
+    d->send_state(ForeignToplevelStateCodec::encode(
+        d->state, static_cast<uint32_t>(wl_resource_get_version(resource()))));
 
     d->scheduleDone();
 }

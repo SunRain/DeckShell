@@ -13,6 +13,7 @@ add_subdirectory(test_effect_glass)
 add_subdirectory(test_scroll_factor)
 add_subdirectory(test_qpa_lifecycle)
 add_subdirectory(test_session_lock_lifecycle)
+add_subdirectory(test_qml_install_smoke)
 
 if(NOT DISABLE_DDM)
     add_subdirectory(test_ddm_greeter_lifecycle)

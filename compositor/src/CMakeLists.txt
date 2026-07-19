@@ -284,6 +284,40 @@ set_property(TARGET libdeckcompositor APPEND PROPERTY AUTOMOC_MOC_OPTIONS
     "-b;${CMAKE_CURRENT_BINARY_DIR}/outputconfig.hpp"
 )
 
+# Qt's generated install rules do not copy this module when the backing
+# library is installed separately. Keep the module relocatable for staged
+# installs and package builds instead of using an absolute system QML path.
+set(_DECKSHELL_QML_INSTALL_DIR "${QT6_INSTALL_QML}")
+if(NOT _DECKSHELL_QML_INSTALL_DIR OR IS_ABSOLUTE "${_DECKSHELL_QML_INSTALL_DIR}")
+    set(_DECKSHELL_QML_INSTALL_DIR "${CMAKE_INSTALL_LIBDIR}/qt6/qml")
+endif()
+install(
+    DIRECTORY "${PROJECT_BINARY_DIR}/qt/qml/DeckShell/Compositor/"
+    DESTINATION "${_DECKSHELL_QML_INSTALL_DIR}/DeckShell/Compositor"
+    COMPONENT DeckShellQmlRuntime
+    FILES_MATCHING
+        PATTERN "*.qml"
+        PATTERN "*.qmltypes"
+        PATTERN "qmldir"
+)
+set_target_properties(libdeckcompositorplugin PROPERTIES
+    INSTALL_RPATH "$ORIGIN/../../../.."
+)
+# Qt's generated plugin install rule is kept for the default package
+# component. The dedicated runtime component uses a file install so its
+# component boundary remains explicit across Qt versions.
+install(
+    FILES "$<TARGET_FILE:libdeckcompositorplugin>"
+    DESTINATION "${_DECKSHELL_QML_INSTALL_DIR}/DeckShell/Compositor"
+    COMPONENT DeckShellQmlRuntime
+)
+install(
+    CODE
+        "file(RPATH_SET FILE \"\$ENV{DESTDIR}\${CMAKE_INSTALL_PREFIX}/${_DECKSHELL_QML_INSTALL_DIR}/DeckShell/Compositor/$<TARGET_FILE_NAME:libdeckcompositorplugin>\" NEW_RPATH \"\$ORIGIN/../../../..\")"
+    COMPONENT DeckShellQmlRuntime
+)
+unset(_DECKSHELL_QML_INSTALL_DIR)
+
 qt_add_repc_sources(libdeckcompositor
     modules/resource/treelandwindowtree.rep
 )
@@ -417,6 +451,23 @@ if(NOT DISABLE_BUILTIN_SHORTCUTS)
 endif()
 add_subdirectory(treeland-screensaver)
 
+# Keep the staged QML smoke test self-contained without pulling in unrelated
+# compositor executables and helpers from the default install component.
+if(TARGET WaylibSharedServer)
+    install(
+        TARGETS WaylibSharedServer
+        LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}"
+        COMPONENT DeckShellQmlRuntime
+    )
+endif()
+if(TARGET capture)
+    install(
+        TARGETS capture
+        LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}"
+        COMPONENT DeckShellQmlRuntime
+    )
+endif()
+
 qt_add_executable(${BIN_NAME}
     main.cpp
 )
@@ -433,7 +484,11 @@ target_link_libraries(${BIN_NAME} PRIVATE
 
 install(TARGETS ${BIN_NAME} RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}")
 install(PROGRAMS treeland.sh DESTINATION "${CMAKE_INSTALL_BINDIR}")
-install(TARGETS libdeckcompositor LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}")
+install(
+    TARGETS libdeckcompositor
+    LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}"
+    COMPONENT DeckShellQmlRuntime
+)
 
 ## systemd socket
 

@@ -15,27 +15,60 @@
 #include <qwinputdevice.h>
 #include <qwseat.h>
 
+#include <QDebug>
 #include <QGuiApplication>
 #include <QMouseEvent>
 #include <QPointingDevice>
 #include <QSignalSpy>
+#include <QStringList>
 #include <QTest>
 
 #include <memory>
+#include <utility>
 #include <vector>
 
 extern "C" {
 #include <wlr/interfaces/wlr_keyboard.h>
 #include <wlr/interfaces/wlr_pointer.h>
+#include <wlr/util/log.h>
 }
+
+namespace {
+
+QStringList wlrootsErrors;
+
+void captureWlrootsLog(wlr_log_importance importance, const char *format, va_list args)
+{
+    if (importance != WLR_ERROR)
+        return;
+
+    const QString message = QString::vasprintf(format, args);
+    wlrootsErrors.append(message);
+    qCritical().noquote() << message;
+}
+
+QString keyboardGroupErrorSummary()
+{
+    QStringList matches;
+    for (const auto &message : std::as_const(wlrootsErrors)) {
+        if (message.contains(QStringLiteral("keyboard not found in group")))
+            matches.append(message);
+    }
+    return matches.join(QLatin1Char('\n'));
+}
+
+} // namespace
 
 class MultiSeatTest : public QObject
 {
     Q_OBJECT
 
 private Q_SLOTS:
+    void initTestCase();
     void init();
     void assignsMigratesAndRemovesDevices();
+    void detachesPhysicalVirtualAndGroupKeyboardsWithoutMembershipErrors();
+    void detachesQueuedDeviceBeforeSeatCreation();
     void removingSeatReassignsDevices();
     void keepsVideoBusKeyboardForBrightnessShortcuts();
     void keepsKeyboardAndPointerFocusPerSeat();
@@ -43,7 +76,9 @@ private Q_SLOTS:
 
 private:
     std::unique_ptr<WInputDevice> createPointer(wlr_pointer *pointer, const char *name);
-    std::unique_ptr<WInputDevice> createKeyboard(wlr_keyboard *keyboard, const char *name);
+    std::unique_ptr<WInputDevice> createKeyboard(wlr_keyboard *keyboard,
+                                                 const char *name,
+                                                 bool isVirtual);
     void detachDevices();
 
     std::unique_ptr<WServer> m_server;
@@ -76,18 +111,25 @@ std::unique_ptr<WInputDevice> MultiSeatTest::createPointer(wlr_pointer *pointer,
 }
 
 std::unique_ptr<WInputDevice> MultiSeatTest::createKeyboard(wlr_keyboard *keyboard,
-                                                            const char *name)
+                                                            const char *name,
+                                                            bool isVirtual)
 {
     static const wlr_keyboard_impl KeyboardImpl = {
         .name = "test-multi-seat-keyboard",
     };
     wlr_keyboard_init(keyboard, &KeyboardImpl, name);
     auto *handle = QW_NAMESPACE::qw_input_device::create(&keyboard->base);
-    return std::make_unique<WInputDevice>(handle, true);
+    return std::make_unique<WInputDevice>(handle, isVirtual);
+}
+
+void MultiSeatTest::initTestCase()
+{
+    wlr_log_init(WLR_DEBUG, captureWlrootsLog);
 }
 
 void MultiSeatTest::init()
 {
+    wlrootsErrors.clear();
     m_server = std::make_unique<WServer>();
     m_manager = std::make_unique<SeatsManager>(m_server.get());
     m_seat0 = m_manager->createSeat(QStringLiteral("seat0"), true);
@@ -99,12 +141,71 @@ void MultiSeatTest::init()
 
     m_pointerDevice0 = createPointer(&m_pointer0, "seat0-pointer");
     m_pointerDevice1 = createPointer(&m_pointer1, "seat1-pointer");
-    m_keyboardDevice0 = createKeyboard(&m_keyboard0, "seat0-keyboard");
-    m_keyboardDevice1 = createKeyboard(&m_keyboard1, "seat1-keyboard");
-    m_videoBusDevice = createKeyboard(&m_videoBusKeyboard, "Video Bus");
+    m_keyboardDevice0 = createKeyboard(&m_keyboard0, "seat0-keyboard", false);
+    m_keyboardDevice1 = createKeyboard(&m_keyboard1, "seat1-keyboard", true);
+    m_videoBusDevice = createKeyboard(&m_videoBusKeyboard, "Video Bus", true);
 
     m_server->start();
     m_manager->setupAllSeats(nullptr, nullptr, nullptr);
+}
+
+void MultiSeatTest::detachesPhysicalVirtualAndGroupKeyboardsWithoutMembershipErrors()
+{
+    QVERIFY(!m_keyboardDevice0->isVirtual());
+    QVERIFY(m_keyboardDevice1->isVirtual());
+    QVERIFY(m_seat0->keyboardGroupKeyboard());
+    QVERIFY(!m_keyboard0.group);
+    QVERIFY(!m_keyboard1.group);
+
+    m_manager->assignDeviceToSeat(m_keyboardDevice0.get(), QStringLiteral("seat0"));
+    m_manager->assignDeviceToSeat(m_keyboardDevice1.get(), QStringLiteral("seat0"));
+    QVERIFY(m_keyboard0.group);
+    QVERIFY(!m_keyboard1.group);
+
+    WBackend backend;
+    m_manager->connectBackendSignals(&backend);
+    Q_EMIT backend.inputRemoved(m_keyboardDevice0.get());
+    Q_EMIT backend.inputRemoved(m_keyboardDevice1.get());
+    QCOMPARE(m_keyboardDevice0->seat(), nullptr);
+    QCOMPARE(m_keyboardDevice1->seat(), nullptr);
+    QVERIFY(!m_keyboard0.group);
+    QVERIFY(!m_keyboard1.group);
+
+    auto groupOnlySeat = std::make_unique<WSeat>(QStringLiteral("group-only"));
+    m_server->attach(groupOnlySeat.get());
+    QVERIFY(groupOnlySeat->keyboardGroupKeyboard());
+    QVERIFY(m_server->detach(groupOnlySeat.get()));
+    groupOnlySeat.reset();
+
+    const QString errors = keyboardGroupErrorSummary();
+    QVERIFY2(errors.isEmpty(), qPrintable(errors));
+}
+
+void MultiSeatTest::detachesQueuedDeviceBeforeSeatCreation()
+{
+    wlr_keyboard queuedKeyboard = { };
+    auto queuedDevice = createKeyboard(&queuedKeyboard, "queued-keyboard", false);
+    WSeat queuedSeat(QStringLiteral("queued-seat"));
+
+    queuedSeat.attachInputDevice(queuedDevice.get());
+    QVERIFY(!queuedDevice->seat());
+    QVERIFY(!queuedDevice->qtDevice());
+
+    queuedSeat.detachInputDevice(queuedDevice.get());
+    QVERIFY(!queuedDevice->seat());
+    QVERIFY(!queuedDevice->qtDevice());
+
+    {
+        WSeat destroyedQueuedSeat(QStringLiteral("destroyed-queued-seat"));
+        destroyedQueuedSeat.attachInputDevice(queuedDevice.get());
+        QVERIFY(!queuedDevice->seat());
+        QVERIFY(!queuedDevice->qtDevice());
+    }
+    QVERIFY(!queuedDevice->seat());
+    QVERIFY(!queuedDevice->qtDevice());
+
+    queuedDevice.reset();
+    wlr_keyboard_finish(&queuedKeyboard);
 }
 
 void MultiSeatTest::assignsMigratesAndRemovesDevices()
@@ -267,6 +368,9 @@ void MultiSeatTest::cleanup()
     wlr_keyboard_finish(&m_keyboard1);
     wlr_keyboard_finish(&m_videoBusKeyboard);
     m_compositor = nullptr;
+
+    const QString errors = keyboardGroupErrorSummary();
+    QVERIFY2(errors.isEmpty(), qPrintable(errors));
 }
 
 int main(int argc, char *argv[])

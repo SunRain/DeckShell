@@ -216,6 +216,15 @@ public Q_SLOTS:
      */
     void logout();
 
+protected:
+    /**
+     * Create a greeter proxy for an explicit DDM endpoint.
+     *
+     * This keeps the socket protocol independently testable without changing
+     * the default system-bus discovery used by the QML singleton.
+     */
+    GreeterProxy(const QString &authSocket, const QString &waylandSocketName, QObject *parent);
+
 private Q_SLOTS:
 
     ///////////////////////
@@ -315,6 +324,7 @@ private:
     QLocalSocket *m_socket{ nullptr };
     LockScreen *m_lockScreen{ nullptr };
 
+    QString m_waylandSocketName{};
     QString m_hostName{};
 
     bool m_canPowerOff      { false };

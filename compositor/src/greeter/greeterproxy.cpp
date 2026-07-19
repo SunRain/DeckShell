@@ -121,6 +121,22 @@ GreeterProxy::GreeterProxy(QObject *parent)
     updateAuthSocket();
 }
 
+GreeterProxy::GreeterProxy(const QString &authSocket,
+                           const QString &waylandSocketName,
+                           QObject *parent)
+    : QObject(parent)
+    , m_socket(new QLocalSocket(this))
+    , m_waylandSocketName(waylandSocketName)
+{
+    connect(m_socket, &QLocalSocket::connected, this, &GreeterProxy::connected);
+    connect(m_socket, &QLocalSocket::disconnected, this, &GreeterProxy::disconnected);
+    connect(m_socket, &QLocalSocket::readyRead, this, &GreeterProxy::readyRead);
+    connect(m_socket, &QLocalSocket::errorOccurred, this, &GreeterProxy::error);
+
+    if (!authSocket.isEmpty())
+        m_socket->connectToServer(authSocket);
+}
+
 GreeterProxy::~GreeterProxy() { }
 
 ////////////////////////
@@ -397,9 +413,10 @@ void GreeterProxy::connected()
 {
     qCInfo(lcTlGreeter) << "Connected to the ddm";
 
-    SocketWriter(m_socket)
-        << quint32(GreeterMessages::Connect)
-        << Helper::instance()->sessionManager()->globalSession()->socket()->fullServerName();
+    const QString waylandSocketName = m_waylandSocketName.isEmpty()
+        ? Helper::instance()->sessionManager()->globalSession()->socket()->fullServerName()
+        : m_waylandSocketName;
+    SocketWriter(m_socket) << quint32(GreeterMessages::Connect) << waylandSocketName;
 }
 
 void GreeterProxy::disconnected()

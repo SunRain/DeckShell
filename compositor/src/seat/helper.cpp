@@ -1445,6 +1445,9 @@ void Helper::deleteTaskSwitch()
         m_taskSwitch->deleteLater();
         m_taskSwitch = nullptr;
     }
+    if (m_currentMode == CurrentMode::WindowSwitch) {
+        setCurrentMode(CurrentMode::Normal);
+    }
 }
 
 void Helper::init(Treeland::Treeland *treeland)

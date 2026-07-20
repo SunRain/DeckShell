@@ -224,7 +224,7 @@ void SessionManager::setActiveSocketEnabled(bool newEnabled)
 {
     auto ptr = m_activeSession.lock();
     if (ptr && ptr->m_socket)
-        ptr->m_socket->setEnabled(newEnabled);
+        ptr->m_socket->setEnabled(newEnabled, globalSession()->socket());
     else
         qCWarning(lcTlCore) << "Can't set enabled for empty socket!";
 }
@@ -547,7 +547,7 @@ SessionManager::ActiveSessionUpdate SessionManager::prepareActiveUserSession(con
         Helper::instance()->activateSurface(nullptr);
         // Update socket enabled state before publishing activation notifications.
         if (previous && previous->m_socket)
-            previous->m_socket->setEnabled(false);
+            previous->m_socket->setEnabled(false, globalSession()->socket());
         session->m_socket->setEnabled(true);
     }
 

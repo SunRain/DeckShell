@@ -14,6 +14,7 @@ add_subdirectory(test_scroll_factor)
 add_subdirectory(test_multi_seat)
 add_subdirectory(test_qpa_lifecycle)
 add_subdirectory(test_session_lock_lifecycle)
+add_subdirectory(test_session_socket_policy)
 add_subdirectory(test_qml_install_smoke)
 
 if(NOT DISABLE_DDM)

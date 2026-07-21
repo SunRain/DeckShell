@@ -205,6 +205,7 @@ qt_add_qml_module(libdeckcompositor
         utils/cmdline.h
         utils/propertymonitor.cpp
         utils/propertymonitor.h
+        utils/singlematchconnection.h
         utils/loginddbustypes.h
         utils/loginddbustypes.cpp
         utils/fpsdisplaymanager.cpp

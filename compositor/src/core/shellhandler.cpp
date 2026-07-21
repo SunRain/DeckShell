@@ -21,6 +21,7 @@
 #include "surface/surfacewrapper.h"
 #include "treelandconfig.hpp"
 #include "treelanduserconfig.hpp"
+#include "utils/singlematchconnection.h"
 #include "wallpapershellinterfacev1.h"
 #include "workspace/workspace.h"
 
@@ -480,18 +481,25 @@ void ShellHandler::ensureXdgWrapper(WXdgToplevelSurface *surface, const QString 
         // to handle late-created DDE shell surfaces
         auto ddeShellManager = Helper::instance()->ddeShellV1();
         if (ddeShellManager) {
-            auto connection = connect(ddeShellManager, &DDEShellManagerInterfaceV1::surfaceCreated,
-                                      this, [this, surface, wrapper, ddeShellManager](DDEShellSurfaceInterface *ddeSurface) {
-                if (ddeSurface->wSurface() == surface->surface()) {
-                    qCDebug(lcTlShell) << "Late DDEShellSurface created for surface"
-                                       << surface->surface();
-                    handleDdeShellSurfaceAdded(surface->surface(), wrapper);
-                    // Disconnect after handling
-                    disconnect(ddeShellManager, &DDEShellManagerInterfaceV1::surfaceCreated, this, nullptr);
-                }
-            });
-            // Store connection for cleanup if needed
-            wrapper->setProperty("ddeShellConnection", QVariant::fromValue(connection));
+            QPointer<ShellHandler> selfGuard(this);
+            QPointer<WXdgToplevelSurface> surfaceGuard(surface);
+            QPointer<SurfaceWrapper> wrapperGuard(wrapper);
+            DeckShell::connectUntilMatch(
+                ddeShellManager,
+                &DDEShellManagerInterfaceV1::surfaceCreated,
+                wrapper,
+                [surfaceGuard](DDEShellSurfaceInterface *ddeSurface) {
+                    return surfaceGuard && ddeSurface
+                        && ddeSurface->wSurface() == surfaceGuard->surface();
+                },
+                [selfGuard, surfaceGuard, wrapperGuard](DDEShellSurfaceInterface *) {
+                    if (!selfGuard || !surfaceGuard || !wrapperGuard)
+                        return;
+
+                    qCDebug(lcTlShell)
+                        << "Late DDEShellSurface created for surface" << surfaceGuard->surface();
+                    selfGuard->handleDdeShellSurfaceAdded(surfaceGuard->surface(), wrapperGuard);
+                });
         }
     }
     auto updateSurfaceWithParentContainer = [this, wrapper, surface] {

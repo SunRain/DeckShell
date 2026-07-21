@@ -6,12 +6,15 @@ find_package(PkgConfig REQUIRED)
 pkg_search_module(WAYLAND_CLIENT REQUIRED IMPORTED_TARGET wayland-client)
 
 add_executable(test_multi_seat
+    devicepathfixture.cpp
+    devicepathfixture.h
     main.cpp
     surfaceclient.cpp
     surfaceclient.h
 )
 
 target_compile_definitions(test_multi_seat PRIVATE WLR_USE_UNSTABLE)
+set_target_properties(test_multi_seat PROPERTIES ENABLE_EXPORTS ON)
 
 target_include_directories(test_multi_seat
     PRIVATE
@@ -26,6 +29,7 @@ target_link_libraries(test_multi_seat
         WaylibShared::SharedServer
         PkgConfig::WAYLAND_CLIENT
         PkgConfig::WLROOTS
+        ${CMAKE_DL_LIBS}
 )
 
 add_test(NAME test_multi_seat COMMAND test_multi_seat)

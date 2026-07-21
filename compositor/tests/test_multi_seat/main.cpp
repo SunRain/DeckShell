@@ -1,6 +1,7 @@
 // Copyright (C) 2026 UnionTech Software Technology Co., Ltd.
 // SPDX-License-Identifier: Apache-2.0 OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
 
+#include "devicepathfixture.h"
 #include "seat/seatsmanager.h"
 #include "surfaceclient.h"
 
@@ -16,11 +17,15 @@
 #include <qwseat.h>
 
 #include <QDebug>
+#include <QFile>
 #include <QGuiApplication>
 #include <QMouseEvent>
 #include <QPointingDevice>
+#include <QRegularExpression>
+#include <QScopeGuard>
 #include <QSignalSpy>
 #include <QStringList>
+#include <QTemporaryFile>
 #include <QTest>
 
 #include <memory>
@@ -71,6 +76,8 @@ private Q_SLOTS:
     void detachesQueuedDeviceBeforeSeatCreation();
     void removingSeatReassignsDevices();
     void keepsVideoBusKeyboardForBrightnessShortcuts();
+    void usesWaylibDeviceIdentityAndPhysicalPathFallback_data();
+    void usesWaylibDeviceIdentityAndPhysicalPathFallback();
     void keepsKeyboardAndPointerFocusPerSeat();
     void cleanup();
 
@@ -287,6 +294,72 @@ void MultiSeatTest::keepsVideoBusKeyboardForBrightnessShortcuts()
 
     QCOMPARE(m_videoBusDevice->seat(), m_seat0);
     QVERIFY(m_seat0->deviceList().contains(m_videoBusDevice.get()));
+}
+
+void MultiSeatTest::usesWaylibDeviceIdentityAndPhysicalPathFallback_data()
+{
+    QTest::addColumn<QString>("deviceName");
+    QTest::addColumn<QByteArray>("physicalPath");
+    QTest::addColumn<QByteArray>("devicePath");
+    QTest::addColumn<QByteArray>("procDevicesContent");
+    QTest::addColumn<QString>("expectedPath");
+
+    QTest::newRow("udev PHYS has priority")
+        << QStringLiteral("Fixture PHYS Keyboard") << QByteArray("usb-fixture-phys/input0")
+        << QByteArray("/devices/pci0000:00/0000:00:14.0/usb1/1-2/1-2.9/") << QByteArray()
+        << QStringLiteral("usb-fixture-phys/input0");
+
+    QTest::newRow("udev DEVPATH is normalized")
+        << QStringLiteral("Fixture DEVPATH Keyboard") << QByteArray()
+        << QByteArray("/devices/pci0000:00/0000:00:14.0/usb1/1-2/1-2.3/1-2.3:1.0/input/input42")
+        << QByteArray() << QStringLiteral("usb-0000:00:14.0-2.3/input0");
+
+    QTest::newRow("proc fallback is consumed")
+        << QStringLiteral("Fixture PROC Keyboard") << QByteArray() << QByteArray()
+        << QByteArray("I: Bus=0003 Vendor=0001 Product=0001 Version=0111\n"
+                      "N: Name=\"Fixture PROC Keyboard\"\n"
+                      "P: Phys=usb-fixture-proc/input0\n\n")
+        << QStringLiteral("usb-fixture-proc/input0");
+}
+
+void MultiSeatTest::usesWaylibDeviceIdentityAndPhysicalPathFallback()
+{
+    QFETCH(QString, deviceName);
+    QFETCH(QByteArray, physicalPath);
+    QFETCH(QByteArray, devicePath);
+    QFETCH(QByteArray, procDevicesContent);
+    QFETCH(QString, expectedPath);
+
+    QTemporaryFile procDevices;
+    QVERIFY(procDevices.open());
+    QCOMPARE(procDevices.write(procDevicesContent), qint64(procDevicesContent.size()));
+    QVERIFY(procDevices.flush());
+
+    const QByteArray nameUtf8 = deviceName.toUtf8();
+    wlr_keyboard keyboard = { };
+    const auto keyboardGuard = qScopeGuard([&keyboard] {
+        wlr_keyboard_finish(&keyboard);
+    });
+    auto device = createKeyboard(&keyboard, nameUtf8.constData(), false);
+    DevicePathFixture fixture(&keyboard.base,
+                              physicalPath,
+                              devicePath,
+                              QFile::encodeName(procDevices.fileName()));
+
+    QCOMPARE(device->name(), deviceName);
+    QCOMPARE(device->devicePath(), expectedPath);
+
+    const auto expectedRule = QRegularExpression(
+        QStringLiteral("^1:%1\\|%2$")
+            .arg(QRegularExpression::escape(deviceName), QRegularExpression::escape(expectedPath)));
+    QVERIFY2(SeatsManager::matchesDevice(device.get(), { expectedRule }),
+             qPrintable(expectedRule.pattern()));
+
+    const auto wrongPathRule = QRegularExpression(
+        QStringLiteral("^1:%1\\|wrong-path$").arg(QRegularExpression::escape(deviceName)));
+    QVERIFY(!SeatsManager::matchesDevice(device.get(), { wrongPathRule }));
+
+    device.reset();
 }
 
 void MultiSeatTest::keepsKeyboardAndPointerFocusPerSeat()

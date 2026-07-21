@@ -45,7 +45,6 @@ public:
     static bool parseIMCandidatePanelProperty(const QMap<xcb_atom_t, QByteArray> &result,
                                               xcb_atom_t atom);
 
-
 private:
     void applyIMCandidatePanel(SurfaceWrapper *wrapper);
     void arrangeIMCandidatePanels(Output *output, const QPointF &basePos);

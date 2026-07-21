@@ -276,10 +276,6 @@ qt_add_qml_module(libdeckcompositor
         ${PROJECT_BINARY_DIR}/qt/qml/DeckShell/Compositor
 )
 
-set_property(TARGET libdeckcompositor APPEND PROPERTY AUTOMOC_MOC_OPTIONS
-    "-b;${CMAKE_CURRENT_BINARY_DIR}/outputconfig.hpp"
-)
-
 # Qt's generated install rules do not copy this module when the backing
 # library is installed separately. Keep the module relocatable for staged
 # installs and package builds instead of using an absolute system QML path.
@@ -316,6 +312,10 @@ unset(_DECKSHELL_QML_INSTALL_DIR)
 
 qt_add_repc_sources(libdeckcompositor
     modules/resource/treelandwindowtree.rep
+)
+
+set_property(TARGET libdeckcompositor APPEND PROPERTY AUTOMOC_MOC_OPTIONS
+    "-b;${CMAKE_CURRENT_BINARY_DIR}/outputconfig.hpp"
 )
 
 target_compile_definitions(libdeckcompositor

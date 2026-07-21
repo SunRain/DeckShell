@@ -1,6 +1,5 @@
 find_package(Qt6 REQUIRED COMPONENTS WaylandClient)
 
-
 set(BIN_NAME test-primary-output)
 
 qt_add_executable(${BIN_NAME}

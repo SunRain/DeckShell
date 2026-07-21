@@ -8,10 +8,6 @@ if(NOT DEFINED DECKCOMPOSITOR_PROTOCOLS_DATA_DIR)
     find_package(DeckCompositorProtocols 0.5.9 REQUIRED)
 endif()
 
-if(NOT DEFINED DECKCOMPOSITOR_PROTOCOLS_DATA_DIR)
-    find_package(DeckCompositorProtocols 0.5.5 REQUIRED)
-endif()
-
 # Qt6 packages
 find_package(Qt6 REQUIRED COMPONENTS
     Core

@@ -1,6 +1,5 @@
 find_package(Qt6 REQUIRED COMPONENTS Gui WaylandClient)
 
-
 set(BIN_NAME test-color-control)
 
 qt_add_executable(${BIN_NAME}

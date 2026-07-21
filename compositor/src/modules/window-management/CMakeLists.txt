@@ -1,4 +1,3 @@
-
 local_qtwayland_server_protocol_treeland(libdeckcompositor
     PROTOCOL ${DECKCOMPOSITOR_PROTOCOLS_DATA_DIR}/treeland-window-management-v1.xml
     BASENAME treeland-window-management-v1

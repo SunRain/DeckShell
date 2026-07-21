@@ -8,7 +8,6 @@
 #include <wbackend.h>
 #include <wcursor.h>
 #include <woutputlayout.h>
-#include <qwinputdevice.h>
 
 #include <QFile>
 #include <QJsonDocument>
@@ -16,44 +15,6 @@
 #include <QJsonArray>
 #include <QInputEvent>
 #include <QQuickWindow>
-#include <QScopeGuard>
-
-#include <libudev.h>
-
-namespace {
-
-QString inputDeviceName(WInputDevice *device)
-{
-    if (!device)
-        return {};
-
-    auto *handle = device->handle();
-    if (handle && handle->handle() && handle->handle()->name)
-        return QString::fromUtf8(handle->handle()->name);
-
-    return device->qtDevice() ? device->qtDevice()->name() : QString();
-}
-
-QString inputDevicePath(WInputDevice *device)
-{
-    auto *handle = device ? device->handle() : nullptr;
-    if (!handle || !handle->is_libinput())
-        return {};
-
-    auto *libinputDevice = wlr_libinput_get_device_handle(handle->handle());
-    auto *udevDevice = libinputDevice ? libinput_device_get_udev_device(libinputDevice) : nullptr;
-    if (!udevDevice)
-        return {};
-
-    const auto guard = qScopeGuard([udevDevice] { udev_device_unref(udevDevice); });
-    if (const char *physicalPath = udev_device_get_property_value(udevDevice, "PHYS"))
-        return QString::fromUtf8(physicalPath);
-    if (const char *devicePath = udev_device_get_property_value(udevDevice, "DEVPATH"))
-        return QString::fromUtf8(devicePath);
-    return {};
-}
-
-} // namespace
 
 SeatsManager::SeatsManager(WServer *server, QObject *parent)
     : QObject(parent)
@@ -126,7 +87,7 @@ void SeatsManager::removeSeat(const QString &name)
                 Q_EMIT deviceReassigned(device, seat, newSeat);
             } else {
                 qCWarning(lcTlSeat) << "Failed to reassign device after seat removal:"
-                                    << inputDeviceName(device);
+                                    << device->name();
             }
         }
     }
@@ -209,7 +170,7 @@ void SeatsManager::assignDeviceToSeat(WInputDevice *device, const QString &seatN
     if (!targetSeat)
         targetSeat = fallbackSeat();
     if (!targetSeat) {
-        qCWarning(lcTlSeat) << "Cannot assign device" << inputDeviceName(device)
+        qCWarning(lcTlSeat) << "Cannot assign device" << device->name()
                             << "- no seats available";
         return;
     }
@@ -217,20 +178,20 @@ void SeatsManager::assignDeviceToSeat(WInputDevice *device, const QString &seatN
     WSeat *currentSeat = m_deviceCache.value(device, device->seat());
     if (currentSeat == targetSeat) {
         m_deviceCache[device] = targetSeat;
-        qCDebug(lcTlSeat) << "Device" << inputDeviceName(device) << "already assigned to seat"
+        qCDebug(lcTlSeat) << "Device" << device->name() << "already assigned to seat"
                           << targetSeat->name();
         return;
     }
 
     if (currentSeat) {
         currentSeat->detachInputDevice(device);
-        qCDebug(lcTlSeat) << "Device" << inputDeviceName(device) << "detached from seat"
+        qCDebug(lcTlSeat) << "Device" << device->name() << "detached from seat"
                           << currentSeat->name();
     }
 
     targetSeat->attachInputDevice(device);
     m_deviceCache[device] = targetSeat;
-    qCDebug(lcTlSeat) << "Device" << inputDeviceName(device) << "assigned to seat"
+    qCDebug(lcTlSeat) << "Device" << device->name() << "assigned to seat"
                       << targetSeat->name();
 
     if (currentSeat)
@@ -245,7 +206,7 @@ WSeat *SeatsManager::autoAssignDevice(WInputDevice *device)
     }
 
     if (auto *seat = m_deviceCache.value(device)) {
-        qCDebug(lcTlSeat) << "Device" << inputDeviceName(device)
+        qCDebug(lcTlSeat) << "Device" << device->name()
                           << "already assigned to seat" << seat->name();
         return seat;
     }
@@ -255,18 +216,18 @@ WSeat *SeatsManager::autoAssignDevice(WInputDevice *device)
     if (targetSeat) {
         targetSeat->attachInputDevice(device);
         m_deviceCache[device] = targetSeat;
-        qCDebug(lcTlSeat) << "Device" << inputDeviceName(device) << "auto-assigned to seat"
+        qCDebug(lcTlSeat) << "Device" << device->name() << "auto-assigned to seat"
                           << targetSeat->name();
         return targetSeat;
     } else if (fallbackSeat()) {
         fallbackSeat()->attachInputDevice(device);
         m_deviceCache[device] = fallbackSeat();
-        qCDebug(lcTlSeat) << "Device" << inputDeviceName(device)
+        qCDebug(lcTlSeat) << "Device" << device->name()
                           << "auto-assigned to fallback seat";
         return fallbackSeat();
     }
 
-    qCWarning(lcTlSeat) << "Failed to auto-assign device" << inputDeviceName(device);
+    qCWarning(lcTlSeat) << "Failed to auto-assign device" << device->name();
     return nullptr;
 }
 
@@ -572,9 +533,9 @@ bool SeatsManager::matchesDevice(WInputDevice *device, const QList<QRegularExpre
     if (!device)
         return false;
 
-    const QString deviceName = inputDeviceName(device);
+    const QString deviceName = device->name();
     WInputDevice::Type deviceType = device->type();
-    const QString devicePath = inputDevicePath(device);
+    const QString devicePath = device->devicePath();
 
     QString deviceInfo = QString("%1:%2")
                         .arg(static_cast<int>(deviceType))
@@ -689,7 +650,7 @@ void SeatsManager::connectBackendSignals(WBackend *backend)
         if (device) {
             if (auto *seat = m_deviceCache.take(device)) {
                 seat->detachInputDevice(device);
-                qCDebug(lcTlSeat) << "Device" << inputDeviceName(device)
+                qCDebug(lcTlSeat) << "Device" << device->name()
                                   << "removed from seat" << seat->name();
             }
 
@@ -724,7 +685,7 @@ void SeatsManager::assignDevice(WInputDevice *device,
         return;
     }
 
-    const QString deviceName = inputDeviceName(device);
+    const QString deviceName = device->name();
     WInputDevice::Type deviceType = device->type();
 
     // Filter out mismatched device types

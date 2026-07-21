@@ -57,8 +57,3 @@ function(impl_deckcompositor)
             ${PARSE_ARG_PREFIX_NAME}
     )
 endfunction()
-
-function(impl_treeland)
-    # Backward compatible wrapper (avoid CMake function name ambiguity with 3rdparty/waylib-shared).
-    impl_deckcompositor(${ARGV})
-endfunction()

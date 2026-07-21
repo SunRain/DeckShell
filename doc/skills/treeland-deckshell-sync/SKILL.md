@@ -335,6 +335,58 @@ python3 "<skill_dir>/scripts/sync_audit.py" verify \
 
 `verify` 必须分别报告 `report_schema_version`、`evidence_schema_version`、`strict_evidence_schema_required`、`target_path_authority` 和 `target_path_expansions`，并证明完整有序映射、单父提交、目标路径合法、applied 路径精确、adapted 无目标路径扩张、adapted/empty 证据完整，以及 schema v2 的 adaptation 路径语义和提交消息一致性。`outcome != pass` 或 `target_path_authority != pass` 时禁止构建收口。
 
+### 8.1 生成 adaptation SHA 文档
+
+目标提交 SHA 全部冻结且 strict verify 通过后，为每个 `action=adapted` 的 rewritten target 生成一份后继文档。文档不得写入其所命名的同步提交，否则文件名会改变 tree 并产生 commit SHA 自引用。
+
+固定输出目录和名称：
+
+```text
+doc/treeland-sync/adaptations/<完整 rewritten target SHA>.md
+```
+
+使用持久 schema-v2 manifest 和 raw-history mapping 生成：
+
+```bash
+python3 "<skill_dir>/scripts/generate_adaptation_docs.py" generate \
+  --repo "<repo_dir>" \
+  --manifest "<persistent_manifest_v2>" \
+  --mapping "<rewritten_mapping>" \
+  --base "<target_base_sha>" \
+  --head "<rewritten_sync_head>" \
+  --docs-dir "<repo_dir>/doc/treeland-sync/adaptations" \
+  --expected-count "<adapted_count>"
+```
+
+规则：
+
+- 一提交一文档；文件名使用 rewritten DeckShell target SHA，不使用 source 或 legacy target SHA。
+- `modified`、`materialized` 嵌入 target parent → target 的完整路径 diff，固定 `--full-index --binary --no-renames`。
+- `omitted` 必须证明目标提交无该路径 diff，并嵌入 source parent → source 的完整 diff；diff header 按 manifest source→target 前缀映射。
+- 每条 path 写入审定 justification、diff SHA-256 和总体 adaptation notes；目标完整 diff 不得表述为纯 adaptation delta。
+- 每条 path 在既有证据后追加“提交后文件状态差异（Treeland 与 DeckShell）”，比较 source commit tree 与 rewritten target commit tree；该结果可能包含 DeckShell 长期差异，不得表述为本次提交的纯 adaptation delta。
+- source post-image 路径优先使用匹配目标路径的 `source_changes[].new.source`；仅在上游删除、new side 不存在时回退到唯一 `old.source`。多重映射必须 BLOCKED。
+- post-image 比较记录两侧 path、存在状态、object type、mode、blob OID 和 size，并使用 `content-different`、`content-and-mode-different`、`mode-only`、`identical`、`upstream-only`、`deckshell-only`、`both-absent` 七种固定结果。
+- 状态不同时嵌入 `upstream/<source-path>` 对 `deckshell/<target-path>` 的规范 `--full-index --binary --no-renames --no-textconv` diff；单侧缺失使用 `/dev/null`，相同或双侧缺失不得生成伪 diff。
+- post-image 只能读取指定 commit 的 Git object；不支持的非 blob object、非法路径或不能安全写入 UTF-8 Markdown 的文本 diff 必须 BLOCKED。二进制 blob 使用 Git binary patch。
+- 输入 schema、manifest 计数、legacy→rewritten→source join、目标范围、commit 字段、review 状态、parent 事实或 path 状态不一致时 BLOCKED。
+- 生成器不得依赖 `/tmp`；manifest 和 mapping 必须来自持久方案证据。
+
+生成后立即逐字节复验：
+
+```bash
+python3 "<skill_dir>/scripts/generate_adaptation_docs.py" verify \
+  --repo "<repo_dir>" \
+  --manifest "<persistent_manifest_v2>" \
+  --mapping "<rewritten_mapping>" \
+  --base "<target_base_sha>" \
+  --head "<rewritten_sync_head>" \
+  --docs-dir "<repo_dir>/doc/treeland-sync/adaptations" \
+  --expected-count "<adapted_count>"
+```
+
+缺失、额外、篡改文档或重复生成产生内容差异时 BLOCKED。文档作为 rewritten sync head 之后的独立后继变更进入目标分支，不移动纯同步分支。
+
 ## 9. 冻结构建与测试
 
 确保 `build_dir` 为全新目录，然后执行：

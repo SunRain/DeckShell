@@ -223,6 +223,14 @@ def _message_contract(
     return paths, note_items, findings
 
 
+def parse_commit_adaptation_fields(
+    repo: Path, target: str, source: str, *, strict: bool = True
+) -> tuple[list[dict[str, str]], list[str], list[str]]:
+    """Return canonical adaptation message fields and parse findings."""
+
+    return _message_contract(repo, target, source, strict)
+
+
 def verify_adaptation_fields(
     repo: Path,
     target: str,

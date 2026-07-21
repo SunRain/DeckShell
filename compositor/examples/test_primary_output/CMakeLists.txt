@@ -1,5 +1,6 @@
 find_package(Qt6 REQUIRED COMPONENTS WaylandClient)
 
+
 set(BIN_NAME test-primary-output)
 
 qt_add_executable(${BIN_NAME}
@@ -8,7 +9,7 @@ qt_add_executable(${BIN_NAME}
 
 qt_generate_wayland_protocol_client_sources(${BIN_NAME}
     FILES
-        ${DECKCOMPOSITOR_PROTOCOLS_DATA_DIR}treeland-output-manager-v1.xml
+        ${DECKCOMPOSITOR_PROTOCOLS_DATA_DIR}/treeland-output-manager-v1.xml
 )
 
 target_link_libraries(${BIN_NAME}

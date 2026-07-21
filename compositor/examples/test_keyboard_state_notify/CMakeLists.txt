@@ -1,4 +1,5 @@
 find_package(Qt6 REQUIRED COMPONENTS Gui WaylandClient)
+
 set(BIN_NAME test-keyboard-state-notify)
 
 qt_add_executable(${BIN_NAME}

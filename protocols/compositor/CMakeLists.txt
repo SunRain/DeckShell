@@ -1,11 +1,16 @@
 cmake_minimum_required(VERSION 3.25.0)
 
-project(DeckCompositorProtocols VERSION 0.5.5)
+project(DeckCompositorProtocols VERSION 0.5.9)
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 set(CMAKE_AUTOMOC ON)
 
 include(GNUInstallDirs)
+set(DECKCOMPOSITOR_PROTOCOLS_INSTALL_DATADIR
+    "${CMAKE_INSTALL_DATADIR}/DeckShell/compositor-protocols")
+set(DECKCOMPOSITOR_PROTOCOLS_INSTALL_CMAKEDIR
+    "${CMAKE_INSTALL_DATADIR}/cmake/DeckCompositorProtocols")
+
 add_subdirectory(cmake)
 
 set(XML
@@ -14,6 +19,8 @@ set(XML
     xml/treeland-dde-shell-v1.xml
     xml/treeland-ddm-v1.xml
     xml/treeland-foreign-toplevel-manager-v1.xml
+    xml/treeland-input-manager-unstable-v1.xml
+    xml/treeland-keyboard-state-notify-unstable-v1.xml
     xml/treeland-output-manager-v1.xml
     xml/treeland-personalization-manager-v1.xml
     xml/treeland-prelaunch-splash-v1.xml
@@ -26,10 +33,13 @@ set(XML
     xml/treeland-wallpaper-manager-unstable-v1.xml
     xml/treeland-wallpaper-shell-unstable-v1.xml
     xml/treeland-window-management-v1.xml
+    xml/treeland-wine-window-management-unstable-v1.xml
+    xml/treeland-wine-window-state-unstable-v1.xml
 )
 
-install(FILES ${XML} DESTINATION ${CMAKE_INSTALL_DATADIR}/DeckShell/compositor-protocols)
+install(FILES ${XML} DESTINATION "${DECKCOMPOSITOR_PROTOCOLS_INSTALL_DATADIR}")
 
+# Export the in-tree protocol source to sibling projects when embedded.
 set(DECKCOMPOSITOR_PROTOCOLS_DATA_DIR "${CMAKE_CURRENT_SOURCE_DIR}/xml")
 if(NOT CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
     set(DECKCOMPOSITOR_PROTOCOLS_DATA_DIR "${CMAKE_CURRENT_SOURCE_DIR}/xml" PARENT_SCOPE)

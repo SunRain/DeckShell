@@ -2,6 +2,7 @@ find_package(Qt6 REQUIRED COMPONENTS Gui WaylandClient Widgets)
 if(Qt6_VERSION VERSION_GREATER_EQUAL 6.10)
     find_package(Qt6 REQUIRED COMPONENTS GuiPrivate WaylandClientPrivate)
 endif()
+
 set(BIN_NAME test-shortcut-capture)
 
 qt_add_executable(${BIN_NAME}

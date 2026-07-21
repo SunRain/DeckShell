@@ -88,6 +88,7 @@ public:
     PersonalizationManagerInterfaceV1 *q;
 
 protected:
+    void destroy(Resource *resource) override;
     void get_window_context(Resource *resource, uint32_t id, struct ::wl_resource *surface) override;
     void get_cursor_context(Resource *resource, uint32_t id) override;
     void get_font_context(Resource *resource, uint32_t id) override;
@@ -103,6 +104,11 @@ PersonalizationManagerInterfaceV1Private::PersonalizationManagerInterfaceV1Priva
 wl_global *PersonalizationManagerInterfaceV1Private::global() const
 {
     return m_global;
+}
+
+void PersonalizationManagerInterfaceV1Private::destroy(Resource *resource)
+{
+    wl_resource_destroy(resource->handle);
 }
 
 void PersonalizationManagerInterfaceV1Private::get_window_context(Resource *resource,

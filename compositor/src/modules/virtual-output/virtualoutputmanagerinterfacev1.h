@@ -22,7 +22,7 @@ public:
 
     QByteArrayView interfaceName() const override;
 
-    static constexpr int InterfaceVersion = 1;
+    static constexpr int InterfaceVersion = 2;
 
 Q_SIGNALS:
     void requestCreateVirtualOutput(VirtualOutputInterfaceV1 *interface);

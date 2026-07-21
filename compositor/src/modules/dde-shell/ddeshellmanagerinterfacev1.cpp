@@ -33,6 +33,7 @@ public:
     DDEShellManagerInterfaceV1 *q;
 
 protected:
+    void destroy(Resource *resource) override;
     void get_window_overlap_checker(Resource *resource, uint32_t id) override;
     void get_shell_surface(Resource *resource, uint32_t id, struct ::wl_resource *surface) override;
     void get_treeland_dde_active(Resource *resource, uint32_t id, struct ::wl_resource *seat) override;
@@ -40,7 +41,7 @@ protected:
     void get_treeland_window_picker(Resource *resource, uint32_t id) override;
     void get_treeland_lockscreen(Resource *resource, uint32_t id) override;
     void set_xwindow_position_relative(Resource *resource, uint32_t callback, uint32_t wid,
-                                       struct ::wl_resource *anchor, wl_fixed_t dx, wl_fixed_t dy);
+                                       struct ::wl_resource *anchor, wl_fixed_t dx, wl_fixed_t dy) override;
 };
 
 void DDEShellManagerInterfaceV1Private::get_treeland_lockscreen(Resource *resource,
@@ -74,6 +75,10 @@ void DDEShellManagerInterfaceV1Private::set_xwindow_position_relative(Resource *
     WSurface *wsurface = WSurface::fromHandle(qw_surface::from_resource(anchor));
     uint32_t ok = (wsurface && Helper::instance()->setXWindowPositionRelative(wid, wsurface, dx, dy)) ? 0 : 1;
     wl_resource *cb = wl_resource_create(resource->client(), &wl_callback_interface, 1, callback);
+    if (!cb) {
+        wl_client_post_no_memory(resource->client());
+        return;
+    }
     wl_callback_send_done(cb, ok);
     wl_resource_destroy(cb);
 }
@@ -87,6 +92,11 @@ DDEShellManagerInterfaceV1Private::DDEShellManagerInterfaceV1Private(DDEShellMan
 wl_global *DDEShellManagerInterfaceV1Private::global() const
 {
     return m_global;
+}
+
+void DDEShellManagerInterfaceV1Private::destroy(Resource *resource)
+{
+    wl_resource_destroy(resource->handle);
 }
 
 void DDEShellManagerInterfaceV1Private::get_window_overlap_checker(Resource *resource,

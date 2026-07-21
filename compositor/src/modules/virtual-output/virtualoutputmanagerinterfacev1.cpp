@@ -100,8 +100,7 @@ public:
     void attachDestroyCleanup(const QString &name, VirtualOutputInterfaceV1 *virtualOutput);
 
 protected:
-    // TODO(YaoBing Xiao): treeland-virtual-output-manager-v1 is missing the 'destroy' request.
-    // void destroy(Resource *resource) override;
+    void destroy(Resource *resource) override;
     void create_virtual_output(Resource *resource, uint32_t id, const QString &name, wl_array *outputs) override;
     void get_virtual_output_list(Resource *resource) override;
     void get_virtual_output(Resource *resource, const QString &name, uint32_t id) override;
@@ -116,6 +115,11 @@ VirtualOutputManagerInterfaceV1Private::VirtualOutputManagerInterfaceV1Private(V
 wl_global *VirtualOutputManagerInterfaceV1Private::global() const
 {
     return m_global;
+}
+
+void VirtualOutputManagerInterfaceV1Private::destroy(Resource *resource)
+{
+    wl_resource_destroy(resource->handle);
 }
 
 VirtualOutputInterfaceV1 *VirtualOutputManagerInterfaceV1Private::createVirtualOutputInternal(Resource *resource,
@@ -148,11 +152,6 @@ void VirtualOutputManagerInterfaceV1Private::attachDestroyCleanup(
         m_configs.remove(name);
     });
 }
-
-// void VirtualOutputManagerInterfaceV1Private::destroy(Resource *resource)
-// {
-//     wl_resource_destroy(resource->handle);
-// }
 
 void VirtualOutputManagerInterfaceV1Private::create_virtual_output(Resource *resource,
                                                                    uint32_t id,
@@ -291,4 +290,3 @@ void VirtualOutputInterfaceV1::sendError(uint32_t code, const QString &message)
 {
     d->send_error(code, message);
 }
-

@@ -118,7 +118,7 @@ set_target_properties(libdeckcompositor PROPERTIES
 qt_add_qml_module(libdeckcompositor
     URI DeckShell.Compositor
     VERSION "2.0"
-    IMPORTS WaylibShared.QuickSharedServer/1.0
+    IMPORTS WaylibShared.QuickSharedServer
 
     SOURCES
         ${DDM_DBUS_SOURCES}

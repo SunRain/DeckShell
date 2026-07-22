@@ -24,7 +24,6 @@ set_target_properties(${MODULE_NAME} PROPERTIES
 qt_add_qml_module(${MODULE_NAME}
     URI DeckShell.Compositor.Capture
     VERSION 1.0
-    IMPORTS DeckShell.Compositor/2.0
     NO_PLUGIN
     SOURCES
         ${CMAKE_CURRENT_SOURCE_DIR}/capture.h

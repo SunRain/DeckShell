@@ -36,6 +36,7 @@ QmlEngine::QmlEngine(QObject *parent)
     , showDesktopAnimatioComponentn(this, "DeckShell.Compositor", "ShowDesktopAnimation")
     , captureSelectorComponent(this, "DeckShell.Compositor", "CaptureSelectorLayer")
     , windowPickerComponent(this, "DeckShell.Compositor", "WindowPickerLayer")
+    , edgeTilePreviewComponent(this, "DeckShell.Compositor", "EdgeTilePreview")
     , launchpadAnimationComponent(this, "DeckShell.Compositor", "LaunchpadAnimation")
     , launchpadCoverComponent(this, "DeckShell.Compositor", "LaunchpadCover")
     , layershellAnimationComponent(this, "DeckShell.Compositor", "LayerShellAnimation")
@@ -243,6 +244,11 @@ QQuickItem *QmlEngine::createCaptureSelector(QQuickItem *parent, CaptureManagerV
 QQuickItem *QmlEngine::createWindowPicker(QQuickItem *parent)
 {
     return createComponent(windowPickerComponent, parent);
+}
+
+QQuickItem *QmlEngine::createEdgeTilePreview(QQuickItem *parent)
+{
+    return createComponent(edgeTilePreviewComponent, parent);
 }
 
 QQuickItem *QmlEngine::createLockScreenFallback(QQuickItem *parent, const QVariantMap &properties)

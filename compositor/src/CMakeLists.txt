@@ -267,6 +267,7 @@ qt_add_qml_module(libdeckcompositor
         core/qml/FadeBehavior.qml
         core/qml/CaptureSelectorLayer.qml
         core/qml/WindowPickerLayer.qml
+        core/qml/EdgeTilePreview.qml
         core/qml/LockScreenFallback.qml
         core/qml/PrelaunchSplash.qml
     RESOURCE_PREFIX

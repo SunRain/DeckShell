@@ -337,6 +337,7 @@ qt_add_shaders(libdeckcompositor "deckcompositor_shaders_ng"
 # so BATCHABLE is unnecessary (it only adds an unused batchable variant).
 qt_add_shaders(libdeckcompositor "deckcompositor_liquidglass_shaders"
     PRECOMPILE
+    OPTIMIZED
     PREFIX
         "/shaders"
     BASE

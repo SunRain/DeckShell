@@ -49,6 +49,7 @@ qt_add_qml_module(test_effect_glass
 
 qt_add_shaders(test_effect_glass "test_glass_shaders"
     PRECOMPILE
+    OPTIMIZED
     PREFIX
         "/shaders"
     BASE
@@ -60,7 +61,7 @@ qt_add_shaders(test_effect_glass "test_glass_shaders"
 
 target_compile_definitions(test_effect_glass
     PRIVATE
-        SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}"
+        SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/../.."
         WLR_USE_UNSTABLE
 )
 

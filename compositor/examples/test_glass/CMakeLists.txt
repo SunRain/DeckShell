@@ -59,6 +59,7 @@ qt_add_qml_module(deckcompositor_stub
 )
 qt_add_shaders(deckcompositor_stub "deckcompositor_stub_liquidglass_shaders"
     PRECOMPILE
+    OPTIMIZED
     PREFIX
         "/shaders"
     BASE

@@ -568,7 +568,6 @@ void Helper::onOutputAdded(WOutput *output)
         }
     }
 
-    o->enable();
     if (scanned && m_mode == OutputMode::Copy) {
         QStringList copyOutputs = m_outputManagerHelper->copyOutputIds();
         const QString addedOutputId = WallpaperManager::getOutputId(o);

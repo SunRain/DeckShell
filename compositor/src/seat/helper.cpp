@@ -676,9 +676,9 @@ void Helper::onOutputAdded(WOutput *output)
             return;
         }
 
-        // Saved geometry belongs exclusively to the initial backend scan.
-        // A hot-plugged output keeps outputLayout's auto-added position, which
-        // extends the current topology to the right.
+        // Only the initial backend scan restores saved geometry. A hot-plugged
+        // output keeps outputLayout's auto-added position, while its mode,
+        // transform, scale, brightness, and color temperature are restored.
         if (!isInitialOutput) {
             const bool restoreAsExtensionOutput =
                 m_mode == OutputMode::Extension
@@ -687,7 +687,6 @@ void Helper::onOutputAdded(WOutput *output)
             if (restoreAsExtensionOutput && !output->isEnabled()) {
                 outputObject->enable();
             }
-            return;
         }
 
         const QString singleOutputId = m_globalConfig->singleOutputId();
@@ -712,6 +711,12 @@ void Helper::onOutputAdded(WOutput *output)
                                << "selected output id:" << singleOutputId;
             return;
         }
+
+        auto restoreColorConfig = qScopeGuard([outputObject] {
+            if (outputObject && outputObject->output() && outputObject->output()->isEnabled()) {
+                outputObject->applyOutputColorConfig();
+            }
+        });
 
         auto *config = outputObject->config();
         const QString outputId = WallpaperManager::getOutputId(outputObject);
@@ -1400,11 +1405,10 @@ void Helper::onOutputCommitFinished(qw_output_configuration_v1 *config, bool suc
                         return;
                     }
 
-                    if (preservePosition) {
-                        return;
+                    if (!preservePosition) {
+                        outputConfig->setX(x);
+                        outputConfig->setY(y);
                     }
-                    outputConfig->setX(x);
-                    outputConfig->setY(y);
                     outputConfig->setWidth(width);
                     outputConfig->setHeight(height);
                     outputConfig->setRefresh(refresh);

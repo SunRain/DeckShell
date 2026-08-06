@@ -1,4 +1,4 @@
-local_qtwayland_server_protocol_treeland(libdeckcompositor
+waylib_generate_qtwayland_server_protocol(libdeckcompositor
     PROTOCOL ${DECKCOMPOSITOR_PROTOCOLS_DATA_DIR}/treeland-foreign-toplevel-manager-v1.xml
     BASENAME treeland-foreign-toplevel-manager-v1
 )
@@ -13,7 +13,6 @@ impl_deckcompositor(
         ${CMAKE_CURRENT_SOURCE_DIR}/foreigntoplevelmanagerv1.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/foreigntoplevelstatecodec.h
         ${CMAKE_CURRENT_SOURCE_DIR}/foreigntoplevelstatecodec.cpp
-        ${CMAKE_CURRENT_BINARY_DIR}/wayland-treeland-foreign-toplevel-manager-v1-server-protocol.c
     INCLUDE
         $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>
 )

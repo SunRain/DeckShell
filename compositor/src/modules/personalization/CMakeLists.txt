@@ -1,4 +1,4 @@
-local_qtwayland_server_protocol_treeland(libdeckcompositor
+waylib_generate_qtwayland_server_protocol(libdeckcompositor
     PROTOCOL ${DECKCOMPOSITOR_PROTOCOLS_DATA_DIR}/treeland-personalization-manager-v1.xml
     BASENAME treeland-personalization-manager-v1
 )
@@ -11,7 +11,6 @@ set(PUBLIC_HEADERS
 
 set(SRCS
     ${CMAKE_CURRENT_SOURCE_DIR}/personalizationmanagerinterfacev1.cpp
-    ${CMAKE_CURRENT_BINARY_DIR}/wayland-treeland-personalization-manager-v1-server-protocol.c
 )
 
 impl_deckcompositor(

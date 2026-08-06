@@ -63,7 +63,6 @@ endif()
 # set(QT_QML_GENERATE_QMLLS_INI ON)
 
 add_subdirectory(3rdparty/waylib-shared)
-add_subdirectory(qtwaylandscanner)
 add_subdirectory(dconfig2cpp)
 add_subdirectory(protocols/compositor)
 add_subdirectory(compositor)

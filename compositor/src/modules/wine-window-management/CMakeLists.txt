@@ -1,4 +1,4 @@
-local_qtwayland_server_protocol_treeland(libdeckcompositor
+waylib_generate_qtwayland_server_protocol(libdeckcompositor
     PROTOCOL ${DECKCOMPOSITOR_PROTOCOLS_DATA_DIR}/treeland-wine-window-management-unstable-v1.xml
     BASENAME treeland-wine-window-management-v1
 )
@@ -9,7 +9,6 @@ impl_deckcompositor(
     SOURCE
         winewindowmanagement.h
         winewindowmanagement.cpp
-        ${CMAKE_CURRENT_BINARY_DIR}/wayland-treeland-wine-window-management-v1-server-protocol.c
     INCLUDE
         $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>
     LINK

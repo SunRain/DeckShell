@@ -27,6 +27,7 @@ set(XML
     xml/treeland-personalization-manager-v1.xml
     xml/treeland-prelaunch-splash-v1.xml
     xml/treeland-prelaunch-splash-v2.xml
+    xml/treeland-remote-subsurface-unstable-v1.xml
     xml/treeland-screensaver-v1.xml
     xml/treeland-shortcut-manager-v1.xml
     xml/treeland-shortcut-manager-v2.xml

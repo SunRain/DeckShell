@@ -62,8 +62,9 @@ endif()
 
 # set(QT_QML_GENERATE_QMLLS_INI ON)
 
+add_subdirectory(protocols/compositor)
+set(WAYLIB_TREELAND_PROTOCOLS_DIR "${DECKCOMPOSITOR_PROTOCOLS_DATA_DIR}")
 add_subdirectory(3rdparty/waylib-shared)
 add_subdirectory(dconfig2cpp)
-add_subdirectory(protocols/compositor)
 add_subdirectory(compositor)
 add_subdirectory(treeland-dde-shell-client)

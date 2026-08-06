@@ -50,8 +50,8 @@ require_text("${pkgconfig_template}" "deckcompositor_protocols_datadir=")
 file(GLOB protocol_xml_files RELATIVE "${protocols_dir}"
     "${protocols_dir}/xml/*.xml")
 list(LENGTH protocol_xml_files protocol_xml_count)
-if(NOT protocol_xml_count EQUAL 21)
-    message(FATAL_ERROR "Expected 21 protocol XML files, found ${protocol_xml_count}")
+if(NOT protocol_xml_count EQUAL 22)
+    message(FATAL_ERROR "Expected 22 protocol XML files, found ${protocol_xml_count}")
 endif()
 
 read_required("${protocols_cmake}" protocols_cmake_content)
@@ -85,8 +85,8 @@ if(DEFINED DECKCOMPOSITOR_INSTALL_PREFIX)
 
     file(GLOB installed_protocol_xml_files "${actual_data_dir}/*.xml")
     list(LENGTH installed_protocol_xml_files installed_protocol_xml_count)
-    if(NOT installed_protocol_xml_count EQUAL 21)
+    if(NOT installed_protocol_xml_count EQUAL 22)
         message(FATAL_ERROR
-            "Installed package must contain 21 XML files, found ${installed_protocol_xml_count}")
+            "Installed package must contain 22 XML files, found ${installed_protocol_xml_count}")
     endif()
 endif()

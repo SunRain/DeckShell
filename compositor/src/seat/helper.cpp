@@ -90,6 +90,7 @@
 #include <wqmlcreator.h>
 #include <wquickcursor.h>
 #include <wrenderhelper.h>
+#include <wremotesubsurfacemanagerv1.h>
 #include <wseat.h>
 #include <wsecuritycontextmanager.h>
 #include <wsocket.h>
@@ -2191,6 +2192,7 @@ void Helper::init(Treeland::Treeland *treeland)
             this,
             &Helper::onOutputTestOrApply);
 
+    m_server->attach<WRemoteSubsurfaceManagerV1>();
     m_server->attach<WCursorShapeManagerV1>();
     wlr_fractional_scale_manager_v1_create(m_server->handle(), WLR_FRACTIONAL_SCALE_V1_VERSION);
     wlr_data_control_manager_v1_create(m_server->handle());

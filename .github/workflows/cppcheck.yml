@@ -17,6 +17,7 @@ jobs:
       - uses: actions/checkout@v7
         with:
           ref: ${{ github.event.pull_request.head.sha }}
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
           persist-credentials: false
           allow-unsafe-pr-checkout: true
       - uses: linuxdeepin/action-cppcheck@main

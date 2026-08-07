@@ -11,9 +11,12 @@
 #include <QMargins>
 #include <QObject>
 #include <QQmlComponent>
+#include <QString>
 
 Q_MOC_INCLUDE(<woutputitem.h>)
 Q_MOC_INCLUDE("outputconfig.hpp")
+
+struct wlr_output;
 
 WAYLIB_SERVER_BEGIN_NAMESPACE
 class WOutput;
@@ -67,6 +70,8 @@ public:
                               Output *proxy,
                               QQmlEngine *engine,
                               QObject *parent = nullptr);
+    static QString getOutputId(wlr_output *output);
+    QString getOutputId();
 
     explicit Output(WOutputItem *output, QObject *parent = nullptr);
     ~Output() override;

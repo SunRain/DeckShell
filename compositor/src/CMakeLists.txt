@@ -325,6 +325,14 @@ target_compile_definitions(libdeckcompositor
     PROJECT_COMPILE_QML_DIR="${PROJECT_BINARY_DIR}/qt/qml/DeckShell/Compositor"
 )
 
+if (USE_BUILD_TREE_WALLPAPER_FACTORY)
+    target_compile_definitions(libdeckcompositor
+        PRIVATE
+        TREELAND_USE_BUILD_TREE_WALLPAPER_FACTORY
+        "TREELAND_WALLPAPER_FACTORY_OUTPUT_PATH=\"${PROJECT_BINARY_DIR}/wallpaper-factory/treeland-wallpaper-factory\""
+    )
+endif()
+
 qt_add_shaders(libdeckcompositor "deckcompositor_shaders_ng"
     BATCHABLE
     PRECOMPILE

@@ -45,6 +45,13 @@ add_feature_info(ASanSupport ADDRESS_SANITIZER
 option(BUILD_TREELAND_EXAMPLES "Build clients demo to test treeland" OFF)
 add_feature_info(DemoClents BUILD_TEST_CLIENTS "clients demo for testing")
 
+option(USE_BUILD_TREE_WALLPAPER_FACTORY
+       "Use the wallpaper factory executable from the build tree"
+       OFF)
+add_feature_info(build_tree_wallpaper_factory
+                 USE_BUILD_TREE_WALLPAPER_FACTORY
+                 "Use the wallpaper factory executable from the build tree")
+
 option(DISABLE_DDM "Disable DDM and greeter" ON)
 
 option(COMPOSITOR_PLUGINS_ADD_BUILD_PATH "Add compositor build path to plugin search paths" ON)
@@ -161,8 +168,6 @@ add_compile_definitions(
     "TREELAND_PLUGINS_INSTALL_PATH=\"${TREELAND_FULL_PLUGINS_INSTALL_PATH}\"")
 add_compile_definitions(
     "TREELAND_PLUGINS_OUTPUT_PATH=\"${TREELAND_PLUGINS_OUTPUT_PATH}\"")
-add_compile_definitions(
-    "TREELAND_WALLPAPER_FACTORY_OUTPUT_PATH=\"${PROJECT_BINARY_DIR}/wallpaper-factory/treeland-wallpaper-factory\"")
 
 add_compile_definitions(
     "TREELAND_COMPONENTS_TRANSLATION_DIR=\"${TREELAND_FULL_COMPONENTS_TRANSLATION_DIR}\""

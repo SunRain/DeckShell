@@ -3625,11 +3625,6 @@ DDMInterfaceV1 *Helper::ddmInterfaceV1() const {
 #endif
 }
 
-void Helper::activateSession() {
-    if (!m_backend->isSessionActive())
-        m_backend->activateSession();
-}
-
 bool Helper::activateUserSession(const QString &username, int sessionId)
 {
 #ifdef DISABLE_DDM
@@ -3648,11 +3643,6 @@ bool Helper::activateUserSession(const QString &username, int sessionId)
     m_sessionManager->commitActiveUserSession(update);
     return true;
 #endif
-}
-
-void Helper::deactivateSession() {
-    if (m_backend->isSessionActive())
-        m_backend->deactivateSession();
 }
 
 void Helper::enableRender() {

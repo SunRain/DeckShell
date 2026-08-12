@@ -5,9 +5,6 @@
 
 #include <wserver.h>
 
-#include <qwcompositor.h>
-#include <qwdisplay.h>
-
 #include <algorithm>
 #include <cerrno>
 #include <cstring>
@@ -40,16 +37,13 @@ SurfaceClient::~SurfaceClient()
 }
 
 bool SurfaceClient::connectTo(WAYLIB_SERVER_NAMESPACE::WServer *server,
-                              QW_NAMESPACE::qw_compositor *compositor,
+                              wlr_compositor *compositor,
                               QString *error)
 {
     m_server = server;
-    m_surfaceConnection = QObject::connect(compositor,
-                                           &QW_NAMESPACE::qw_compositor::notify_new_surface,
-                                           compositor,
-                                           [this](wlr_surface *surface) {
-                                               m_nativeSurfaces.append(surface);
-                                           });
+    m_surfaceListener.init(&compositor->events.new_surface, [this](wlr_surface *surface) {
+        m_nativeSurfaces.append(surface);
+    });
 
     int sockets[2] = { -1, -1 };
     if (::socketpair(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, 0, sockets) != 0) {
@@ -57,7 +51,7 @@ bool SurfaceClient::connectTo(WAYLIB_SERVER_NAMESPACE::WServer *server,
         return false;
     }
 
-    m_serverClient = wl_client_create(server->handle()->handle(), sockets[0]);
+    m_serverClient = wl_client_create(server->handle(), sockets[0]);
     if (!m_serverClient) {
         ::close(sockets[0]);
         ::close(sockets[1]);
@@ -116,8 +110,7 @@ const QVector<wlr_surface *> &SurfaceClient::nativeSurfaces() const
 
 void SurfaceClient::disconnect()
 {
-    QObject::disconnect(m_surfaceConnection);
-    m_surfaceConnection = { };
+    m_surfaceListener.disconnect();
 
     if (!m_display)
         return;
@@ -144,7 +137,7 @@ void SurfaceClient::disconnect()
     m_compositorVersion = 0;
 
     if (m_server) {
-        wl_event_loop_dispatch(wl_display_get_event_loop(m_server->handle()->handle()), 0);
+        wl_event_loop_dispatch(wl_display_get_event_loop(m_server->handle()), 0);
         m_serverClient = nullptr;
     }
 }
@@ -172,11 +165,11 @@ bool SurfaceClient::dispatchServer(QString *error)
         setError(error, QStringLiteral("failed to flush Wayland client"));
         return false;
     }
-    if (wl_event_loop_dispatch(wl_display_get_event_loop(m_server->handle()->handle()), 0) != 0) {
+    if (wl_event_loop_dispatch(wl_display_get_event_loop(m_server->handle()), 0) != 0) {
         setError(error, QStringLiteral("failed to dispatch Wayland server"));
         return false;
     }
-    wl_display_flush_clients(m_server->handle()->handle());
+    wl_display_flush_clients(m_server->handle());
     return true;
 }
 

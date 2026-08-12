@@ -41,10 +41,6 @@
 #include <wxwaylandsurface.h>
 #include <wxwaylandsurfaceitem.h>
 
-#include <qwbuffer.h>
-#include <qwcompositor.h>
-#include <qwxwaylandsurface.h>
-
 #include <QColor>
 #include <QPointer>
 #include <QTimer>
@@ -53,7 +49,6 @@
 #include <functional>
 #include <optional>
 
-QW_USE_NAMESPACE
 WAYLIB_SERVER_USE_NAMESPACE
 
 #define TREELAND_XDG_SHELL_VERSION 5
@@ -126,11 +121,11 @@ void ShellHandler::updateWrapperContainer(SurfaceWrapper *wrapper, WSurface *par
 // Prelaunch splash request: create a SurfaceWrapper that is not yet bound to a shellSurface
 void ShellHandler::handlePrelaunchSplashRequested(const QString &appId,
                                                   const QString &instanceId,
-                                                  QW_NAMESPACE::qw_buffer *iconBuffer)
+                                                  wlr_buffer *iconBuffer)
 {
     auto skipSplash = [this, appId, iconBuffer] {
         if (iconBuffer) {
-            iconBuffer->unlock();
+            wlr_buffer_unlock(iconBuffer);
         }
         m_pendingPrelaunchAppIds.remove(appId);
     };
@@ -170,7 +165,7 @@ void ShellHandler::handlePrelaunchSplashRequested(const QString &appId,
 
 void ShellHandler::createPrelaunchSplash(const QString &appId,
                                          const QString &instanceId,
-                                         QW_NAMESPACE::qw_buffer *iconBuffer,
+                                         wlr_buffer *iconBuffer,
                                          const QSize &lastSize,
                                          const QString &darkPalette,
                                          const QString &lightPalette,
@@ -180,7 +175,7 @@ void ShellHandler::createPrelaunchSplash(const QString &appId,
 
     if (!m_pendingPrelaunchAppIds.contains(appId)) {
         if (iconBuffer) {
-            iconBuffer->unlock();
+            wlr_buffer_unlock(iconBuffer);
         }
         return; // app window already created while waiting for dconfig
     }
@@ -197,7 +192,7 @@ void ShellHandler::createPrelaunchSplash(const QString &appId,
                                        iconBuffer,
                                        splashColor);
     if (iconBuffer) {
-        iconBuffer->unlock();
+        wlr_buffer_unlock(iconBuffer);
     }
     m_prelaunchWrappers.append(wrapper);
     m_workspace->addSurface(wrapper);
@@ -369,7 +364,7 @@ void ShellHandler::init(WServer *server, WSeat *seat)
 
 WXWayland *ShellHandler::createXWayland(WServer *server,
                                         WSeat *seat,
-                                        qw_compositor *compositor,
+                                        wlr_compositor *compositor,
                                         [[maybe_unused]] bool lazy)
 {
     auto *xwayland = server->attach<WXWayland>(compositor, false);
@@ -507,7 +502,7 @@ void ShellHandler::ensureXdgWrapper(WXdgToplevelSurface *surface, const QString 
         updateWrapperContainer(wrapper, surface->parentSurface());
     };
 
-    surface->safeConnect(&WXdgToplevelSurface::parentXdgSurfaceChanged,
+    QObject::connect(surface, &WXdgToplevelSurface::parentXdgSurfaceChanged,
                          this,
                          updateSurfaceWithParentContainer);
     updateSurfaceWithParentContainer();
@@ -524,7 +519,7 @@ void ShellHandler::ensureXdgWrapper(WXdgToplevelSurface *surface, const QString 
     // IM candidate panel detection via xdg-toplevel-tag
     if (m_imCandidatePanelManager) {
         QPointer<SurfaceWrapper> wrapperPtr(wrapper);
-        surface->safeConnect(&WXdgToplevelSurface::tagChanged, this, [this, surface, wrapperPtr]() {
+        QObject::connect(surface, &WXdgToplevelSurface::tagChanged, this, [this, surface, wrapperPtr]() {
             if (wrapperPtr)
                 m_imCandidatePanelManager->checkAndApplyIMCandidatePanel(wrapperPtr, surface);
         });
@@ -607,7 +602,7 @@ void ShellHandler::onXdgPopupSurfaceRemoved(WXdgPopupSurface *surface)
 
 void ShellHandler::onXWaylandSurfaceAdded(WXWaylandSurface *surface)
 {
-    surface->safeConnect(&WXWaylandSurface::associated,
+    QObject::connect(surface, &WXWaylandSurface::associated,
                          this,
                          [this, surface = QPointer<WXWaylandSurface>(surface)] {
                              auto raw = surface.data();
@@ -651,14 +646,14 @@ void ShellHandler::onXWaylandSurfaceAdded(WXWaylandSurface *surface)
                              // Async path not taken: directly fetch properties then match/create
                              fetchInitialProperties(raw, QString());
                          });
-    surface->safeConnect(&WXWaylandSurface::aboutToDissociate, this, [this, surface] {
+    QObject::connect(surface, &WXWaylandSurface::aboutToDissociate, this, [this, surface] {
         auto wrapper = m_rootSurfaceContainer->getSurface(surface);
         qCDebug(lcTlShell) << "WXWayland::aboutToDissociate" << surface << wrapper;
 
         // Cancel pending async property fetch for this surface.
         auto *xwayland = surface->xwayland();
         if (xwayland) {
-            auto windowId = surface->handle()->handle()->window_id;
+            auto windowId = surface->handle()->window_id;
             xwayland->cancelAsyncProperties(windowId);
         }
 
@@ -694,7 +689,7 @@ void ShellHandler::fetchInitialProperties(WXWaylandSurface *surface, const QStri
         return;
     }
 
-    auto windowId = surface->handle()->handle()->window_id;
+    auto windowId = surface->handle()->window_id;
     QVector<WXWayland::AsyncPropRequest> requests;
     if (m_imCandidatePanelManager) {
         requests.append({ m_imCandidatePanelManager->imCandidatePanelAtom(), XCB_ATOM_CARDINAL });
@@ -781,7 +776,7 @@ void ShellHandler::ensureXwaylandWrapper(WXWaylandSurface *surface, const QStrin
     auto updateSurfaceWithParentContainer = [this, wrapper, surface] {
         updateWrapperContainer(wrapper, surface->parentSurface());
     };
-    surface->safeConnect(&WXWaylandSurface::parentSurfaceChanged,
+    QObject::connect(surface, &WXWaylandSurface::parentSurfaceChanged,
                          this,
                          updateSurfaceWithParentContainer);
     updateSurfaceWithParentContainer();

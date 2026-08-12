@@ -13,8 +13,6 @@
 #include <wserver.h>
 #include <wsocket.h>
 
-#include <qwdisplay.h>
-
 #include <QElapsedTimer>
 #include <QFile>
 #include <QGuiApplication>
@@ -73,7 +71,7 @@ bool LateDdeListenerTest::dispatchServer()
     if (!server || !server->handle())
         return false;
 
-    auto *display = server->handle()->handle();
+    auto *display = server->handle();
     if (wl_event_loop_dispatch(wl_display_get_event_loop(display), 0) != 0)
         return false;
     wl_display_flush_clients(display);

@@ -24,7 +24,7 @@ target_link_libraries(test_scroll_factor
         Qt::Test
         WaylibShared::SharedServer
         PkgConfig::WAYLAND_CLIENT
-        PkgConfig::WLROOTS
+        Wlroots::wlroots
 )
 
 add_test(NAME test_scroll_factor COMMAND test_scroll_factor)

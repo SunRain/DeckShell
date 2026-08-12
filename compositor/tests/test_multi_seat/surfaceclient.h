@@ -5,9 +5,7 @@
 
 #include <wglobal.h>
 
-#include <qwglobal.h>
-
-#include <QMetaObject>
+#include <wscoplistener.h>
 #include <QVector>
 
 #include <cstdint>
@@ -20,9 +18,7 @@ struct wl_seat;
 struct wl_surface;
 struct wlr_surface;
 
-QW_BEGIN_NAMESPACE
-class qw_compositor;
-QW_END_NAMESPACE
+struct wlr_compositor;
 
 WAYLIB_SERVER_BEGIN_NAMESPACE
 class WServer;
@@ -35,7 +31,7 @@ public:
     ~SurfaceClient();
 
     bool connectTo(WAYLIB_SERVER_NAMESPACE::WServer *server,
-                   QW_NAMESPACE::qw_compositor *compositor,
+                   wlr_compositor *compositor,
                    QString *error);
     bool createSurfaces(int count, QString *error);
     const QVector<wlr_surface *> &nativeSurfaces() const;
@@ -63,5 +59,5 @@ private:
     QVector<QPair<uint32_t, uint32_t>> m_seatGlobals;
     uint32_t m_compositorName = 0;
     uint32_t m_compositorVersion = 0;
-    QMetaObject::Connection m_surfaceConnection;
+    WAYLIB_SERVER_NAMESPACE::WScopedListener m_surfaceListener;
 };

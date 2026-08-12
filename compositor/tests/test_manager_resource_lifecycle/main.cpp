@@ -7,8 +7,6 @@
 
 #include <wserver.h>
 
-#include <qwdisplay.h>
-
 #include <QTest>
 
 #include <cerrno>
@@ -128,9 +126,9 @@ bool dispatchServer(WAYLIB_SERVER_NAMESPACE::WServer *server, wl_display *displa
 {
     if (wl_display_flush(display) < 0)
         return false;
-    if (wl_event_loop_dispatch(wl_display_get_event_loop(server->handle()->handle()), 0) != 0)
+    if (wl_event_loop_dispatch(wl_display_get_event_loop(server->handle()), 0) != 0)
         return false;
-    wl_display_flush_clients(server->handle()->handle());
+    wl_display_flush_clients(server->handle());
     return true;
 }
 
@@ -230,7 +228,7 @@ void ManagerResourceLifecycleTest::managerResourcesAreDestroyed()
 
     int sockets[2] = { -1, -1 };
     QCOMPARE(::socketpair(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, 0, sockets), 0);
-    auto *serverClient = wl_client_create(server->handle()->handle(), sockets[0]);
+    auto *serverClient = wl_client_create(server->handle(), sockets[0]);
     QVERIFY2(serverClient != nullptr, std::strerror(errno));
 
     ClientState client;
@@ -301,7 +299,7 @@ void ManagerResourceLifecycleTest::managerResourcesAreDestroyed()
     } else if (trigger == QStringLiteral("disconnect")) {
         wl_display_disconnect(client.display);
         client.display = nullptr;
-        QVERIFY(wl_event_loop_dispatch(wl_display_get_event_loop(server->handle()->handle()), 0)
+        QVERIFY(wl_event_loop_dispatch(wl_display_get_event_loop(server->handle()), 0)
                 == 0);
     } else {
         server->stop();
@@ -316,7 +314,7 @@ void ManagerResourceLifecycleTest::managerResourcesAreDestroyed()
         client.registry = nullptr;
         wl_display_disconnect(client.display);
         client.display = nullptr;
-        QVERIFY(wl_event_loop_dispatch(wl_display_get_event_loop(server->handle()->handle()), 0)
+        QVERIFY(wl_event_loop_dispatch(wl_display_get_event_loop(server->handle()), 0)
                 == 0);
     }
 

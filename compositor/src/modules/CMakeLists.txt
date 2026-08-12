@@ -20,10 +20,9 @@ link_libraries(
     PkgConfig::WAYLAND_SERVER
 )
 
-target_sources(libdeckcompositor
-    PRIVATE
-        ${CMAKE_BINARY_DIR}/protocols/xdg-shell-protocol.c
-)
+# xdg-shell protocol code is compiled into WaylibSharedServer (waylib's
+# ws_generate); compiling it again here would duplicate global symbols
+# (xdg_*_interface) across the two shared libraries.
 
 add_subdirectory(tools)
 add_subdirectory(foreign-toplevel)

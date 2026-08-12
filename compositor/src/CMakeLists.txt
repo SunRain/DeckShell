@@ -481,6 +481,14 @@ if(TARGET capture)
     )
 endif()
 
+if(TARGET waylib_wlroots_native_library)
+    install(
+        TARGETS waylib_wlroots_native_library
+        LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}"
+        COMPONENT DeckShellQmlRuntime
+    )
+endif()
+
 qt_add_executable(${BIN_NAME}
     main.cpp
 )

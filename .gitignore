@@ -123,3 +123,12 @@ CLAUDE.md
 claudecode-session-history
 .mcp.json
 dev.db
+
+# git worktrees
+.worktrees/
+
+# CTest run state
+Testing/Temporary/
+
+# codegraph index
+.codegraph/

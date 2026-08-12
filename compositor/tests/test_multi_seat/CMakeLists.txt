@@ -28,7 +28,7 @@ target_link_libraries(test_multi_seat
         Qt::Test
         WaylibShared::SharedServer
         PkgConfig::WAYLAND_CLIENT
-        PkgConfig::WLROOTS
+        Wlroots::wlroots
         ${CMAKE_DL_LIBS}
 )
 

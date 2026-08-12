@@ -101,15 +101,9 @@ list(APPEND LOCAL_QML_IMPORT_PATH "${PROJECT_BINARY_DIR}")
 list(APPEND LOCAL_QML_IMPORT_PATH "${PROJECT_BINARY_DIR}/qt/qml")
 list(APPEND LOCAL_QML_IMPORT_PATH "${PROJECT_BINARY_DIR}/waylib/src/server")
 
-# if(WITH_SUBMODULE_WAYLIB)
-#   set(WITH_SUBMODULE_QWLROOTS ON)
-#   include(
-#     ${CMAKE_CURRENT_SOURCE_DIR}/qwlroots/cmake/WaylandScannerHelpers.cmake)
-#   add_subdirectory(waylib)
-#   list(APPEND LOCAL_QML_IMPORT_PATH "${PROJECT_BINARY_DIR}/waylib/src/server")
-# else()
-#   find_package(Waylib REQUIRED Server)
-# endif()
+# Waylib/native wlroots are provided once by the top-level waylib-shared entry.
+# Protocol consumers use Waylib's own helpers after qwlroots retirement.
+include(${CMAKE_CURRENT_SOURCE_DIR}/../3rdparty/waylib-shared/waylib/cmake/WaylandScannerHelpers.cmake)
 
 set(QML_IMPORT_PATH "${LOCAL_QML_IMPORT_PATH}" CACHE STRING "For LSP" FORCE)
 

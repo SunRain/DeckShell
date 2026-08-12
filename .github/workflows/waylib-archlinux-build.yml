@@ -41,18 +41,11 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Create qwlroots symlink for waylib
-        run: |
-          cd 3rdparty/waylib-shared/waylib
-          ln -sf ../qwlroots qwlroots
-          echo "✅ Created symlink: waylib/qwlroots -> ../qwlroots"
-          ls -la qwlroots
-
       - name: Configure and Build waylib with ci preset
         working-directory: 3rdparty/waylib-shared/waylib
         run: |
           echo "Working directory:" $PWD
-          cmake --preset ci -DWITH_SUBMODULE_QWLROOTS=ON
+          cmake --preset ci
           cmake --build --preset ci
 
       - name: Install waylib to staging directory
@@ -81,8 +74,8 @@ jobs:
           Version: $(date +%Y%m%d-%H%M%S)
           Architecture: x86_64
           Built-on: Arch Linux
-          Built-with: qwlroots submodule enabled
-          CMake-Config: -DWITH_SUBMODULE_QWLROOTS=ON
+          Built-with: vendored wlroots 0.19.3
+          CMake-Config: vendored wlroots 0.19.3 via ../wlroots
 
           Installation Instructions:
           1. Extract this package to /

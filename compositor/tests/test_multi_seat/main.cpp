@@ -11,11 +11,6 @@
 #include <wserver.h>
 #include <wsurface.h>
 
-#include <qwcompositor.h>
-#include <qwdisplay.h>
-#include <qwinputdevice.h>
-#include <qwseat.h>
-
 #include <QDebug>
 #include <QFile>
 #include <QGuiApplication>
@@ -102,7 +97,7 @@ private:
     std::unique_ptr<WInputDevice> m_keyboardDevice0;
     std::unique_ptr<WInputDevice> m_keyboardDevice1;
     std::unique_ptr<WInputDevice> m_videoBusDevice;
-    QW_NAMESPACE::qw_compositor *m_compositor = nullptr;
+    wlr_compositor *m_compositor = nullptr;
     std::unique_ptr<SurfaceClient> m_client;
     std::vector<std::unique_ptr<WSurface>> m_surfaces;
 };
@@ -113,8 +108,7 @@ std::unique_ptr<WInputDevice> MultiSeatTest::createPointer(wlr_pointer *pointer,
         .name = "test-multi-seat-pointer",
     };
     wlr_pointer_init(pointer, &PointerImpl, name);
-    auto *handle = QW_NAMESPACE::qw_input_device::create(&pointer->base);
-    return std::make_unique<WInputDevice>(handle, true);
+    return std::make_unique<WInputDevice>(&pointer->base, true);
 }
 
 std::unique_ptr<WInputDevice> MultiSeatTest::createKeyboard(wlr_keyboard *keyboard,
@@ -125,8 +119,7 @@ std::unique_ptr<WInputDevice> MultiSeatTest::createKeyboard(wlr_keyboard *keyboa
         .name = "test-multi-seat-keyboard",
     };
     wlr_keyboard_init(keyboard, &KeyboardImpl, name);
-    auto *handle = QW_NAMESPACE::qw_input_device::create(&keyboard->base);
-    return std::make_unique<WInputDevice>(handle, isVirtual);
+    return std::make_unique<WInputDevice>(&keyboard->base, isVirtual);
 }
 
 void MultiSeatTest::initTestCase()
@@ -143,7 +136,7 @@ void MultiSeatTest::init()
     m_seat1 = m_manager->createSeat(QStringLiteral("seat1"));
     m_server->attach(m_seat0);
     m_server->attach(m_seat1);
-    m_compositor = QW_NAMESPACE::qw_compositor::create(m_server->handle()->handle(), 6, nullptr);
+    m_compositor = wlr_compositor_create(m_server->handle(), 6, nullptr);
     QVERIFY(m_compositor);
 
     m_pointerDevice0 = createPointer(&m_pointer0, "seat0-pointer");
@@ -178,6 +171,13 @@ void MultiSeatTest::detachesPhysicalVirtualAndGroupKeyboardsWithoutMembershipErr
     QVERIFY(!m_keyboard0.group);
     QVERIFY(!m_keyboard1.group);
 
+    m_seat0->detachInputDevice(m_keyboardDevice0.get());
+    m_seat0->detachInputDevice(m_keyboardDevice1.get());
+    QCOMPARE(m_keyboardDevice0->seat(), nullptr);
+    QCOMPARE(m_keyboardDevice1->seat(), nullptr);
+    QVERIFY(!m_keyboard0.group);
+    QVERIFY(!m_keyboard1.group);
+
     auto groupOnlySeat = std::make_unique<WSeat>(QStringLiteral("group-only"));
     m_server->attach(groupOnlySeat.get());
     QVERIFY(groupOnlySeat->keyboardGroupKeyboard());
@@ -201,6 +201,8 @@ void MultiSeatTest::detachesQueuedDeviceBeforeSeatCreation()
     queuedSeat.detachInputDevice(queuedDevice.get());
     QVERIFY(!queuedDevice->seat());
     QVERIFY(!queuedDevice->qtDevice());
+    queuedSeat.detachInputDevice(queuedDevice.get());
+    QVERIFY(queuedSeat.deviceList().isEmpty());
 
     {
         WSeat destroyedQueuedSeat(QStringLiteral("destroyed-queued-seat"));
@@ -374,15 +376,15 @@ void MultiSeatTest::keepsKeyboardAndPointerFocusPerSeat()
     QVERIFY2(m_client->connectTo(m_server.get(), m_compositor, &error), qPrintable(error));
     QVERIFY2(m_client->createSurfaces(2, &error), qPrintable(error));
     for (auto *nativeSurface : m_client->nativeSurfaces()) {
-        auto *handle = QW_NAMESPACE::qw_surface::from(nativeSurface);
-        QVERIFY(handle);
-        m_surfaces.push_back(std::make_unique<WSurface>(handle));
+        QVERIFY(nativeSurface);
+        m_surfaces.push_back(std::make_unique<WSurface>(nativeSurface));
+        QCOMPARE(WSurface::fromHandle(nativeSurface), m_surfaces.back().get());
     }
 
     m_seat0->setKeyboardFocusSurface(m_surfaces[0].get());
     m_seat1->setKeyboardFocusSurface(m_surfaces[1].get());
-    m_seat0->handle()->pointer_notify_enter(m_client->nativeSurfaces()[0], 1.0, 1.0);
-    m_seat1->handle()->pointer_notify_enter(m_client->nativeSurfaces()[1], 2.0, 2.0);
+    wlr_seat_pointer_notify_enter(m_seat0->handle(), m_client->nativeSurfaces()[0], 1.0, 1.0);
+    wlr_seat_pointer_notify_enter(m_seat1->handle(), m_client->nativeSurfaces()[1], 2.0, 2.0);
 
     QCOMPARE(m_seat0->keyboardFocusSurface(), m_surfaces[0].get());
     QCOMPARE(m_seat1->keyboardFocusSurface(), m_surfaces[1].get());
@@ -390,7 +392,7 @@ void MultiSeatTest::keepsKeyboardAndPointerFocusPerSeat()
     QCOMPARE(m_seat1->pointerFocusSurface(), m_surfaces[1].get());
 
     m_seat0->setKeyboardFocusSurface(m_surfaces[1].get());
-    m_seat0->handle()->pointer_notify_enter(m_client->nativeSurfaces()[1], 3.0, 3.0);
+    wlr_seat_pointer_notify_enter(m_seat0->handle(), m_client->nativeSurfaces()[1], 3.0, 3.0);
     QCOMPARE(m_seat0->keyboardFocusSurface(), m_surfaces[1].get());
     QCOMPARE(m_seat1->keyboardFocusSurface(), m_surfaces[1].get());
     QCOMPARE(m_seat0->pointerFocusSurface(), m_surfaces[1].get());
@@ -413,11 +415,11 @@ void MultiSeatTest::cleanup()
 {
     if (m_seat0 && m_seat0->isValid()) {
         m_seat0->setKeyboardFocusSurface(nullptr);
-        m_seat0->handle()->pointer_notify_clear_focus();
+        wlr_seat_pointer_notify_clear_focus(m_seat0->handle());
     }
     if (m_seat1 && m_seat1->isValid()) {
         m_seat1->setKeyboardFocusSurface(nullptr);
-        m_seat1->handle()->pointer_notify_clear_focus();
+        wlr_seat_pointer_notify_clear_focus(m_seat1->handle());
     }
     m_surfaces.clear();
     m_client.reset();

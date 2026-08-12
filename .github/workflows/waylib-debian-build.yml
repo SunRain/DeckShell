@@ -39,15 +39,7 @@ jobs:
           rm -f /etc/apt/sources.list.d/deepin-community.list
           apt-get update
 
-          # qwlroots is built from the monorepo submodule below
-          sed -i '/^[[:space:]]*qwlroots,/d' debian/control
           mk-build-deps --install --remove --tool='apt-get -o Debug::pkgProblemResolver=yes --no-install-recommends --yes' debian/control
-
-          # Build waylib with monorepo qwlroots so it uses vendored wlroots
-          ln -sfn ../qwlroots qwlroots
-          echo "Created symlink: waylib/qwlroots -> ../qwlroots"
-          ls -la qwlroots
-          echo "usr/lib/*/libqwlroots.a" > debian/not-installed
 
           dpkg-buildpackage -uc -us -b
           echo "✅ waylib deb package built successfully!"
@@ -57,6 +49,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: waylib-deb-packages
-          path: "*.deb"
+          path: "3rdparty/waylib-shared/*.deb"
           if-no-files-found: error
           retention-days: 30

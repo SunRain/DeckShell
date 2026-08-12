@@ -7,11 +7,7 @@
 #include <winputdevice.h>
 #include <wseat.h>
 #include <wserver.h>
-
-#include <qwcompositor.h>
-#include <qwdisplay.h>
-#include <qwinputdevice.h>
-#include <qwseat.h>
+#include <wscoplistener.h>
 
 #include <QGuiApplication>
 #include <QTest>
@@ -153,7 +149,8 @@ private:
     std::unique_ptr<WAYLIB_SERVER_NAMESPACE::WInputDevice> m_inputDevice;
     WAYLIB_SERVER_NAMESPACE::WSeat *m_seat = nullptr;
     WAYLIB_SERVER_NAMESPACE::WCursor *m_cursor = nullptr;
-    QW_NAMESPACE::qw_compositor *m_compositor = nullptr;
+    wlr_compositor *m_compositor = nullptr;
+    WAYLIB_SERVER_NAMESPACE::WScopedListener m_surfaceListener;
     wlr_surface *m_nativeSurface = nullptr;
     wlr_pointer m_nativePointer = { };
     wl_client *m_serverClient = nullptr;
@@ -163,8 +160,8 @@ private:
 void ScrollFactorTest::dispatchServerRequests()
 {
     QVERIFY(wl_display_flush(m_client.display) >= 0);
-    QCOMPARE(wl_event_loop_dispatch(wl_display_get_event_loop(m_server->handle()->handle()), 0), 0);
-    wl_display_flush_clients(m_server->handle()->handle());
+    QCOMPARE(wl_event_loop_dispatch(wl_display_get_event_loop(m_server->handle()), 0), 0);
+    wl_display_flush_clients(m_server->handle());
 }
 
 void ScrollFactorTest::dispatchClientEvents()
@@ -205,19 +202,15 @@ void ScrollFactorTest::initTestCase()
     m_server->attach(m_seat);
 
     wlr_pointer_init(&m_nativePointer, &PointerImpl, "test-scroll-factor-pointer");
-    auto *qwInput = QW_NAMESPACE::qw_input_device::create(&m_nativePointer.base);
-    QVERIFY(qwInput != nullptr);
-    m_inputDevice = std::make_unique<WAYLIB_SERVER_NAMESPACE::WInputDevice>(qwInput, true);
+    m_inputDevice = std::make_unique<WAYLIB_SERVER_NAMESPACE::WInputDevice>(&m_nativePointer.base, true);
+    QCOMPARE(m_inputDevice->handle(), &m_nativePointer.base);
     m_seat->attachInputDevice(m_inputDevice.get());
 
-    m_compositor = QW_NAMESPACE::qw_compositor::create(m_server->handle()->handle(), 6, nullptr);
+    m_compositor = wlr_compositor_create(m_server->handle(), 6, nullptr);
     QVERIFY(m_compositor != nullptr);
-    connect(m_compositor,
-            &QW_NAMESPACE::qw_compositor::notify_new_surface,
-            this,
-            [this](wlr_surface *surface) {
-                m_nativeSurface = surface;
-            });
+    m_surfaceListener.init(&m_compositor->events.new_surface, [this](wlr_surface *surface) {
+        m_nativeSurface = surface;
+    });
 
     m_server->start();
     m_seatsManager->setupAllSeats(nullptr, nullptr, nullptr);
@@ -226,7 +219,7 @@ void ScrollFactorTest::initTestCase()
 
     int sockets[2] = { -1, -1 };
     QCOMPARE(::socketpair(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, 0, sockets), 0);
-    m_serverClient = wl_client_create(m_server->handle()->handle(), sockets[0]);
+    m_serverClient = wl_client_create(m_server->handle(), sockets[0]);
     QVERIFY2(m_serverClient != nullptr, std::strerror(errno));
     m_client.display = wl_display_connect_to_fd(sockets[1]);
     QVERIFY(m_client.display != nullptr);
@@ -241,8 +234,8 @@ void ScrollFactorTest::initTestCase()
     dispatchServerRequests();
     QVERIFY(m_nativeSurface != nullptr);
 
-    m_seat->handle()->pointer_notify_enter(m_nativeSurface, 0.0, 0.0);
-    wl_display_flush_clients(m_server->handle()->handle());
+    wlr_seat_pointer_notify_enter(m_seat->handle(), m_nativeSurface, 0.0, 0.0);
+    wl_display_flush_clients(m_server->handle());
     dispatchClientEvents();
     QVERIFY(m_client.pointerEntered);
 }
@@ -280,7 +273,7 @@ void ScrollFactorTest::axisDeltaUsesConfiguredFactor()
     };
     wl_signal_emit_mutable(&m_nativePointer.events.axis, &event);
     wl_signal_emit_mutable(&m_nativePointer.events.frame, &m_nativePointer);
-    wl_display_flush_clients(m_server->handle()->handle());
+    wl_display_flush_clients(m_server->handle());
     dispatchClientEvents();
 
     QCOMPARE(m_client.axisValues.size(), 1);
@@ -306,12 +299,13 @@ void ScrollFactorTest::destroyClient()
     wl_display_disconnect(m_client.display);
     m_client = { };
 
-    wl_event_loop_dispatch(wl_display_get_event_loop(m_server->handle()->handle()), 0);
+    wl_event_loop_dispatch(wl_display_get_event_loop(m_server->handle()), 0);
     m_serverClient = nullptr;
 }
 
 void ScrollFactorTest::cleanupTestCase()
 {
+    m_surfaceListener.disconnect();
     destroyClient();
 
     if (m_seat && m_inputDevice)

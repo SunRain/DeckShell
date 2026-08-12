@@ -6,8 +6,6 @@
 
 #include <wserver.h>
 
-#include <qwdisplay.h>
-
 #include <QCoreApplication>
 #include <QFile>
 #include <QTest>
@@ -164,8 +162,8 @@ private:
 void ForeignToplevelProtocolTest::dispatchServerRequests()
 {
     QVERIFY(wl_display_flush(m_client.display) >= 0);
-    QCOMPARE(wl_event_loop_dispatch(wl_display_get_event_loop(m_server->handle()->handle()), 0), 0);
-    wl_display_flush_clients(m_server->handle()->handle());
+    QCOMPARE(wl_event_loop_dispatch(wl_display_get_event_loop(m_server->handle()), 0), 0);
+    wl_display_flush_clients(m_server->handle());
 }
 
 void ForeignToplevelProtocolTest::dispatchClientEvents()
@@ -192,7 +190,7 @@ void ForeignToplevelProtocolTest::initTestCase()
 
     int sockets[2] = { -1, -1 };
     QCOMPARE(::socketpair(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, 0, sockets), 0);
-    m_serverClient = wl_client_create(m_server->handle()->handle(), sockets[0]);
+    m_serverClient = wl_client_create(m_server->handle(), sockets[0]);
     QVERIFY2(m_serverClient != nullptr, std::strerror(errno));
     m_client.display = wl_display_connect_to_fd(sockets[1]);
     QVERIFY(m_client.display != nullptr);
@@ -267,7 +265,7 @@ void ForeignToplevelProtocolTest::cleanupTestCase()
         wl_display_flush(m_client.display);
         wl_display_disconnect(m_client.display);
         m_client = { };
-        wl_event_loop_dispatch(wl_display_get_event_loop(m_server->handle()->handle()), 0);
+        wl_event_loop_dispatch(wl_display_get_event_loop(m_server->handle()), 0);
     }
 
     m_serverClient = nullptr;

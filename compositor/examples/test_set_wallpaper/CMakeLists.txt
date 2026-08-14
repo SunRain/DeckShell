@@ -4,7 +4,7 @@ if(Qt6_VERSION VERSION_GREATER_EQUAL 6.10)
 endif()
 
 
-set(BIN_NAME test_set_wallpaper)
+set(BIN_NAME test-set-wallpaper)
 
 qt_add_executable(${BIN_NAME}
     main.cpp

@@ -235,7 +235,7 @@ static void runWhenTreelandConfigInitialized(TreelandConfig *config,
         return;
     }
 
-    if (config->isInitializeSucceeded() || config->isInitializeFailed()) {
+    if (config->isInitializeSucceeded()) {
         callback();
         return;
     }
@@ -243,10 +243,6 @@ static void runWhenTreelandConfigInitialized(TreelandConfig *config,
     auto sharedCallback = std::make_shared<std::function<void()>>(std::move(callback));
     QObject::connect(config,
                      &TreelandConfig::configInitializeSucceed,
-                     context,
-                     [sharedCallback] { (*sharedCallback)(); });
-    QObject::connect(config,
-                     &TreelandConfig::configInitializeFailed,
                      context,
                      [sharedCallback] { (*sharedCallback)(); });
 }
@@ -628,11 +624,17 @@ void Helper::onOutputAdded(WOutput *output)
         }
     }
 
-    auto publishOutput = [this, output, outputObject = QPointer<Output>(o)] {
-        if (!outputObject) {
+    const auto outputPublished = std::make_shared<bool>(false);
+    auto publishOutput = [this, output, outputObject = QPointer<Output>(o), outputPublished] {
+        if (!outputObject || *outputPublished || !m_outputList.contains(outputObject.data())) {
             return;
         }
 
+        *outputPublished = true;
+        if (outputObject->config()->isInitializeFailed() || m_globalConfig->isInitializeFailed()) {
+            qCWarning(lcTlOutput) << "Output configuration initialization failed; publishing current state for"
+                                 << output->name();
+        }
         m_outputManager->newOutput(output);
         m_wallpaperManager->ensureWallpaperConfigForOutput(outputObject);
     };
@@ -757,20 +759,20 @@ void Helper::onOutputAdded(WOutput *output)
         saveCurrentOutputConfig(outputObject);
     };
     auto *outputConfig = o->config();
-    if (outputConfig->isInitializeFailed()) {
+    // 配置失败只发布当前输出，不执行配置恢复；两个异步失败信号共享单次发布状态。
+    connect(outputConfig, &OutputConfig::configInitializeFailed, o, publishOutput);
+    connect(m_globalConfig.get(), &TreelandConfig::configInitializeFailed, o, publishOutput);
+    if (outputConfig->isInitializeFailed() || m_globalConfig->isInitializeFailed()) {
         publishOutput();
     } else {
-        if (!outputConfig->isInitializeSucceeded()) {
-            connect(outputConfig, &OutputConfig::configInitializeFailed, o, publishOutput);
-        }
         runWhenOutputConfigInitialized(outputConfig,
                                        o,
                                        [this,
                                         restoreOutputConfig = std::move(restoreOutputConfig),
                                         outputObject = QPointer<Output>(o)]() mutable {
                                            runWhenTreelandConfigInitialized(m_globalConfig.get(),
-                                                                           outputObject,
-                                                                           std::move(restoreOutputConfig));
+                                                                            outputObject,
+                                                                            std::move(restoreOutputConfig));
                                        });
     }
 }

@@ -1524,6 +1524,48 @@ void Helper::onShowDesktop()
             surface->startShowDesktopAnimation(false);
         }
     }
+
+    if (s == WindowManagementInterfaceV1::DesktopState::Show) {
+        // Find the desktop background surface first
+        SurfaceWrapper *desktopSurface = nullptr;
+        const auto &backgroundSurfaces = m_shellHandler->m_backgroundContainer->surfaces();
+        for (SurfaceWrapper *w : backgroundSurfaces) {
+            auto *layer = qobject_cast<WLayerSurface *>(w->shellSurface());
+            if (layer && layer->scope() == QStringLiteral("dde-shell/desktop")) {
+                desktopSurface = w;
+                break;
+            }
+        }
+
+        const auto &seats = m_seatManager->seats();
+        for (auto *seat : seats) {
+            auto *seatContainer = m_rootSurfaceContainer->getSeatContainer(seat);
+            // Seat may be in transition (hotplug); requestKeyboardFocus asserts
+            // on a missing seat container.
+            if (!seatContainer)
+                continue;
+
+            // Dismiss any popup keyboard grab: the grab would redirect keyboard
+            // focus back to the popup and defeat the desktop-surface transfer.
+            seatContainer->dismissPopups();
+            // Move keyboard focus to the desktop surface (or drop it when the
+            // desktop surface is unavailable) so layer-shell windows that close
+            // on focus loss exit.
+            requestKeyboardFocus(desktopSurface, Qt::OtherFocusReason, seat);
+        }
+    } else if (s == WindowManagementInterfaceV1::DesktopState::Normal) {
+        // m_showDesktop already set to s above; the protocol state is already Normal.
+        restoreShowDesktopFocus();
+    }
+}
+
+void Helper::restoreShowDesktopFocus()
+{
+    const auto &seats = m_seatManager->seats();
+    for (auto *seat : seats) {
+        if (auto *seatContainer = m_rootSurfaceContainer->getSeatContainer(seat))
+            seatContainer->restoreShowDesktopFocus();
+    }
 }
 
 void Helper::onSetCopyOutput(VirtualOutputInterfaceV1 *interface)
@@ -2938,6 +2980,8 @@ void Helper::setActivatedSurface(SurfaceWrapper *newActivateSurface, WSeat *seat
     if (oldPrimarySurface)
         oldPrimarySurface->setActivate(false);
 
+    bool wasShowingDesktop = false;
+
     if (newActivateSurface) {
         Q_ASSERT(newActivateSurface->showOnWorkspace(workspace()->current()->id()));
         newActivateSurface->stackToLast();
@@ -2954,6 +2998,7 @@ void Helper::setActivatedSurface(SurfaceWrapper *newActivateSurface, WSeat *seat
             m_showDesktop = WindowManagementInterfaceV1::DesktopState::Normal;
             m_windowManagementInterfaceV1->setDesktopState(WindowManagementInterfaceV1::DesktopState::Normal);
             newActivateSurface->setHideByShowDesk(true);
+            wasShowingDesktop = true;
         }
 
         Q_ASSERT(newActivateSurface->hasActiveCapability());
@@ -2963,6 +3008,11 @@ void Helper::setActivatedSurface(SurfaceWrapper *newActivateSurface, WSeat *seat
     // SeatSurfaceManager emits activatedSurfaceChanged, and RootSurfaceContainer forwards
     // it for the primary seat. Do not emit Helper::activatedSurfaceChanged again here.
     seatContainer->setActivatedSurface(newActivateSurface, Qt::OtherFocusReason);
+
+    // This also restores keyboard focus on the other seats; the caller's subsequent
+    // requestKeyboardFocus() only covers the target seat.
+    if (wasShowingDesktop)
+        restoreShowDesktopFocus();
 
     if (isPrimarySeat && newActivateSurface) {
         Q_ASSERT(newActivateSurface->hasActiveCapability());
@@ -3563,6 +3613,7 @@ void Helper::restoreFromShowDesktop(SurfaceWrapper *activeSurface)
                 surface->setSurfaceState(SurfaceWrapper::State::Minimized);
             }
         }
+        restoreShowDesktopFocus();
     }
 }
 

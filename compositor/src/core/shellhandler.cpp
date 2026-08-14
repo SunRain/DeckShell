@@ -75,7 +75,7 @@ ShellHandler::ShellHandler(RootSurfaceContainer *rootContainer, WServer *server)
     m_treelandForeignToplevel = server->attach<ForeignToplevelManagerInterfaceV1>();
     Q_ASSERT(m_treelandForeignToplevel);
     qmlRegisterSingletonInstance<ForeignToplevelManagerInterfaceV1>(
-        "Treeland.Protocols",
+        "DeckShell.Compositor.Protocols",
         1,
         0,
         "ForeignToplevelManagerInterfaceV1",
@@ -649,6 +649,14 @@ void ShellHandler::ensureXdgWrapper(WXdgToplevelSurface *surface, const QString 
                          updateSurfaceWithParentContainer);
     updateSurfaceWithParentContainer();
     Q_ASSERT(wrapper->parentItem());
+    if (surface->isInitialized()) {
+        const auto initialState = surface->handle()->requested.fullscreen
+            ? SurfaceWrapper::State::Fullscreen
+            : surface->handle()->requested.maximized ? SurfaceWrapper::State::Maximized
+                                                     : SurfaceWrapper::State::Normal;
+        if (initialState != SurfaceWrapper::State::Normal)
+            wrapper->setSurfaceStateDirectly(initialState);
+    }
     setupSurfaceWindowMenu(wrapper);
     // Only setup active watcher for newly created wrappers;
     // prelaunch splash wrappers already have it set up in createPrelaunchSplash

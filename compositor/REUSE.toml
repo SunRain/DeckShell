@@ -206,7 +206,8 @@ path = [
     "waylib/src/server/protocols/WInputPopupSurface",
     "waylib/src/server/protocols/WXWayland",
     "waylib/src/server/protocols/WXWaylandSurface",
-    "waylib/src/server/protocols/WXdgDecorationManager"
+    "waylib/src/server/protocols/WXdgDecorationManager",
+    "waylib/src/server/protocols/WPointerConstraintsV1",
 ]
 precedence = "aggregate"
 SPDX-FileCopyrightText = "UnionTech Software Technology Co., Ltd."

@@ -48,6 +48,7 @@ public:
 };
 
 ProtocolTestRunner *g_runner = nullptr;
+bool g_clientSkipped = false;
 
 class ProtocolTest;
 struct ClientThreadContext {
@@ -89,6 +90,10 @@ private slots:
         loop.exec();
 
         pthread_join(m_thread, nullptr);
+        if (m_context.result == 77) {
+            g_clientSkipped = true;
+            QSKIP("protocol client requested skip");
+        }
         QCOMPARE(m_context.result, 0);
     }
 
@@ -175,7 +180,9 @@ int main(int argc, char *argv[])
     ProtocolTestRunner runner;
     g_runner = &runner;
     ProtocolTest test(helper, socketName);
-    const int result = QTest::qExec(&test, argc, argv);
+    int result = QTest::qExec(&test, argc, argv);
+    if (g_clientSkipped && result == 0)
+        result = 77;
     g_runner = nullptr;
 
     // Treeland owns process-lifetime QML singletons whose shutdown ordering is

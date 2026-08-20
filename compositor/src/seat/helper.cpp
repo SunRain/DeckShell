@@ -2010,6 +2010,19 @@ void Helper::init(Treeland::Treeland *treeland)
 
 #ifndef DISABLE_DDM
     updateCurrentUser();
+#else
+#if TREELANDUSERCONFIG_DCONFIG_FILE_VERSION_MINOR > 0
+    if (m_config->isInitializeSucceeded()) {
+#else
+    if (m_config->isInitializeSucceed()) {
+#endif
+        m_wallpaperManager->updateWallpaperConfig();
+    } else {
+        connect(m_config.get(),
+                &TreelandUserConfig::configInitializeSucceed,
+                m_wallpaperManager,
+                &WallpaperManager::updateWallpaperConfig);
+    }
 #endif
 
     connect(m_windowManagementInterfaceV1,
@@ -3542,7 +3555,10 @@ void Helper::setLockScreenImpl(ILockScreen *impl)
                        }
                    });
     if (CmdLine::ref().useLockScreen()) {
-        showLockScreen(false);
+        // Start in the undecided state: make the lock screen surface (wallpaper)
+        // visible but keep the login UI hidden until DDM decides (ShowGreeter /
+        // UserActivateMessage) or the fallback timeout in GreeterProxy fires.
+        m_lockScreen->setVisible(true);
     }
 #else
     Q_UNUSED(impl)
@@ -3581,9 +3597,18 @@ void Helper::showLockScreen(bool switchToGreeter)
     if (!isLockScreenAvailable()) {
         return;
     }
+#ifndef DISABLE_DDM
+    // LockScreen::isLocked() is isVisible(), which is also true in the
+    // undecided state (surface shown, not yet locked), so check the real
+    // lock state instead.
+    if (m_greeterProxy->isLocked()) {
+        return;
+    }
+#else
     if (m_lockScreen->isLocked()) {
         return;
     }
+#endif
 
     prepareLockScreenTransition();
     m_lockScreen->lock();

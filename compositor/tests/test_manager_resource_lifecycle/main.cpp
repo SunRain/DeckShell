@@ -303,6 +303,8 @@ void ManagerResourceLifecycleTest::managerResourcesAreDestroyed()
                 == 0);
     } else {
         server->stop();
+        QVERIFY(!server->isRunning());
+        QVERIFY(server->handle() == nullptr);
     }
 
     QCOMPARE(ddeDestroyed, 1);
@@ -314,8 +316,10 @@ void ManagerResourceLifecycleTest::managerResourcesAreDestroyed()
         client.registry = nullptr;
         wl_display_disconnect(client.display);
         client.display = nullptr;
-        QVERIFY(wl_event_loop_dispatch(wl_display_get_event_loop(server->handle()), 0)
-                == 0);
+        if (trigger != QStringLiteral("server-stop")) {
+            QVERIFY(wl_event_loop_dispatch(wl_display_get_event_loop(server->handle()), 0)
+                    == 0);
+        }
     }
 
     if (trigger != QStringLiteral("server-stop"))

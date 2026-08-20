@@ -6,9 +6,7 @@
 #include <libinput.h>
 #include <libudev.h>
 
-extern "C" {
-#include <wlr/backend/libinput.h>
-}
+#include <wlr_all.h>
 
 #include <sys/syscall.h>
 

@@ -363,6 +363,9 @@ void ShellHandler::createPrelaunchSplash(const QString &appId,
 
         // Destroy the splash wrapper
         m_rootSurfaceContainer->destroyForSurface(wrapper);
+
+        // Splash closed without matching a real window — record mismatch
+        m_windowConfigStore->recordSplashMismatch(appId);
     });
 
     if (timeoutMs > 0) {
@@ -380,7 +383,9 @@ void ShellHandler::createPrelaunchSplash(const QString &appId,
                                    << "Prelaunch splash timeout, destroy wrapper appId="
                                    << wrapper->appId();
                                m_prelaunchWrappers.removeAt(idx);
+                               const QString mismatchAppId = wrapper->appId();
                                m_rootSurfaceContainer->destroyForSurface(wrapper);
+                               m_windowConfigStore->recordSplashMismatch(mismatchAppId);
                            });
     }
 }
@@ -400,6 +405,7 @@ void ShellHandler::handlePrelaunchSplashClosed(const QString &appId, const QStri
                 << "Client requested close_splash, destroy wrapper appId=" << appId;
             m_prelaunchWrappers.removeAt(i);
             m_rootSurfaceContainer->destroyForSurface(wrapper);
+            m_windowConfigStore->recordSplashMismatch(appId);
             return;
         }
     }
@@ -633,6 +639,7 @@ void ShellHandler::ensureXdgWrapper(WXdgToplevelSurface *surface, const QString 
                 candidate->convertToNormalSurface(surface, SurfaceWrapper::Type::XdgToplevel);
                 wrapper = candidate;
                 isNewWrapper = false; // matched from prelaunch, not newly created
+                m_windowConfigStore->resetSplashMismatchCount(targetAppId);
                 break;
             }
         }
@@ -1001,6 +1008,7 @@ void ShellHandler::ensureXwaylandWrapper(WXWaylandSurface *surface, const QStrin
                 candidate->convertToNormalSurface(surface, SurfaceWrapper::Type::XWayland);
                 wrapper = candidate;
                 isNewWrapper = false; // matched from prelaunch, not newly created
+                m_windowConfigStore->resetSplashMismatchCount(targetAppId);
                 break;
             }
         }

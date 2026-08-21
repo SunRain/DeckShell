@@ -3,7 +3,7 @@
 
 import QtQuick
 import QtQuick.Controls
-import Waylib.Server 1.0
+import WaylibShared.QuickSharedServer 1.0
 
 // Pre-launch splash QML item that can be shown before an application's main window appears.
 Item {

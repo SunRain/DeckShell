@@ -140,6 +140,7 @@ qt_add_qml_module(libdeckcompositor
         core/imcandidatepanelmanager.h
         core/shellhandler.cpp
         core/shellhandler.h
+        core/treelandinit.cpp
         core/treeland.cpp
         core/treeland.h
         core/windowpicker.cpp
@@ -408,20 +409,20 @@ setup_main_translations(libdeckcompositor)
 
 target_include_directories(libdeckcompositor
     PUBLIC
-        # $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/src>
+        # $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/compositor/src>
         # $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/src>
-        # $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/src/config>
-        # $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/src/core>
-        # $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/src/effects>
-        # $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/src/greeter>
-        # $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/src/input>
-        # $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/src/interfaces>
-        # $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/src/output>
-        # $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/src/seat>
-        # $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/src/surface>
-        # $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/src/workspace>
-        # $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/src/utils>
-        # $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/src/wallpaper>
+        # $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/compositor/src/config>
+        # $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/compositor/src/core>
+        # $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/compositor/src/effects>
+        # $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/compositor/src/greeter>
+        # $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/compositor/src/input>
+        # $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/compositor/src/interfaces>
+        # $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/compositor/src/output>
+        # $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/compositor/src/seat>
+        # $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/compositor/src/surface>
+        # $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/compositor/src/workspace>
+        # $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/compositor/src/utils>
+        # $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/compositor/src/wallpaper>
         $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}>
         $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/config>
@@ -447,6 +448,7 @@ target_link_libraries(libdeckcompositor
         Dtk6::SystemSettings
         WaylibShared::SharedServer
     PRIVATE
+        Qt6::GuiPrivate
         Qt6::Quick
         Qt6::QuickControls2
         Qt6::QuickPrivate

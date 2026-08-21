@@ -473,6 +473,7 @@ if(TARGET WaylibSharedServer)
     install(
         TARGETS WaylibSharedServer
         LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}"
+        NAMELINK_SKIP
         COMPONENT DeckShellQmlRuntime
     )
 endif()
@@ -480,6 +481,7 @@ if(TARGET capture)
     install(
         TARGETS capture
         LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}"
+        NAMELINK_SKIP
         COMPONENT DeckShellQmlRuntime
     )
 endif()
@@ -488,6 +490,7 @@ if(TARGET waylib_wlroots_native_library)
     install(
         TARGETS waylib_wlroots_native_library
         LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}"
+        NAMELINK_SKIP
         COMPONENT DeckShellQmlRuntime
     )
 endif()
@@ -509,11 +512,17 @@ target_link_libraries(${BIN_NAME} PRIVATE
 
 install(TARGETS ${BIN_NAME} RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}")
 install(PROGRAMS treeland.sh DESTINATION "${CMAKE_INSTALL_BINDIR}")
-install(
-    TARGETS libdeckcompositor
+install(TARGETS libdeckcompositor
     LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}"
+    NAMELINK_SKIP
     COMPONENT DeckShellQmlRuntime
 )
+if(TREELAND_INSTALL_DEV)
+    install(TARGETS libdeckcompositor
+        LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}"
+        NAMELINK_ONLY
+    )
+endif()
 
 ## systemd socket
 

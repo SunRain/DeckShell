@@ -90,6 +90,8 @@ if (NOT EXT_SESSION_LOCK_V1 AND DISABLE_DDM)
     message(WARNING "no ext-session-lock support and no DDM, treeland will not have session locking ability.")
 endif()
 
+option(TREELAND_INSTALL_DEV "Install development files (headers, CMake config, pkg-config, .so symlinks)" OFF)
+add_feature_info(treeland_install_dev TREELAND_INSTALL_DEV "Install development files for external consumers")
 # NOTE: Qt keywords conflict with wlroots. but dtksystemsettings still uses it.
 # add_definitions("-DQT_NO_KEYWORDS")
 

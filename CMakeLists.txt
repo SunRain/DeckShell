@@ -62,6 +62,8 @@ endif()
 
 # set(QT_QML_GENERATE_QMLLS_INI ON)
 
+option(TREELAND_INSTALL_DEV "Install development files (headers, CMake config, pkg-config, .so symlinks)" OFF)
+
 add_subdirectory(protocols/compositor)
 set(WAYLIB_TREELAND_PROTOCOLS_DIR "${DECKCOMPOSITOR_PROTOCOLS_DATA_DIR}")
 add_subdirectory(3rdparty/waylib-shared)

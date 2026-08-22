@@ -16,6 +16,7 @@
 #include <QEventLoop>
 #include <QMetaObject>
 #include <QSemaphore>
+#include <QTemporaryDir>
 #include <QtTest>
 #include <wsocket.h>
 
@@ -113,28 +114,7 @@ private:
 
     bool waitForFixture()
     {
-        if (fixtureReady())
-            return true;
-
-        QEventLoop loop;
-        const auto quitWhenReady = [this, &loop] {
-            if (fixtureReady())
-                loop.quit();
-        };
-        connect(m_helper->rootSurfaceContainer()->outputModel(),
-                &QAbstractItemModel::rowsInserted,
-                &loop,
-                [quitWhenReady](const QModelIndex &, int, int) { quitWhenReady(); });
-        connect(m_helper->globalConfig(),
-                &TreelandConfig::configInitializeSucceed,
-                &loop,
-                [quitWhenReady](auto *) { quitWhenReady(); });
-        connect(m_helper->config(),
-                &TreelandUserConfig::configInitializeSucceed,
-                &loop,
-                [quitWhenReady](auto *) { quitWhenReady(); });
-        loop.exec();
-        return fixtureReady();
+        return QTest::qWaitFor([this] { return fixtureReady(); }, 5000);
     }
 
     Helper *m_helper = nullptr;
@@ -158,12 +138,19 @@ int main(int argc, char *argv[])
         std::fflush(nullptr);
         std::_Exit(77);
     }
+    QTemporaryDir runtimeDir(QStringLiteral("/tmp/treeland-protocol-runtime-XXXXXX"));
+    if (!runtimeDir.isValid()) {
+        std::fputs("failed to create private protocol runtime directory\n", stderr);
+        return 1;
+    }
+    qputenv("XDG_RUNTIME_DIR", runtimeDir.path().toLocal8Bit());
+    qputenv("QT_NO_XDG_DESKTOP_PORTAL", "1");
     TestDConfigService dconfigService;
     if (!dconfigService.start()) {
         dconfigService.stop();
         return 1;
     }
-    Treeland::preInit(argc, argv);
+    auto application = Treeland::preInit(argc, argv);
     Treeland::postInit();
     if (!dconfigService.waitForService()) {
         dconfigService.stop();
@@ -198,8 +185,11 @@ int main(int argc, char *argv[])
     // The protocol client has already completed and been joined, so terminate
     // without running the unrelated compositor shutdown sequence.
     dconfigService.stop();
+    const bool runtimeRemoved = runtimeDir.remove();
+    if (!runtimeRemoved)
+        std::fputs("failed to remove private protocol runtime directory\n", stderr);
     std::fflush(nullptr);
-    std::_Exit(result);
+    std::_Exit(runtimeRemoved ? result : 1);
 }
 
 #include "protocol-test-entry.moc"

@@ -16,7 +16,7 @@ DCORE_USE_NAMESPACE;
 
 int main(int argc, char *argv[])
 {
-    Treeland::preInit(argc, argv);
+    auto application = Treeland::preInit(argc, argv);
 
 #ifdef COMPOSITOR_ENABLE_CONSOLE_DEBUG_OUTPUT
     DLogManager::registerConsoleAppender();

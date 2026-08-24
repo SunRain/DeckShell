@@ -20,7 +20,6 @@ struct test_result {
     char        message[TEST_MSG_MAX];
 };
 
-
 struct ftm_server_state {
     int      output_ready;
     int      wrapper_created;
@@ -56,13 +55,11 @@ struct test_ctx {
     struct client_connection connection;
     struct wl_display    *display;
 
-
     struct treeland_foreign_toplevel_manager_v1  *manager;
     struct treeland_dock_preview_context_v1      *context;
     struct treeland_foreign_toplevel_handle_v1   *handle;
     struct wl_seat                                *seat;
     struct xdg_toplevel_client             xdg_toplevel;
-
 
     int context_enter_received;
     int context_leave_received;
@@ -70,7 +67,6 @@ struct test_ctx {
     int handle_count;
     int handle_closed_count;
     uint32_t handle_identifier;
-
 
     struct test_result *results;
     int                 result_count;

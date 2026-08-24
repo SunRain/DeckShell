@@ -242,8 +242,8 @@ qt_add_qml_module(libdeckcompositor
         xsettings/settingmanager.cpp
 
     QML_FILES
-        core/qml/PrimaryOutput.qml
-        core/qml/CopyOutput.qml
+        core/qml/SourceOutput.qml
+        core/qml/MirrorOutput.qml
         core/qml/TitleBar.qml
         core/qml/Decoration.qml
         core/qml/WindowMenu.qml

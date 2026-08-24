@@ -27,3 +27,5 @@ add_subdirectory(test_qml_install_smoke)
 if(NOT DISABLE_DDM)
     add_subdirectory(test_ddm_greeter_lifecycle)
 endif()
+
+add_subdirectory(test_treeland_debug)

@@ -1,0 +1,9 @@
+impl_deckcompositor(
+    NAME
+        module_keyboard_shortcuts_inhibit
+    SOURCE
+        keyboardshortcutsinhibitmanager.h
+        keyboardshortcutsinhibitmanager.cpp
+    LINK
+        Qt6::Core
+)

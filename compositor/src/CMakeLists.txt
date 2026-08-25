@@ -201,8 +201,6 @@ qt_add_qml_module(libdeckcompositor
         surface/surfaceproxy.h
         surface/surfacewrapper.cpp
         surface/surfacewrapper.h
-        surface/quicktile.cpp
-        surface/quicktile.h
         utils/cmdline.cpp
         utils/cmdline.h
         utils/propertymonitor.cpp

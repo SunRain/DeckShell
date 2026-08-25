@@ -89,6 +89,7 @@ public:
     QRectF geometry() const;
     QRectF validRect() const;
     QRectF validGeometry() const;
+    QRectF tileGeometry(SurfaceWrapper::TileMode mode) const;
     WOutputViewport *screenViewport() const;
     void updatePositionFromLayout();
     void applyOutputColorConfig();

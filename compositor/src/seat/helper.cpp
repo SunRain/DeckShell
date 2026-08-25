@@ -639,6 +639,12 @@ void Helper::onOutputAdded(WOutput *output)
             }, Qt::QueuedConnection);
         });
     }
+    // The output-management protocol must advertise an output as soon as it
+    // enters the compositor. DConfig restoration is asynchronous and may be
+    // unavailable in minimal sessions; delaying registration until it
+    // completes leaves newly bound clients with an empty head list forever.
+    m_outputManager->newOutput(output);
+
     const bool shouldDisableOutput = !scanned;
     if (shouldDisableOutput) {
         WOutputStateGuard disabledState;
@@ -658,10 +664,9 @@ void Helper::onOutputAdded(WOutput *output)
 
         *outputPublished = true;
         if (outputObject->config()->isInitializeFailed() || m_globalConfig->isInitializeFailed()) {
-            qCWarning(lcTlOutput) << "Output configuration initialization failed; publishing current state for"
+            qCWarning(lcTlOutput) << "Output configuration initialization failed for"
                                  << output->name();
         }
-        m_outputManager->newOutput(output);
         m_wallpaperManager->ensureWallpaperConfigForOutput(outputObject);
     };
     auto restoreOutputConfig = [this,

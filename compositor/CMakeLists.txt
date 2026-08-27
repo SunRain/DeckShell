@@ -95,10 +95,15 @@ endif()
 option(TREELAND_INSTALL_DEV "Install development files (headers, CMake config, pkg-config, .so symlinks)" OFF)
 add_feature_info(treeland_install_dev TREELAND_INSTALL_DEV "Install development files for external consumers")
 
-# Enable the treeland-debug remote source by default in Debug builds so the
-# adb-style debug tool works out of the box without toggling the DConfig key.
-# It still costs nothing until a client connects (see TreelandRemoteSource).
-add_compile_definitions($<$<CONFIG:Debug>:TREELAND_DEBUG_BUILD>)
+# Enable the treeland-debug remote source by default so the adb-style debug
+# tool works out of the box. The source has zero cost until a client connects
+# (see TreelandRemoteSource), and runtime activation is still gated by the
+# debugSource DConfig key (default false). Pass -DTREELAND_DEBUG_SOURCE=OFF
+# to exclude the source from the build entirely.
+option(TREELAND_DEBUG_SOURCE "Enable treeland-debug remote source" ON)
+if (TREELAND_DEBUG_SOURCE)
+    add_compile_definitions(TREELAND_DEBUG_BUILD)
+endif()
 
 # NOTE: Qt keywords conflict with wlroots. but dtksystemsettings still uses it.
 # add_definitions("-DQT_NO_KEYWORDS")

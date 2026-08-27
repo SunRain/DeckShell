@@ -509,6 +509,8 @@ WXWayland *ShellHandler::createXWayland(WServer *server,
     m_xwaylands.append(xwayland);
     xwayland->setSeat(seat);
     connect(xwayland, &WXWayland::surfaceAdded, this, &ShellHandler::onXWaylandSurfaceAdded);
+    // aboutToDissociate never fires when the XWayland instance is torn down.
+    connect(xwayland, &WXWayland::surfaceRemoved, this, &ShellHandler::onXWaylandSurfaceRemoved);
     connect(xwayland, &WXWayland::ready, xwayland, [this, xwayland] {
         auto atomPid = xwayland->atom("_NET_WM_PID");
         xwayland->setAtomSupported(atomPid, true);
@@ -572,6 +574,17 @@ void ShellHandler::onXdgToplevelSurfaceAdded(WXdgToplevelSurface *surface)
     }
     // Async resolve not started or failed -> directly match or create
     ensureXdgWrapper(surface, QString());
+}
+
+void ShellHandler::onXWaylandSurfaceRemoved(WXWaylandSurface *surface)
+{
+    auto *wrapper = m_rootSurfaceContainer->getSurface(surface);
+    if (!wrapper || wrapper->isAboutToRemove())
+        return;
+    if (auto *xwayland = surface->xwayland())
+        xwayland->cancelAsyncProperties(surface->handle()->window_id);
+    Q_EMIT surfaceWrapperAboutToRemove(wrapper);
+    m_rootSurfaceContainer->destroyForSurface(wrapper);
 }
 
 void ShellHandler::ensureXdgWrapper(WXdgToplevelSurface *surface, const QString &targetAppId)

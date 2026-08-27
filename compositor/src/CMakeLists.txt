@@ -326,6 +326,8 @@ target_compile_definitions(libdeckcompositor
     PRIVATE
     WLR_USE_UNSTABLE
     PROJECT_COMPILE_QML_DIR="${PROJECT_BINARY_DIR}/qt/qml/DeckShell/Compositor"
+
+    "TREELAND_SYSCONFDIR=\"${TREELAND_SYSCONFDIR}\""
 )
 
 if (USE_BUILD_TREE_WALLPAPER_FACTORY)

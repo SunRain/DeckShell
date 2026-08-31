@@ -93,7 +93,7 @@ add_feature_info(treeland_install_dev TREELAND_INSTALL_DEV "Install development 
 
 # Enable the treeland-debug remote source by default in Debug builds so the
 # adb-style debug tool works out of the box without toggling the DConfig key.
-# Release builds stay gated by the debugSource DConfig key (default false), so
+# Release builds stay gated by the remoteDebug DConfig key (default false), so
 # the source is not created unless explicitly enabled. Pass
 # -DTREELAND_DEBUG_SOURCE=OFF to also keep it off in Debug builds.
 option(TREELAND_DEBUG_SOURCE "Enable treeland-debug remote source by default in Debug builds" ON)

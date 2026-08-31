@@ -92,3 +92,7 @@ Q_LOGGING_CATEGORY(lcTlPopupFocus, "treeland.popup.focus")
 Q_LOGGING_CATEGORY(lcTlShellXdg, "treeland.shell.xdg", QtInfoMsg)
 // Hook scripts runner
 Q_LOGGING_CATEGORY(lcTlHooks, "treeland.hooks")
+
+// Debug remote source
+Q_LOGGING_CATEGORY(lcTlDebug, "treeland.debug")
+

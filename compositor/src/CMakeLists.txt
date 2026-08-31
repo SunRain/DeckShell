@@ -180,6 +180,8 @@ qt_add_qml_module(libdeckcompositor
         interfaces/proxyinterface.h
         modules/resource/treelandremotesource.cpp
         modules/resource/treelandremotesource.h
+        modules/resource/treelanddebugsocket.cpp
+        modules/resource/treelanddebugsocket.h
         output/output.cpp
         output/output.h
         output/backlight.h

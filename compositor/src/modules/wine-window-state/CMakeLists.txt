@@ -1,6 +1,6 @@
 waylib_generate_qtwayland_server_protocol(libdeckcompositor
     PROTOCOL ${DECKCOMPOSITOR_PROTOCOLS_DATA_DIR}/treeland-wine-window-state-unstable-v1.xml
-    BASENAME treeland-wine-window-state-v1
+    BASENAME treeland-wine-window-state-unstable-v1
 )
 
 impl_deckcompositor(

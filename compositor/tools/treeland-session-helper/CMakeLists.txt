@@ -1,5 +1,4 @@
 find_package(Qt6 REQUIRED COMPONENTS WaylandClient Gui Core DBus)
-
 set(BIN_NAME treeland-session-helper)
 
 qt_add_executable(${BIN_NAME}
@@ -8,7 +7,7 @@ qt_add_executable(${BIN_NAME}
 
 qt_generate_wayland_protocol_client_sources(${BIN_NAME}
     FILES
-        ${DECKCOMPOSITOR_PROTOCOLS_DATA_DIR}/treeland-app-id-resolver-v1.xml
+        ${DECKCOMPOSITOR_PROTOCOLS_DATA_DIR}/treeland-app-id-resolver-unstable-v2.xml
 )
 
 target_link_libraries(${BIN_NAME}

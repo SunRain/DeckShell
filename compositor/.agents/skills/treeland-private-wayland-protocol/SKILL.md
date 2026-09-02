@@ -61,7 +61,7 @@ Prefer the existing helper (defined in `waylib/tools/CMakeLists.txt`):
 
 `waylib_generate_qtwayland_server_protocol(<target> PROTOCOL <xml> BASENAME <basename> [PREFIX <prefix>])`
 
-The first argument is the CMake target that owns the generated sources (usually `libtreeland`); `PROTOCOL` is the xml path and `BASENAME` derives the generated filenames. The optional `PREFIX` sets the generated C++ type/namespace prefix (e.g. `PREFIX "/"` in `src/modules/personalization/`); omit it for the default empty prefix.
+The first argument is the CMake target that owns the generated sources (usually `libdeckcompositor`); `PROTOCOL` is the xml path and `BASENAME` derives the generated filenames. The optional `PREFIX` sets the generated C++ type/namespace prefix (e.g. `PREFIX "/"` in `src/modules/personalization/`); omit it for the default empty prefix.
 
 Typical outputs:
 
@@ -73,6 +73,7 @@ At minimum, verify:
 1. the target source list includes `wayland-<basename>-server-protocol.c`
 2. include paths contain `${CMAKE_CURRENT_BINARY_DIR}`
 3. `BASENAME`, generated filenames, and C++ type names are consistent
+4. **`BASENAME` must equal the `<protocol name>` with underscores converted to dashes** (e.g. `<protocol name="treeland_screensaver_unstable_v2">` → `BASENAME treeland-screensaver-unstable-v2`). The generated `.cpp`'s internal `#include` derives from the `<protocol name>` (underscore→dash), while the generated filename derives from `BASENAME`; if they diverge the generated `.cpp` cannot find its own header and the build fails. So renaming only the `<protocol name>` (even with interface names unchanged) still requires updating `BASENAME` and every source `#include "qwayland-server-<new-basename>.h"`.
 
 ## Recommended Code Structure
 - public class: `QObject + WServerInterface`
@@ -354,7 +355,7 @@ For new private protocols, prefer `appidresolver`, `prelaunch-splash`, or `scree
 ## Reference Starting Points
 - `src/modules/app-id-resolver/appidresolver.cpp`
 - `src/modules/prelaunch-splash/prelaunchsplash.cpp`
-- `src/modules/screensaver/screensaverinterfacev1.cpp`
+- `src/modules/screensaver/screensaverinterfacev2.cpp`
 - `waylib/tools/CMakeLists.txt`
 - `src/seat/helper.cpp`
 

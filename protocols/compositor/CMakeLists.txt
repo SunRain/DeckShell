@@ -16,8 +16,13 @@ set(DECKCOMPOSITOR_PROTOCOLS_INSTALL_CMAKEDIR
 add_subdirectory(cmake)
 
 set(XML
-    xml/treeland-app-id-resolver-v1.xml
     xml/treeland-capture-unstable-v1.xml
+    xml/treeland-app-id-resolver-unstable-v2.xml
+    xml/treeland-prelaunch-splash-unstable-v2.xml
+    xml/treeland-screensaver-unstable-v2.xml
+    xml/treeland-wallpaper-shell-unstable-v1.xml
+    xml/treeland-wine-window-management-unstable-v1.xml
+    xml/treeland-wine-window-state-unstable-v1.xml
     xml/treeland-dde-shell-v1.xml
     xml/treeland-ddm-v1.xml
     xml/treeland-foreign-toplevel-manager-v1.xml
@@ -26,9 +31,7 @@ set(XML
     xml/treeland-output-manager-v1.xml
     xml/treeland-personalization-manager-v1.xml
     xml/treeland-prelaunch-splash-v1.xml
-    xml/treeland-prelaunch-splash-v2.xml
     xml/treeland-remote-subsurface-unstable-v1.xml
-    xml/treeland-screensaver-v1.xml
     xml/treeland-shortcut-manager-v1.xml
     xml/treeland-shortcut-manager-v2.xml
     xml/treeland-virtual-output-manager-v1.xml

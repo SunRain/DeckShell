@@ -1,6 +1,6 @@
 waylib_generate_qtwayland_server_protocol(libdeckcompositor
-    PROTOCOL ${DECKCOMPOSITOR_PROTOCOLS_DATA_DIR}/treeland-app-id-resolver-v1.xml
-    BASENAME treeland-app-id-resolver-v1
+    PROTOCOL ${DECKCOMPOSITOR_PROTOCOLS_DATA_DIR}/treeland-app-id-resolver-unstable-v2.xml
+    BASENAME treeland-app-id-resolver-unstable-v2
 )
 
 impl_deckcompositor(

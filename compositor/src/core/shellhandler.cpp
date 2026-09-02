@@ -1120,7 +1120,8 @@ void ShellHandler::onSurfaceInactivationRequested(SurfaceWrapper *wrapper)
             if (seat == primarySeat) {
                 helper->activateSurface(m_workspace->current()->latestActiveSurface(),
                                         Qt::OtherFocusReason,
-                                        seat);
+                                        seat,
+                                        false);
             } else {
                 helper->requestKeyboardFocus(nullptr, Qt::OtherFocusReason, seat);
             }

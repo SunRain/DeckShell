@@ -46,7 +46,6 @@ public:
     void lock();
     void shutdown();
     void switchUser();
-    void setPrimaryOutputName(const QString &primaryOutputName);
 
 Q_SIGNALS:
     void unlock();
@@ -74,6 +73,13 @@ public:
     void removeOutput(Output *output) override;
 
 private:
+    void onLoginViewVisibleChanged();
+    void createLoginView();
+    void destroyLoginView();
+    void repositionLoginView();
+    void onCursorPositionChanged();
+    Output *followerOutput() const;
+
     ILockScreen *m_impl{ nullptr };
     GreeterProxy *m_greeterProxy{ nullptr };
     std::map<Output *, std::unique_ptr<QQuickItem, void (*)(QQuickItem *)>> m_components;
@@ -84,5 +90,5 @@ private:
     WSessionLock* m_sessionLock{ nullptr };
     bool m_externalLockActive{ false };
 #endif
-    QString m_primaryOutputName;
+    QQuickItem *m_loginView{ nullptr };
 };

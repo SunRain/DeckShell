@@ -146,10 +146,6 @@ void initLockScreen(LockScreen *lockScreen,
         lockScreen->addOutput(output);
     }
 
-    if (auto primaryOutput = rootSurfaceContainer->primaryOutput()) {
-        lockScreen->setPrimaryOutputName(primaryOutput->output()->name());
-    }
-
     QObject::connect(lockScreen,
                      &LockScreen::unlock,
                      context,
@@ -2107,11 +2103,6 @@ void Helper::init(Treeland::Treeland *treeland)
     connect(m_rootSurfaceContainer, &RootSurfaceContainer::primaryOutputChanged, this, [this]() {
         if (m_rootSurfaceContainer->primaryOutput()) {
             m_outputManagerV1->onPrimaryOutputChanged();
-#ifndef DISABLE_DDM
-            if (m_lockScreen) {
-                m_lockScreen->setPrimaryOutputName(m_rootSurfaceContainer->primaryOutput()->output()->name());
-            }
-#endif
         }
     });
 

@@ -1,0 +1,41 @@
+source_repo: /srv/git/DeckShell
+source_ref: refs/heads/source-review
+source_tip: refs/heads/source-review
+overall_range:
+  base: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+  head: dddddddddddddddddddddddddddddddddddddddd
+key_nodes:
+  - ref: refs/tags/example-release
+    commit: bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+  - ref: refs/heads/source-review
+    commit: dddddddddddddddddddddddddddddddddddddddd
+range_base: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+range_head: bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+
+parent_target_ref: refs/heads/master-merge
+parent_work_branch: sync/unified-aaaaaaaa-bbbbbbbb
+parent_worktree: /srv/worktrees/deckshell-unified-sync
+
+child_repo: /srv/git/DeckShell/3rdparty/waylib-shared
+child_target_ref: refs/heads/waylibshared-merge
+child_work_branch: sync/unified-aaaaaaaa-bbbbbbbb
+child_worktree: /srv/worktrees/waylib-shared-unified-sync
+
+wlroots_repo: /srv/git/wlroots-local
+wlroots_base: cccccccccccccccccccccccccccccccccccccccc
+wlroots_target_ref: refs/heads/wlroots-merge
+wlroots_work_branch: sync/unified-aaaaaaaa-bbbbbbbb
+wlroots_worktree: /srv/worktrees/wlroots-unified-sync
+wlroots_submodule_url: /srv/git/wlroots-local
+
+protocol_tracking:
+  enabled: true
+  protocol_repo: /srv/git/treeland-protocols
+  protocol_ref: refs/heads/protocol-review
+  similarity_threshold: 0.7
+  days_before: 30
+  days_after: 7
+
+artifact_root: /srv/sync-artifacts/treeland-unified/2026-09-07
+run_id: treeland-unified-20260907-001
+refs_doc: /srv/sync-artifacts/treeland-unified/2026-09-07/refs.md

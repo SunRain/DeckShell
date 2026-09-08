@@ -1,0 +1,102 @@
+{
+  "entries": {
+    "1111111111111111111111111111111111111111": {
+      "child": {
+        "action": "adapted",
+        "adaptation_notes": [
+          "Preserve the frozen waylib-shared target and install contracts."
+        ],
+        "adaptation_paths": [
+          {
+            "path": "waylib/CMakeLists.txt",
+            "kind": "modified",
+            "reason": "Retain the target package contract while adapting the source change.",
+            "proof": {
+              "path": "decisions/1111111111111111111111111111111111111111-child-review.md",
+              "size": 234,
+              "sha256": "<sha256-from-artifact-record.py>"
+            },
+            "review_state": "approved"
+          }
+        ],
+        "adaptation_patch": {
+          "path": "decisions/1111111111111111111111111111111111111111-child.patch",
+          "size": 123,
+          "sha256": "<sha256-from-artifact-record.py>"
+        }
+      }
+    },
+    "2222222222222222222222222222222222222222": {
+      "parent": {
+        "action": "empty",
+        "adaptation_notes": [
+          "The target tree already contains an equivalent DeckShell change."
+        ],
+        "equivalence_proof": {
+          "path": "decisions/2222222222222222222222222222222222222222-parent-equivalence.md",
+          "size": 456,
+          "sha256": "<sha256-from-artifact-record.py>"
+        }
+      }
+    },
+    "3333333333333333333333333333333333333333": {
+      "wlroots": {
+        "action": "applied"
+      },
+      "child": {
+        "action": "adapted",
+        "structural_paths": [
+          "CMakeLists.txt"
+        ],
+        "adaptation_notes": [
+          "Integrate the reviewed wrapper and reject the old subtree updater before any Git command."
+        ],
+        "adaptation_paths": [
+          {
+            "path": "wlroots/CMakeLists.txt",
+            "kind": "materialized",
+            "reason": "Preserve the existing Waylib contract while adding the approved wlroots wrapper.",
+            "proof": {
+              "path": "decisions/wrapper-review.md",
+              "size": 123,
+              "sha256": "<sha256-from-artifact-record.py>"
+            },
+            "review_state": "approved"
+          },
+          {
+            "path": "wlroots/update-from-upstream.sh",
+            "kind": "materialized",
+            "reason": "Preserve the existing Waylib contract while adding the approved wlroots wrapper.",
+            "proof": {
+              "path": "decisions/wrapper-review.md",
+              "size": 123,
+              "sha256": "<sha256-from-artifact-record.py>"
+            },
+            "review_state": "approved"
+          },
+          {
+            "path": "CMakeLists.txt",
+            "kind": "modified",
+            "reason": "Preserve the existing Waylib contract while adding the approved wlroots wrapper.",
+            "proof": {
+              "path": "decisions/wrapper-review.md",
+              "size": 123,
+              "sha256": "<sha256-from-artifact-record.py>"
+            },
+            "review_state": "approved"
+          }
+        ],
+        "adaptation_patch": {
+          "path": "decisions/wrapper.patch",
+          "size": 123,
+          "sha256": "<sha256-from-artifact-record.py>"
+        },
+        "contract_additions": {
+          "path": "decisions/wrapper-source-additions.json",
+          "size": 123,
+          "sha256": "<sha256-from-artifact-record.py>"
+        }
+      }
+    }
+  }
+}

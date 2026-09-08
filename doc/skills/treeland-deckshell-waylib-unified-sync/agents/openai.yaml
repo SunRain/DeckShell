@@ -1,0 +1,4 @@
+interface:
+  display_name: "Treeland → DeckShell + Waylib + wlroots"
+  short_description: "逐提交同步三仓库，在所选关键节点完整验收，不要求中间提交编译"
+  default_prompt: "使用 $treeland-deckshell-waylib-unified-sync 冻结整体范围与关键节点，分段逐提交 R→C→P 同步；每段终点核验两层 gitlink、递归物化、协议候选、完整构建与安装合同，通过且授权覆盖后收口再接续。普通中间提交不要求编译，不自动 fetch/push/tag 或修改外层 gitlink。"

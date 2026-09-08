@@ -38,7 +38,7 @@ set(XML
     xml/treeland-wallpaper-color-v1.xml
     xml/treeland-wallpaper-manager-unstable-v1.xml
     xml/treeland-wallpaper-shell-unstable-v1.xml
-    xml/treeland-window-management-v1.xml
+    xml/treeland-show-desktop-unstable-v1.xml
     xml/treeland-wine-window-management-unstable-v1.xml
     xml/treeland-wine-window-state-unstable-v1.xml
 )

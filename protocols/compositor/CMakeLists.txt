@@ -25,7 +25,7 @@ set(XML
     xml/treeland-wine-window-state-unstable-v1.xml
     xml/treeland-dde-shell-v1.xml
     xml/treeland-ddm-v1.xml
-    xml/treeland-foreign-toplevel-manager-v1.xml
+    xml/treeland-foreign-toplevel-manager-unstable-v2.xml
     xml/treeland-input-manager-unstable-v1.xml
     xml/treeland-keyboard-state-notify-unstable-v1.xml
     xml/treeland-output-manager-v1.xml

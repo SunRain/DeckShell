@@ -1,8 +1,7 @@
 // Copyright (C) 2026 UnionTech Software Technology Co., Ltd.
 // SPDX-License-Identifier: Apache-2.0 OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
 
-#include "modules/foreign-toplevel/foreigntoplevelmanagerv1.h"
-#include "modules/foreign-toplevel/foreigntoplevelstatecodec.h"
+#include "modules/foreign-toplevel/foreigntoplevelmanagerv2.h"
 
 #include <wserver.h>
 
@@ -11,7 +10,6 @@
 #include <QTest>
 #include <QXmlStreamReader>
 
-#include <algorithm>
 #include <cerrno>
 #include <cstring>
 #include <memory>
@@ -25,8 +23,8 @@ extern "C" {
 namespace {
 
 constexpr wl_interface ForeignToplevelManagerInterface = {
-    .name = "treeland_foreign_toplevel_manager_v1",
-    .version = 2,
+    .name = "treeland_foreign_toplevel_manager_v2",
+    .version = 1,
     .method_count = 0,
     .methods = nullptr,
     .event_count = 0,
@@ -76,8 +74,11 @@ struct ProtocolContract
 {
     int managerVersion = 0;
     int handleVersion = 0;
+    int maximizedValue = -1;
+    int minimizedValue = -1;
+    int activatedValue = -1;
+    int fullscreenValue = -1;
     int attentionValue = -1;
-    int attentionSince = 0;
 };
 
 ProtocolContract readProtocolContract()
@@ -97,19 +98,27 @@ ProtocolContract readProtocolContract()
             if (xml.name() == QStringView(u"interface")) {
                 currentInterface = xml.attributes().value(QStringView(u"name")).toString();
                 const int version = xml.attributes().value(QStringView(u"version")).toInt();
-                if (currentInterface == QStringLiteral("treeland_foreign_toplevel_manager_v1"))
+                if (currentInterface == QStringLiteral("treeland_foreign_toplevel_manager_v2"))
                     contract.managerVersion = version;
-                if (currentInterface == QStringLiteral("treeland_foreign_toplevel_handle_v1"))
+                if (currentInterface == QStringLiteral("treeland_foreign_toplevel_handle_v2"))
                     contract.handleVersion = version;
-            } else if (currentInterface == QStringLiteral("treeland_foreign_toplevel_handle_v1")
+            } else if (currentInterface == QStringLiteral("treeland_foreign_toplevel_handle_v2")
                        && xml.name() == QStringView(u"enum")
                        && xml.attributes().value(QStringView(u"name")) == QStringView(u"state")) {
                 inStateEnum = true;
-            } else if (inStateEnum && xml.name() == QStringView(u"entry")
-                       && xml.attributes().value(QStringView(u"name"))
-                           == QStringView(u"attention")) {
-                contract.attentionValue = xml.attributes().value(QStringView(u"value")).toInt();
-                contract.attentionSince = xml.attributes().value(QStringView(u"since")).toInt();
+            } else if (inStateEnum && xml.name() == QStringView(u"entry")) {
+                const auto name = xml.attributes().value(QStringView(u"name"));
+                const int value = xml.attributes().value(QStringView(u"value")).toInt();
+                if (name == QStringView(u"maximized"))
+                    contract.maximizedValue = value;
+                else if (name == QStringView(u"minimized"))
+                    contract.minimizedValue = value;
+                else if (name == QStringView(u"activated"))
+                    contract.activatedValue = value;
+                else if (name == QStringView(u"fullscreen"))
+                    contract.fullscreenValue = value;
+                else if (name == QStringView(u"attention"))
+                    contract.attentionValue = value;
             }
         } else if (xml.isEndElement() && xml.name() == QStringView(u"enum") && inStateEnum) {
             inStateEnum = false;
@@ -117,20 +126,6 @@ ProtocolContract readProtocolContract()
     }
 
     return contract;
-}
-
-QList<uint32_t> decodeStates(const QByteArray &encoded)
-{
-    if (encoded.size() % static_cast<qsizetype>(sizeof(uint32_t)) != 0)
-        return { };
-
-    QList<uint32_t> states;
-    for (qsizetype offset = 0; offset < encoded.size(); offset += sizeof(uint32_t)) {
-        uint32_t state = 0;
-        std::memcpy(&state, encoded.constData() + offset, sizeof(state));
-        states.append(state);
-    }
-    return states;
 }
 
 } // namespace
@@ -141,11 +136,9 @@ class ForeignToplevelProtocolTest : public QObject
 
 private Q_SLOTS:
     void initTestCase();
-    void advertisesVersionTwo();
-    void clientsCanBindV1AndV2();
-    void protocolDefinesVersionedAttentionState();
-    void serializesInitialState();
-    void serializesAttentionByClientVersion();
+    void advertisesV2InterfaceAtVersionOne();
+    void clientsCanBindV2Interface();
+    void protocolDefinesV2StateValues();
     void cleanupTestCase();
 
 private:
@@ -154,7 +147,7 @@ private:
     void syncClient();
 
     std::unique_ptr<WAYLIB_SERVER_NAMESPACE::WServer> m_server;
-    ForeignToplevelManagerInterfaceV1 *m_protocol = nullptr;
+    ForeignToplevelManagerInterfaceV2 *m_protocol = nullptr;
     wl_client *m_serverClient = nullptr;
     ClientState m_client;
 };
@@ -184,7 +177,7 @@ void ForeignToplevelProtocolTest::syncClient()
 void ForeignToplevelProtocolTest::initTestCase()
 {
     m_server = std::make_unique<WAYLIB_SERVER_NAMESPACE::WServer>();
-    m_protocol = m_server->attach<ForeignToplevelManagerInterfaceV1>();
+    m_protocol = m_server->attach<ForeignToplevelManagerInterfaceV2>();
     QVERIFY(m_protocol != nullptr);
     m_server->start();
 
@@ -199,62 +192,38 @@ void ForeignToplevelProtocolTest::initTestCase()
     syncClient();
 }
 
-void ForeignToplevelProtocolTest::advertisesVersionTwo()
+void ForeignToplevelProtocolTest::advertisesV2InterfaceAtVersionOne()
 {
     QVERIFY(m_client.foreignToplevelName != 0);
-    QCOMPARE(m_client.foreignToplevelVersion, 2U);
+    QCOMPARE(m_client.foreignToplevelVersion, 1U);
 }
 
-void ForeignToplevelProtocolTest::clientsCanBindV1AndV2()
+void ForeignToplevelProtocolTest::clientsCanBindV2Interface()
 {
     QVERIFY(m_client.foreignToplevelName != 0);
 
-    auto *versionOne = wl_registry_bind(m_client.registry,
-                                        m_client.foreignToplevelName,
-                                        &ForeignToplevelManagerInterface,
-                                        1);
-    auto *versionTwo = wl_registry_bind(m_client.registry,
-                                        m_client.foreignToplevelName,
-                                        &ForeignToplevelManagerInterface,
-                                        2);
-    QVERIFY(versionOne != nullptr);
-    QVERIFY(versionTwo != nullptr);
+    auto *manager = wl_registry_bind(m_client.registry,
+                                     m_client.foreignToplevelName,
+                                     &ForeignToplevelManagerInterface,
+                                     1);
+    QVERIFY(manager != nullptr);
 
     syncClient();
     QCOMPARE(wl_display_get_error(m_client.display), 0);
 
-    wl_proxy_destroy(static_cast<wl_proxy *>(versionOne));
-    wl_proxy_destroy(static_cast<wl_proxy *>(versionTwo));
+    wl_proxy_destroy(static_cast<wl_proxy *>(manager));
 }
 
-void ForeignToplevelProtocolTest::protocolDefinesVersionedAttentionState()
+void ForeignToplevelProtocolTest::protocolDefinesV2StateValues()
 {
     const ProtocolContract contract = readProtocolContract();
-    QCOMPARE(contract.managerVersion, 2);
-    QCOMPARE(contract.handleVersion, 2);
+    QCOMPARE(contract.managerVersion, 1);
+    QCOMPARE(contract.handleVersion, 1);
+    QCOMPARE(contract.maximizedValue, 0);
+    QCOMPARE(contract.minimizedValue, 1);
+    QCOMPARE(contract.activatedValue, 2);
+    QCOMPARE(contract.fullscreenValue, 3);
     QCOMPARE(contract.attentionValue, 4);
-    QCOMPARE(contract.attentionSince, 2);
-}
-
-void ForeignToplevelProtocolTest::serializesInitialState()
-{
-    ForeignToplevelHandleV1::States states;
-    states.setFlag(ForeignToplevelHandleV1::State::Maximized);
-    states.setFlag(ForeignToplevelHandleV1::State::Minimized);
-    states.setFlag(ForeignToplevelHandleV1::State::Activated);
-    states.setFlag(ForeignToplevelHandleV1::State::Fullscreen);
-
-    const QList<uint32_t> expected{ 0, 1, 2, 3 };
-    QCOMPARE(decodeStates(ForeignToplevelStateCodec::encode(states, 1)), expected);
-    QCOMPARE(decodeStates(ForeignToplevelStateCodec::encode(states, 2)), expected);
-}
-
-void ForeignToplevelProtocolTest::serializesAttentionByClientVersion()
-{
-    const ForeignToplevelHandleV1::States attention(ForeignToplevelHandleV1::State::Attention);
-
-    QVERIFY(ForeignToplevelStateCodec::encode(attention, 1).isEmpty());
-    QCOMPARE(decodeStates(ForeignToplevelStateCodec::encode(attention, 2)), QList<uint32_t>{ 4 });
 }
 
 void ForeignToplevelProtocolTest::cleanupTestCase()

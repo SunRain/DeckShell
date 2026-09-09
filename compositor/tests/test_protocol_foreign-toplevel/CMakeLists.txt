@@ -9,7 +9,7 @@ add_executable(test_protocol_foreign-toplevel main.cpp)
 
 target_compile_definitions(test_protocol_foreign-toplevel
     PRIVATE
-        PROTOCOL_XML="${DECKCOMPOSITOR_PROTOCOLS_DATA_DIR}/treeland-foreign-toplevel-manager-v1.xml"
+        PROTOCOL_XML="${DECKCOMPOSITOR_PROTOCOLS_DATA_DIR}/treeland-foreign-toplevel-manager-unstable-v2.xml"
 )
 
 target_include_directories(test_protocol_foreign-toplevel

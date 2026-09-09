@@ -1,21 +1,59 @@
 // Copyright (C) 2026 UnionTech Software Technology Co., Ltd.
 // SPDX-License-Identifier: Apache-2.0 OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
-#ifndef _POSIX_C_SOURCE
-#define _POSIX_C_SOURCE 200809L
-#endif
-
-#include "treeland-foreign-toplevel-manager-v1.h"
+#include "treeland-foreign-toplevel-manager-v2.h"
 #include "server-bridge-api.h"
-#include "treeland-foreign-toplevel-manager-v1-client-protocol.h"
+#include "treeland-foreign-toplevel-manager-unstable-v2-client-protocol.h"
 
+#include <errno.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <time.h>
 
 extern void ftm_read_server_state(void *data);
-extern void ftm_render_frame(void *data);
+extern void ftm_render_and_settle(void *data);
+extern void ftm_set_attention(void *data);
+extern void ftm_clear_activation(void *data);
+
+enum {
+    WIRE_STATE_MAXIMIZED = 0,
+    WIRE_STATE_MINIMIZED = 1,
+    WIRE_STATE_ACTIVATED = 2,
+    WIRE_STATE_FULLSCREEN = 3,
+    WIRE_STATE_ATTENTION = 4,
+    MAX_RECEIVED_STATES = 8,
+};
+
+static uint32_t received_states[MAX_RECEIVED_STATES];
+static int received_state_count;
+static int received_state_event;
+static int received_state_overflow;
+
+static void clear_received_states(void)
+{
+    received_state_count = 0;
+    received_state_event = 0;
+    received_state_overflow = 0;
+}
+
+static int received_state_matches(uint32_t expected, int present)
+{
+    if (!received_state_event || received_state_overflow)
+        return 0;
+
+    int found = 0;
+    for (int i = 0; i < received_state_count; ++i) {
+        if (received_states[i] > WIRE_STATE_ATTENTION)
+            return 0;
+        for (int j = 0; j < i; ++j) {
+            if (received_states[j] == received_states[i])
+                return 0;
+        }
+        found |= received_states[i] == expected;
+    }
+
+    return found == present;
+}
 
 struct test_case {
     const char *name;
@@ -76,7 +114,7 @@ int test_print_results(struct test_ctx *ctx)
     return failed == 0;
 }
 
-static void handle_pid(void *data, struct treeland_foreign_toplevel_handle_v1 *handle,
+static void handle_pid(void *data, struct treeland_foreign_toplevel_handle_v2 *handle,
                        uint32_t pid)
 {
     (void)data;
@@ -84,7 +122,7 @@ static void handle_pid(void *data, struct treeland_foreign_toplevel_handle_v1 *h
     (void)pid;
 }
 
-static void handle_title(void *data, struct treeland_foreign_toplevel_handle_v1 *handle,
+static void handle_title(void *data, struct treeland_foreign_toplevel_handle_v2 *handle,
                          const char *title)
 {
     (void)data;
@@ -92,7 +130,7 @@ static void handle_title(void *data, struct treeland_foreign_toplevel_handle_v1 
     (void)title;
 }
 
-static void handle_app_id(void *data, struct treeland_foreign_toplevel_handle_v1 *handle,
+static void handle_app_id(void *data, struct treeland_foreign_toplevel_handle_v2 *handle,
                           const char *app_id)
 {
     (void)data;
@@ -100,14 +138,14 @@ static void handle_app_id(void *data, struct treeland_foreign_toplevel_handle_v1
     (void)app_id;
 }
 
-static void handle_identifier(void *data, struct treeland_foreign_toplevel_handle_v1 *handle,
+static void handle_identifier(void *data, struct treeland_foreign_toplevel_handle_v2 *handle,
                               uint32_t identifier)
 {
     (void)handle;
     ((struct test_ctx *)data)->handle_identifier = identifier;
 }
 
-static void handle_output_enter(void *data, struct treeland_foreign_toplevel_handle_v1 *handle,
+static void handle_output_enter(void *data, struct treeland_foreign_toplevel_handle_v2 *handle,
                                 struct wl_output *output)
 {
     (void)data;
@@ -115,7 +153,7 @@ static void handle_output_enter(void *data, struct treeland_foreign_toplevel_han
     (void)output;
 }
 
-static void handle_output_leave(void *data, struct treeland_foreign_toplevel_handle_v1 *handle,
+static void handle_output_leave(void *data, struct treeland_foreign_toplevel_handle_v2 *handle,
                                 struct wl_output *output)
 {
     (void)data;
@@ -123,38 +161,47 @@ static void handle_output_leave(void *data, struct treeland_foreign_toplevel_han
     (void)output;
 }
 
-static void handle_state(void *data, struct treeland_foreign_toplevel_handle_v1 *handle,
+static void handle_state(void *data, struct treeland_foreign_toplevel_handle_v2 *handle,
                          struct wl_array *state)
 {
     (void)data;
     (void)handle;
-    (void)state;
+    clear_received_states();
+    received_state_event = 1;
+    uint32_t *value;
+    wl_array_for_each(value, state) {
+        if (received_state_count == MAX_RECEIVED_STATES) {
+            received_state_overflow = 1;
+            continue;
+        }
+        received_states[received_state_count++] = *value;
+    }
 }
 
-static void handle_done(void *data, struct treeland_foreign_toplevel_handle_v1 *handle)
+static void handle_done(void *data, struct treeland_foreign_toplevel_handle_v2 *handle)
 {
     (void)data;
     (void)handle;
 }
 
-static void handle_closed(void *data, struct treeland_foreign_toplevel_handle_v1 *handle)
+static void handle_closed(void *data, struct treeland_foreign_toplevel_handle_v2 *handle)
 {
     struct test_ctx *ctx = data;
     if (ctx->handle == handle)
         ctx->handle = NULL;
     ++ctx->handle_closed_count;
-    treeland_foreign_toplevel_handle_v1_destroy(handle);
+    treeland_foreign_toplevel_handle_v2_destroy(handle);
 }
 
-static void handle_parent(void *data, struct treeland_foreign_toplevel_handle_v1 *handle,
-                          struct treeland_foreign_toplevel_handle_v1 *parent)
+static void handle_parent(void *data, struct treeland_foreign_toplevel_handle_v2 *handle,
+                          struct treeland_foreign_toplevel_handle_v2 *parent)
 {
     (void)data;
     (void)handle;
     (void)parent;
 }
 
-static const struct treeland_foreign_toplevel_handle_v1_listener handle_listener = {
+static const struct treeland_foreign_toplevel_handle_v2_listener handle_listener = {
     .pid = handle_pid,
     .title = handle_title,
     .app_id = handle_app_id,
@@ -167,40 +214,40 @@ static const struct treeland_foreign_toplevel_handle_v1_listener handle_listener
     .parent = handle_parent,
 };
 
-static void manager_toplevel(void *data, struct treeland_foreign_toplevel_manager_v1 *manager,
-                             struct treeland_foreign_toplevel_handle_v1 *toplevel)
+static void manager_toplevel(void *data, struct treeland_foreign_toplevel_manager_v2 *manager,
+                             struct treeland_foreign_toplevel_handle_v2 *toplevel)
 {
     (void)manager;
     struct test_ctx *ctx = data;
     ctx->handle = toplevel;
     ++ctx->handle_count;
-    treeland_foreign_toplevel_handle_v1_add_listener(toplevel, &handle_listener, ctx);
+    treeland_foreign_toplevel_handle_v2_add_listener(toplevel, &handle_listener, ctx);
 }
 
-static void manager_finished(void *data, struct treeland_foreign_toplevel_manager_v1 *manager)
+static void manager_finished(void *data, struct treeland_foreign_toplevel_manager_v2 *manager)
 {
     (void)manager;
     ((struct test_ctx *)data)->manager_finished_received = 1;
 }
 
-static const struct treeland_foreign_toplevel_manager_v1_listener manager_listener = {
+static const struct treeland_foreign_toplevel_manager_v2_listener manager_listener = {
     .toplevel = manager_toplevel,
     .finished = manager_finished,
 };
 
-static void context_enter(void *data, struct treeland_dock_preview_context_v1 *context)
+static void context_enter(void *data, struct treeland_dock_preview_context_v2 *context)
 {
     (void)context;
     ((struct test_ctx *)data)->context_enter_received = 1;
 }
 
-static void context_leave(void *data, struct treeland_dock_preview_context_v1 *context)
+static void context_leave(void *data, struct treeland_dock_preview_context_v2 *context)
 {
     (void)context;
     ((struct test_ctx *)data)->context_leave_received = 1;
 }
 
-static const struct treeland_dock_preview_context_v1_listener context_listener = {
+static const struct treeland_dock_preview_context_v2_listener context_listener = {
     .enter = context_enter,
     .leave = context_leave,
 };
@@ -211,10 +258,10 @@ static int connect_client(struct test_ctx *ctx, const char *socket_name)
         return 0;
     ctx->display = ctx->connection.display;
     ctx->seat = client_bind(&ctx->connection, "wl_seat", &wl_seat_interface, 1);
-    ctx->manager = client_bind(&ctx->connection, "treeland_foreign_toplevel_manager_v1",
-                                      &treeland_foreign_toplevel_manager_v1_interface, 1);
+    ctx->manager = client_bind(&ctx->connection, "treeland_foreign_toplevel_manager_v2",
+                                      &treeland_foreign_toplevel_manager_v2_interface, 1);
     if (ctx->manager)
-        treeland_foreign_toplevel_manager_v1_add_listener(ctx->manager, &manager_listener, ctx);
+        treeland_foreign_toplevel_manager_v2_add_listener(ctx->manager, &manager_listener, ctx);
     return ctx->seat != NULL && ctx->manager != NULL;
 }
 
@@ -225,33 +272,10 @@ static int read_server_state(struct test_ctx *ctx, struct ftm_server_state *stat
     return invoke_on_server_thread(ftm_read_server_state, state);
 }
 
-static int wait_for_window_state(struct test_ctx *ctx, int maximized, int fullscreen)
+static int settle_geometry_animation(struct test_ctx *ctx)
 {
-    struct timespec deadline, now;
-    if (clock_gettime(CLOCK_MONOTONIC, &deadline) < 0)
-        return 0;
-    deadline.tv_sec += 5;
-    struct ftm_server_state state;
-    do {
-        // 请求只发送一次；这里推进真实帧及 configure/ack/commit，直到最终状态稳定。
-        if (!invoke_on_server_thread(ftm_render_frame, NULL)
-            || wl_display_roundtrip(ctx->display) < 0
-            || !xdg_toplevel_client_ack_latest_configure(&ctx->connection, &ctx->xdg_toplevel)
-            || !read_server_state(ctx, &state))
-            return 0;
-        if (!state.wrapper_animation_running && state.wrapper_maximized == maximized
-            && state.wrapper_fullscreen == fullscreen)
-            return 1;
-        if (clock_gettime(CLOCK_MONOTONIC, &now) < 0)
-            return 0;
-    } while (now.tv_sec < deadline.tv_sec
-             || (now.tv_sec == deadline.tv_sec && now.tv_nsec < deadline.tv_nsec));
-    fprintf(stderr, "window state timed out: maximized=%d fullscreen=%d animation=%d "
-                    "expected=(%d,%d) configure=%u ack=%u\n",
-            state.wrapper_maximized, state.wrapper_fullscreen, state.wrapper_animation_running,
-            maximized, fullscreen, ctx->xdg_toplevel.configure_serial,
-            ctx->xdg_toplevel.acknowledged_configure_serial);
-    return 0;
+    (void)ctx;
+    return invoke_on_server_thread(ftm_render_and_settle, NULL);
 }
 
 static int create_xdg_toplevel(struct test_ctx *ctx)
@@ -264,7 +288,7 @@ static int create_xdg_toplevel(struct test_ctx *ctx)
            && ctx->handle
            && ctx->handle_count == 1
            && ctx->handle_identifier
-           && wait_for_window_state(ctx, 0, 0)
+           && settle_geometry_animation(ctx)
            && read_server_state(ctx, &state)
            && state.wrapper_created
            && state.wrapper_in_workspace;
@@ -274,10 +298,10 @@ static int create_context(struct test_ctx *ctx)
 {
     if (!ctx->xdg_toplevel.surface)
         return 0;
-    ctx->context = treeland_foreign_toplevel_manager_v1_get_dock_preview_context(
+    ctx->context = treeland_foreign_toplevel_manager_v2_get_dock_preview_context(
         ctx->manager, ctx->xdg_toplevel.surface);
     if (ctx->context)
-        treeland_dock_preview_context_v1_add_listener(ctx->context, &context_listener, ctx);
+        treeland_dock_preview_context_v2_add_listener(ctx->context, &context_listener, ctx);
     return ctx->context != NULL;
 }
 
@@ -293,8 +317,8 @@ static int show_preview(struct test_ctx *ctx)
         return 0;
     }
     *slot = ctx->handle_identifier;
-    treeland_dock_preview_context_v1_show(ctx->context, &surfaces, 10, 20,
-                                          TREELAND_DOCK_PREVIEW_CONTEXT_V1_DIRECTION_BOTTOM);
+    treeland_dock_preview_context_v2_show(ctx->context, &surfaces, 10, 20,
+                                          TREELAND_DOCK_PREVIEW_CONTEXT_V2_DIRECTION_BOTTOM);
     wl_array_release(&surfaces);
     if (wl_display_roundtrip(ctx->display) < 0)
         return 0;
@@ -304,7 +328,7 @@ static int show_preview(struct test_ctx *ctx)
     return state.preview_fired
            && state.preview_x == 10
            && state.preview_y == 20
-           && state.preview_direction == TREELAND_DOCK_PREVIEW_CONTEXT_V1_DIRECTION_BOTTOM
+           && state.preview_direction == TREELAND_DOCK_PREVIEW_CONTEXT_V2_DIRECTION_BOTTOM
            && state.preview_surface_count == 1;
 }
 
@@ -319,8 +343,8 @@ static int show_unknown_identifier(struct test_ctx *ctx)
         return 0;
     *slot = 0xDEADBEEFu;
 
-    treeland_dock_preview_context_v1_show(ctx->context, &surfaces, 1, 2,
-                                          TREELAND_DOCK_PREVIEW_CONTEXT_V1_DIRECTION_TOP);
+    treeland_dock_preview_context_v2_show(ctx->context, &surfaces, 1, 2,
+                                          TREELAND_DOCK_PREVIEW_CONTEXT_V2_DIRECTION_TOP);
     wl_array_release(&surfaces);
     if (wl_display_roundtrip(ctx->display) < 0)
         return 0;
@@ -334,8 +358,8 @@ static int show_tooltip(struct test_ctx *ctx)
 {
     if (!ctx->context)
         return 0;
-    treeland_dock_preview_context_v1_show_tooltip(ctx->context, "dock-tooltip", 5, 6,
-                                                  TREELAND_DOCK_PREVIEW_CONTEXT_V1_DIRECTION_TOP);
+    treeland_dock_preview_context_v2_show_tooltip(ctx->context, "dock-tooltip", 5, 6,
+                                                  TREELAND_DOCK_PREVIEW_CONTEXT_V2_DIRECTION_TOP);
     if (wl_display_roundtrip(ctx->display) < 0)
         return 0;
     struct ftm_server_state state;
@@ -345,14 +369,14 @@ static int show_tooltip(struct test_ctx *ctx)
            && strcmp(state.tooltip, "dock-tooltip") == 0
            && state.tooltip_x == 5
            && state.tooltip_y == 6
-           && state.tooltip_direction == TREELAND_DOCK_PREVIEW_CONTEXT_V1_DIRECTION_TOP;
+           && state.tooltip_direction == TREELAND_DOCK_PREVIEW_CONTEXT_V2_DIRECTION_TOP;
 }
 
 static int close_preview(struct test_ctx *ctx)
 {
     if (!ctx->context)
         return 0;
-    treeland_dock_preview_context_v1_close(ctx->context);
+    treeland_dock_preview_context_v2_close(ctx->context);
     if (wl_display_roundtrip(ctx->display) < 0)
         return 0;
     struct ftm_server_state state;
@@ -365,80 +389,134 @@ static int minimize_real_toplevel(struct test_ctx *ctx)
 {
     if (!ctx->handle)
         return 0;
-    treeland_foreign_toplevel_handle_v1_set_minimized(ctx->handle);
+    clear_received_states();
+    treeland_foreign_toplevel_handle_v2_set_minimized(ctx->handle);
     if (wl_display_roundtrip(ctx->display) < 0)
         return 0;
     struct ftm_server_state state;
-    return read_server_state(ctx, &state) && state.wrapper_minimized;
+    return read_server_state(ctx, &state) && state.wrapper_minimized
+           && received_state_matches(WIRE_STATE_MINIMIZED, 1);
 }
 
 static int restore_real_toplevel(struct test_ctx *ctx)
 {
     if (!ctx->handle)
         return 0;
-    treeland_foreign_toplevel_handle_v1_unset_minimized(ctx->handle);
+    clear_received_states();
+    treeland_foreign_toplevel_handle_v2_unset_minimized(ctx->handle);
     if (wl_display_roundtrip(ctx->display) < 0)
         return 0;
     struct ftm_server_state state;
-    return read_server_state(ctx, &state) && !state.wrapper_minimized;
+    return read_server_state(ctx, &state) && !state.wrapper_minimized
+           && received_state_matches(WIRE_STATE_MINIMIZED, 0);
+}
+
+static int render_ack_and_read_server_state(struct test_ctx *ctx, struct ftm_server_state *state)
+{
+    return settle_geometry_animation(ctx)
+           && xdg_toplevel_client_ack_latest_configure(&ctx->connection, &ctx->xdg_toplevel)
+           && settle_geometry_animation(ctx)
+           && read_server_state(ctx, state);
 }
 
 static int maximize_real_toplevel(struct test_ctx *ctx)
 {
     if (!ctx->handle)
         return 0;
-    treeland_foreign_toplevel_handle_v1_set_maximized(ctx->handle);
+    clear_received_states();
+    treeland_foreign_toplevel_handle_v2_set_maximized(ctx->handle);
     if (wl_display_roundtrip(ctx->display) < 0)
         return 0;
-    return wait_for_window_state(ctx, 1, 0);
+    struct ftm_server_state state;
+    return render_ack_and_read_server_state(ctx, &state) && state.wrapper_maximized
+           && received_state_matches(WIRE_STATE_MAXIMIZED, 1);
 }
 
 static int unmaximize_real_toplevel(struct test_ctx *ctx)
 {
     if (!ctx->handle)
         return 0;
-    treeland_foreign_toplevel_handle_v1_unset_maximized(ctx->handle);
+    clear_received_states();
+    treeland_foreign_toplevel_handle_v2_unset_maximized(ctx->handle);
     if (wl_display_roundtrip(ctx->display) < 0)
         return 0;
-    return wait_for_window_state(ctx, 0, 0);
+    struct ftm_server_state state;
+    return render_ack_and_read_server_state(ctx, &state) && !state.wrapper_maximized
+           && received_state_matches(WIRE_STATE_MAXIMIZED, 0);
 }
 
 static int fullscreen_real_toplevel(struct test_ctx *ctx)
 {
     if (!ctx->handle)
         return 0;
-    treeland_foreign_toplevel_handle_v1_set_fullscreen(ctx->handle, NULL);
+    clear_received_states();
+    treeland_foreign_toplevel_handle_v2_set_fullscreen(ctx->handle, NULL);
     if (wl_display_roundtrip(ctx->display) < 0)
         return 0;
-    return wait_for_window_state(ctx, 0, 1);
+    struct ftm_server_state state;
+    return render_ack_and_read_server_state(ctx, &state) && state.wrapper_fullscreen
+           && received_state_matches(WIRE_STATE_FULLSCREEN, 1);
 }
 
 static int unfullscreen_real_toplevel(struct test_ctx *ctx)
 {
     if (!ctx->handle)
         return 0;
-    treeland_foreign_toplevel_handle_v1_unset_fullscreen(ctx->handle);
+    clear_received_states();
+    treeland_foreign_toplevel_handle_v2_unset_fullscreen(ctx->handle);
     if (wl_display_roundtrip(ctx->display) < 0)
         return 0;
-    return wait_for_window_state(ctx, 0, 0);
+    struct ftm_server_state state;
+    return render_ack_and_read_server_state(ctx, &state) && !state.wrapper_fullscreen
+           && received_state_matches(WIRE_STATE_FULLSCREEN, 0);
 }
 
 static int activate_real_toplevel(struct test_ctx *ctx)
 {
     if (!ctx->handle || !ctx->seat)
         return 0;
-    treeland_foreign_toplevel_handle_v1_activate(ctx->handle, ctx->seat);
-    if (wl_display_roundtrip(ctx->display) < 0)
+    /* A restored window can already be active; test a real state transition. */
+    if (!invoke_on_server_thread(ftm_clear_activation, NULL)
+        || wl_display_roundtrip(ctx->display) < 0)
         return 0;
     struct ftm_server_state state;
-    return read_server_state(ctx, &state) && state.wrapper_activated && state.wrapper_focused;
+    if (!read_server_state(ctx, &state) || state.wrapper_activated || state.wrapper_focused)
+        return 0;
+    clear_received_states();
+    treeland_foreign_toplevel_handle_v2_activate(ctx->handle, ctx->seat);
+    if (wl_display_roundtrip(ctx->display) < 0)
+        return 0;
+    return read_server_state(ctx, &state) && state.wrapper_activated && state.wrapper_focused
+           && received_state_matches(WIRE_STATE_ACTIVATED, 1);
 }
 
-static int set_rectangle_changes_icon_geometry(struct test_ctx *ctx)
+static int set_attention(struct test_ctx *ctx, int attention)
+{
+    int request[2] = { attention, 0 };
+    clear_received_states();
+    if (!invoke_on_server_thread(ftm_set_attention, request) || !request[1])
+        return 0;
+    if (wl_display_roundtrip(ctx->display) < 0)
+        return 0;
+    return received_state_matches(WIRE_STATE_MINIMIZED, 1)
+           && received_state_matches(WIRE_STATE_ATTENTION, attention);
+}
+
+static int attention_real_toplevel(struct test_ctx *ctx)
+{
+    if (!ctx->handle)
+        return 0;
+    struct ftm_server_state state;
+    if (!read_server_state(ctx, &state) || !state.wrapper_minimized)
+        return 0;
+    return set_attention(ctx, 1) && set_attention(ctx, 0);
+}
+
+static int set_icon_geometry_changes_icon_geometry(struct test_ctx *ctx)
 {
     if (!ctx->handle || !ctx->xdg_toplevel.surface)
         return 0;
-    treeland_foreign_toplevel_handle_v1_set_rectangle(ctx->handle,
+    treeland_foreign_toplevel_handle_v2_set_icon_geometry(ctx->handle,
                                                        ctx->xdg_toplevel.surface,
                                                        11, 12, 130, 140);
     if (wl_display_roundtrip(ctx->display) < 0)
@@ -453,7 +531,7 @@ static int request_close(struct test_ctx *ctx)
 {
     if (!ctx->handle)
         return 0;
-    treeland_foreign_toplevel_handle_v1_close(ctx->handle);
+    treeland_foreign_toplevel_handle_v2_close(ctx->handle);
     return wl_display_roundtrip(ctx->display) >= 0 && ctx->xdg_toplevel.close_received;
 }
 
@@ -461,7 +539,7 @@ static int destroy_context(struct test_ctx *ctx)
 {
     if (!ctx->context)
         return 0;
-    treeland_dock_preview_context_v1_destroy(ctx->context);
+    treeland_dock_preview_context_v2_destroy(ctx->context);
     ctx->context = NULL;
     return wl_display_roundtrip(ctx->display) >= 0;
 }
@@ -470,10 +548,43 @@ static int stop_manager(struct test_ctx *ctx)
 {
     if (!ctx->manager)
         return 0;
-    treeland_foreign_toplevel_manager_v1_stop(ctx->manager);
+    treeland_foreign_toplevel_manager_v2_stop(ctx->manager);
     if (wl_display_roundtrip(ctx->display) < 0)
         return 0;
     return ctx->manager_finished_received;
+}
+
+static int duplicate_context_rejected(const char *socket_name)
+{
+    struct test_ctx duplicate;
+    test_init(&duplicate);
+    int rejected = 0;
+    if (connect_client(&duplicate, socket_name)
+        && xdg_toplevel_client_create(&duplicate.connection, &duplicate.xdg_toplevel)
+        && wl_display_roundtrip(duplicate.display) >= 0
+        && create_context(&duplicate)
+        && wl_display_roundtrip(duplicate.display) >= 0) {
+        const uint32_t manager_id = wl_proxy_get_id((struct wl_proxy *)duplicate.manager);
+        struct treeland_dock_preview_context_v2 *second =
+            treeland_foreign_toplevel_manager_v2_get_dock_preview_context(
+                duplicate.manager, duplicate.xdg_toplevel.surface);
+        if (second) {
+            const struct wl_interface *interface = NULL;
+            uint32_t object_id = 0;
+            if (wl_display_roundtrip(duplicate.display) < 0
+                && wl_display_get_error(duplicate.display) == EPROTO) {
+                const uint32_t code = wl_display_get_protocol_error(
+                    duplicate.display, &interface, &object_id);
+                /* 07d3368 定义的独立 expected，不能与生产端共用生成枚举。 */
+                rejected = code == 1 && object_id == manager_id
+                           && interface == &treeland_foreign_toplevel_manager_v2_interface;
+            }
+            wl_proxy_destroy((struct wl_proxy *)second);
+        }
+    }
+    test_cleanup(&duplicate);
+    test_destroy(&duplicate);
+    return rejected;
 }
 
 static const struct test_case cases[] = {
@@ -484,24 +595,27 @@ static const struct test_case cases[] = {
     { "context.show_tooltip", show_tooltip },
     { "context.close", close_preview },
     { "handle.minimize_changes_wrapper", minimize_real_toplevel },
+    { "handle.attention_uses_v2_wire_state", attention_real_toplevel },
     { "handle.restore_changes_wrapper", restore_real_toplevel },
     { "handle.maximize_changes_wrapper", maximize_real_toplevel },
     { "handle.unmaximize_changes_wrapper", unmaximize_real_toplevel },
     { "handle.fullscreen_changes_wrapper", fullscreen_real_toplevel },
     { "handle.unfullscreen_changes_wrapper", unfullscreen_real_toplevel },
     { "handle.activate_focuses_wrapper", activate_real_toplevel },
-    { "handle.set_rectangle_changes_icon_geometry", set_rectangle_changes_icon_geometry },
+    { "handle.set_icon_geometry_changes_icon_geometry", set_icon_geometry_changes_icon_geometry },
     { "handle.close_requests_xdg_close", request_close },
     { "context.destroy", destroy_context },
+    { "context.recreate_after_destroy", create_context },
+    { "context.destroy_recreated", destroy_context },
     { "manager.stop", stop_manager },
 };
 
 void test_cleanup(struct test_ctx *ctx)
 {
-    if (ctx->context) treeland_dock_preview_context_v1_destroy(ctx->context);
+    if (ctx->context) treeland_dock_preview_context_v2_destroy(ctx->context);
     xdg_toplevel_client_destroy(&ctx->xdg_toplevel);
-    if (ctx->handle) treeland_foreign_toplevel_handle_v1_destroy(ctx->handle);
-    if (ctx->manager) treeland_foreign_toplevel_manager_v1_destroy(ctx->manager);
+    if (ctx->handle) treeland_foreign_toplevel_handle_v2_destroy(ctx->handle);
+    if (ctx->manager) treeland_foreign_toplevel_manager_v2_destroy(ctx->manager);
     if (ctx->seat) wl_seat_destroy(ctx->seat);
     client_disconnect(&ctx->connection);
 }
@@ -511,7 +625,7 @@ int protocol_test_run(const char *socket_name)
     struct test_ctx ctx;
     test_init(&ctx);
     if (!connect_client(&ctx, socket_name)) {
-        fprintf(stderr, "failed to connect to or bind treeland_foreign_toplevel_manager_v1\n");
+        fprintf(stderr, "failed to connect to or bind treeland_foreign_toplevel_manager_v2\n");
         test_cleanup(&ctx);
         test_destroy(&ctx);
         return 1;
@@ -526,6 +640,9 @@ int protocol_test_run(const char *socket_name)
     }
 
     test_cleanup(&ctx);
+    const int duplicate_result = test_add(&ctx, "context.duplicate_is_protocol_error");
+    if (!duplicate_context_rejected(socket_name))
+        test_fail(&ctx, duplicate_result, "expected manager context_already_exists error 1");
     const int success = test_print_results(&ctx);
     test_destroy(&ctx);
     return success ? 0 : 1;

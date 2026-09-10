@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.25.0)
 
 project(
     DeckCompositor
-    VERSION 0.9.1
+    VERSION 0.10.0
     LANGUAGES CXX C
     DESCRIPTION "Deck Shell Compositor"
 )

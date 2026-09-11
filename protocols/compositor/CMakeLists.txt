@@ -16,6 +16,7 @@ set(DECKCOMPOSITOR_PROTOCOLS_INSTALL_CMAKEDIR
 add_subdirectory(cmake)
 
 set(XML
+    xml/treeland-layer-shell-extension-unstable-v1.xml
     xml/treeland-capture-unstable-v1.xml
     xml/treeland-app-id-resolver-unstable-v2.xml
     xml/treeland-prelaunch-splash-unstable-v2.xml

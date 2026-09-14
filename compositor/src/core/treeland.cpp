@@ -91,7 +91,8 @@ void init()
     connect(qmlEngine, &QQmlEngine::quit, q, &Treeland::quit, Qt::QueuedConnection);
     helper = qmlEngine->singletonInstance<Helper *>("DeckShell.Compositor", "Helper");
     connect(helper, &Helper::requestQuit, q, &Treeland::quit, Qt::QueuedConnection);
-    qputenv("WLR_XWAYLAND", QByteArray(LIBEXEC_DIR) + "/treeland-xwayland");
+    if (qEnvironmentVariableIsEmpty("WLR_XWAYLAND"))
+        qputenv("WLR_XWAYLAND", QByteArray(LIBEXEC_DIR) + "/treeland-xwayland");
     helper->init(q);
 
 #ifndef DISABLE_DDM

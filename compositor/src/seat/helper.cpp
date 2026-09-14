@@ -1715,8 +1715,7 @@ void Helper::onSurfaceWrapperAdded(SurfaceWrapper *wrapper)
             auto wrapper = attached->surfaceWrapper();
             if (attached->noTitlebar()) {
                 wrapper->setNoTitleBar(true);
-                auto layer = qobject_cast<WLayerSurface *>(wrapper->shellSurface());
-                if (!isLaunchpad(layer)) {
+                if (!wrapper->isLaunchpad()) {
                     wrapper->setNoDecoration(false);
                 }
             } else {
@@ -1753,11 +1752,8 @@ void Helper::onSurfaceWrapperAdded(SurfaceWrapper *wrapper)
         connect(attached, &Personalization::cornerRadiusChanged, this, updateCornerRadius);
         updateCornerRadius();
         updateBlur();
-        if (isLayer) {
-            auto layer = qobject_cast<WLayerSurface *>(wrapper->shellSurface());
-            if (isLaunchpad(layer))
-                wrapper->setCoverEnabled(true);
-        }
+        if (wrapper->isLaunchpad())
+            wrapper->setCoverEnabled(true);
     }
 
     if (isXwayland) {
@@ -3497,17 +3493,6 @@ ShowDesktopInterfaceV1::State Helper::showDesktopState() const
 WXdgOutputManager *Helper::xwaylandOutputManager() const
 {
     return m_xwaylandOutputManager;
-}
-
-bool Helper::isLaunchpad(WLayerSurface *surface) const
-{
-    if (!surface) {
-        return false;
-    }
-
-    auto scope = QString(surface->handle()->scope);
-
-    return scope == "dde-shell/launchpad";
 }
 
 DDEShellManagerInterfaceV1 *Helper::ddeShellV1() const

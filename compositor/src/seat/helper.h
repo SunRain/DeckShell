@@ -16,6 +16,7 @@
 #include "modules/wallpaper/wallpapermanagerinterfacev1.h"
 #include "modules/wallpaper/wallpapernotifierinterfacev1.h"
 #include "modules/show-desktop/showdesktopinterfacev1.h"
+#include "modules/xwindow-control/xwindowcontrolinterfacev1.h"
 #include "utils/fpsdisplaymanager.h"
 
 #include "interfaces/multitaskviewinterface.h"
@@ -485,6 +486,7 @@ private:
     WOutputManagerV1 *m_outputManager = nullptr;
     WXdgOutputManager *m_xwaylandOutputManager = nullptr;
     ShowDesktopInterfaceV1 *m_showDesktopInterfaceV1 = nullptr;
+    XWindowControlInterfaceV1 *m_xWindowControlInterfaceV1 = nullptr;
     ShowDesktopInterfaceV1::State m_showDesktop = ShowDesktopInterfaceV1::State::Normal;
     DDEShellManagerInterfaceV1 *m_ddeShellV1 = nullptr;
     VirtualOutputManagerInterfaceV1 *m_virtualOutputInterfaceV1 = nullptr;

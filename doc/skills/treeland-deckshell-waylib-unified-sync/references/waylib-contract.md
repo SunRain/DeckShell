@@ -21,7 +21,9 @@ PRIVATE 依赖、PRIVATE include、测试 target 或 private 实现可变化，�
 
 每次 C commit 后、对应 P commit 前，replay 从相邻 Git 树生成 `waylib-source-contract-audit`。比较非测试核心 target、install/package/PUBLIC/INTERFACE include/export namespace、受保护属性、CMakePresets 和变量依赖；同时记录公共调用与相关 set/option/unset 定义的条件、作用域、顺序、函数调用和 include/add_subdirectory/return 等入口。未改变调用文字不代表执行合同不变。公共头的命名空间宏保留 include、条件与 undef 后展开，无法求值则阻断。工件位于 `commits/<source-sha>/child-source-contract-audit.json`。
 
-任何中间节点漂移都阻断，即使范围末尾会恢复。例如 `Core → BrokenCore → Core` 在第一次变化处停止，parent gitlink 不会指向 BrokenCore。保留 child commit 和 journal；同身份 resume 和 child verifier 必须重算审计并验证工件哈希，不能改 JSON 放行。
+未经精确批准的中间节点漂移都阻断，即使范围末尾会恢复。例如 `Core → BrokenCore → Core` 在第一次变化处停止，parent gitlink 不会指向 BrokenCore。保留 child commit 和 journal；同身份 resume 和 child verifier 必须重算审计并验证工件哈希，不能改 JSON 放行。
+
+公共迁移须有调用者明确授权，并使用 [contract_migration 审批](evidence-schema.md#显式公共合同迁移) 精确绑定来源、前后快照、实际差异和必要本地调用方；不自动移除旧包或变更命名空间。源码和安装分别审批，旧 wrapper-only 批准不能豁免删除/替换。保留的合同、新 API 和候选实际安装包仍完整验收，报告显示批准的真实变化而不是 `drift={}`。
 
 源码预检采用保守规则，不是任意 CMake 求值器：受保护执行上下文改变就阻断；应通过目标适配保留原合同，不能靠说明豁免。仅新增 wrapper 时可精确批准根部 `add_subdirectory(wlroots)` 及 wrapper 新增项，已有上下文变化仍拒绝。已知私有调用的变更不纳入公共门禁。安装后的 public header、namespace、导出属性与真实 consumer 仍须按下述流程验证，不能由静态扫描代替。
 
@@ -130,7 +132,9 @@ meson test -C "$WLROOTS_BUILD" --print-errorlogs
 
 C/P 的 R 模式配置必须是 Ninja、`CMAKE_EXPORT_COMPILE_COMMANDS=ON`；构建证据保存 codemodel/compile_commands/Ninja 命令、实际编译依赖和生成头摘要。wrapper 产物必须同时属于具体消费目标的 codemodel 链接库，以及产生该目标的真实链接命令输入；按完整路径比较，排除 wrapper 自身输出与纯 `add_dependencies`。只放置未使用的生成头或回退系统 wlroots 均不能放行；报告重新读取工件执行同一检查。
 
-新增 wrapper target/安装产物需精确批准，格式见 [证据格式](evidence-schema.md)。只有来自 wrapper 的新增项可被批准，旧核心 target、public header、导出与安装合同仍不可修改。qwlroots 0.19 与来源 wlroots 0.20 的 API 兼容不能由目录映射推定；无法等价适配则阻断，不自动迁移公共 API。
+已独立验收的原生 Meson 包装层使用 CMake `waylib_wlroots_native` 入口定位同目录的 `native/` 构建，不伪装成 CMake 编译目标。记录器额外保存 Meson 目标来源、真实编译数据库与 Ninja 依赖；必须证明库由当前 R 源码编译、生成头确实被 R 及 C/P 使用、具体 C/P 目标链接该库的完整路径。仅构建 native 库、借用另一源码树或系统库仍阻断；此规则同样适用于分段基线，不复用前一节点的 PASS。
+
+新增 wrapper target/安装产物需精确批准，格式见 [证据格式](evidence-schema.md)。wrapper-only 批准只接受 wrapper 新增项，不能修改旧核心 target、public header、导出与安装合同。qwlroots 0.19 与来源 wlroots 0.20 的 API 兼容不能由目录映射推定；需要公共迁移时必须另有上述明确授权和精确审批，不因依赖目录变化自动放行。
 
 当 C 已登记 R 且对应来源树包含 `wlroots/update-from-upstream.sh`，或 C 已保留该脚本时，目标必须继续保留该路径；来源后来删除脚本也不能自动撤销目标保留规则。来源与目标均无该脚本的旧场景不凭空创建文件。脚本必须是 mode 为 `100644` 或 `100755` 的普通 blob，不能是 symlink、目录或 gitlink，并在原脚本内容前加入固定拒绝前缀：
 
@@ -150,7 +154,7 @@ pkg-config 将被查 .pc 的目录置于搜索首位，按包名查询并核验 
 
 快照的每个 pkg-config 项必须包含实际求值的 `Cflags.static`、`Libs.static` 等字段；旧字面快照和依赖其生成的报告必须重建，不能仅补字段或修改摘要。
 
-导出属性通过临时 CMake 工程加载已安装 Config 入口获取；没有 Config 时加载 Targets 入口。读取每个 imported target 的实际属性，不再用正则推测变量展开。`exported_target_properties` 保存 `target -> property -> value`；本次 install root 统一替换为 `<install-root>`，列表顺序、生成器表达式和配置专属属性保留。CMake 配置失败直接返回 `fail`，不降级成文本结果。该探测需要 CMake 3.21+、C/C++ 编译器和被审包的配置依赖，不构建产品。
+导出属性通过临时 CMake 工程加载已安装 Config 入口获取；没有 Config 时加载 Targets 入口。读取每个 imported target 的实际属性，不再用正则推测变量展开。`exported_target_properties` 保存 `target -> property -> value`；本次 install root 统一替换为 `<install-root>`，列表顺序、生成器表达式和配置专属属性保留。CMake 配置失败直接返回 `fail`，不降级成文本结果。该探测随本 skill 使用 CMake 3.27+、C/C++ 编译器和被审包的配置依赖，不构建产品。
 
 ```bash
 python3 "$SKILL_DIR/scripts/waylib_contract_audit.py" \
@@ -164,5 +168,9 @@ python3 "$SKILL_DIR/scripts/waylib_contract_audit.py" \
 缺任一 install root、只构建 candidate、缺 consumer CTest 日志或 log hash 不符时，结果只能是 `fail/blocked`。审计器记录两个 source worktree 的实际 HEAD；最终报告要求它们分别等于 manifest 的 child base/candidate，并独立要求上述 configure/build/CTest 三个 validation ID。合同审计中的 consumer 记录还必须与 validation bundle 的 `waylib-package-consumer` 当前 attempt 一致。
 
 审计器另生成固定写出基线完整 namespace 的编译探针（例如 `::Waylib::Server`），通过候选安装包配置编译；不使用候选 SERVER_NAMESPACE 宏自适应。探针失败、快照绑定不同或源码工件被替换都会阻断。
+
+每个基线公共头分别在独立翻译单元中检查其固定命名空间，完整构建覆盖全部这些单元；不把所有公共头合并编译，避免基线头之间的重复定义干扰命名空间检查，也防止其他头补齐候选中实际缺失的命名空间。
+
+安装命名空间投影使用真实导出属性中的安装树 include 根定位同名协议头；多个有效根仍有歧义时阻断，不按文件内容相同或排序任取其一。仅与命名空间有关的条件及其错误指令进入投影，已剥离条件内的错误指令不能提升到外层；外部头的实际编译约束仍由逐头安装探针验证。
 
 报告还会从两份快照重算合同差异，而非直接相信审计的 `pass`。缺少 `exported_target_properties` 的旧快照必须重新生成；不能只补字段或改 hash。consumer 通过只能证明该 consumer 的使用路径，不能豁免其他公共属性漂移。

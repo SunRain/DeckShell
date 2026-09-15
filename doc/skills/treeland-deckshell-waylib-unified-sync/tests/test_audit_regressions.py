@@ -49,6 +49,33 @@ class AuditRegressionTests(unittest.TestCase):
         broken = '#if UNKNOWN_FEATURE(enabled)\nnamespace Hidden {}\n#endif\n'
         self.assertTrue(namespace_contract({"api.h": broken})["errors"])
 
+    def test_exported_include_root_resolves_generated_protocol_header_copy(self):
+        headers = {
+            "include/wlr/types/api.h": '#include "protocol.h"\nnamespace Native {}\n',
+            "include/protocol.h": "struct protocol_type;\n",
+            "include/wlr/protocol.h": "struct protocol_type;\n",
+        }
+        self.assertTrue(namespace_contract(headers)["errors"])
+        result = namespace_contract(headers, ["include"])
+        self.assertEqual(result["errors"], [])
+        self.assertEqual(result["namespaces"], ["Native"])
+        self.assertTrue(namespace_contract(headers, ["include", "include/wlr"])["errors"])
+
+    def test_namespace_projection_does_not_lift_unrelated_nested_guard_error(self):
+        header = ("#define ENABLE_NAMESPACE 1\n#if ENABLE_NAMESPACE\n"
+                  "#include <external-system-header.h>\n#ifndef EXTERNAL_HEADER_GUARD\n"
+                  '#error "external include ordering is checked by the real compile probe"\n'
+                  "#endif\nnamespace Public {}\n#endif\n")
+        result = namespace_contract({"api.h": header})
+        self.assertEqual(result["errors"], [])
+        self.assertEqual(result["namespaces"], ["Public"])
+
+    def test_namespace_projection_preserves_error_in_its_required_inner_guard(self):
+        header = ("#define ENABLE_NAMESPACE 1\n#if ENABLE_NAMESPACE\n#ifndef MISSING_NAMESPACE_GUARD\n"
+                  '#error "required namespace condition is invalid"\n'
+                  "namespace Public {}\n#endif\n#endif\n")
+        self.assertTrue(namespace_contract({"api.h": header})["errors"])
+
     def test_ctest_contradictory_success_percentage_is_not_pass(self):
         result = _test_result(b"0% tests passed, 0 tests failed out of 3\n", 0)
         self.assertEqual(result["outcome"], "fail")

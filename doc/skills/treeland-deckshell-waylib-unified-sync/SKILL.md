@@ -159,7 +159,11 @@ fi
 
 `adaptation_paths` 按 inventory 顺序覆盖该 lane 的全部目标路径，每项包含 `path`、`kind`、`reason`、内容寻址 `proof` 和 `review_state: approved`。`modified` 表示已有路径发生修改或删除；`materialized` 表示原本不存在的路径被创建；`omitted` 表示该路径不进入实际 diff，但仍须说明取舍并提供已审核的证明。遗漏路径不是一律禁止，但普通 `omitted`/`empty` 证明不能豁免更新脚本的强制保留与拒绝前缀；未说明、未批准、证明缺失或与真实 diff 不符仍阻断。细节见 [证据格式](references/evidence-schema.md)。
 
-decisions 根对象只能包含 `entries`；每个来源 SHA 下仅允许实际拥有的 `wlroots`/`child`/`parent` lane。C 的 `structural_paths` 只可精确声明 `CMakeLists.txt`，并提供逐路径适配证明；新增 wrapper 合同还要 `contract_additions`。不是任意根文件白名单。
+decisions 根对象只能包含 `entries`；每个来源 SHA 下仅允许实际拥有的 `wlroots`/`child`/`parent` lane。默认 C 的 `structural_paths` 只可精确声明 `CMakeLists.txt`，并提供逐路径适配证明；新增 wrapper 合同还要 `contract_additions`。不是任意根文件白名单。
+
+调用者另行明确授权公共合同迁移时，使用 [显式迁移审批](references/evidence-schema.md#显式公共合同迁移)，不能把 `contract_additions` 当成删除或替换旧 API 的授权。`contract_migration` 必须绑定当前来源、同一 refs_doc、相邻源码快照和完整批准差异；只允许 adapted C/P lane。必要的本地包配置、既有 consumer 和 P 测试调用方及现有 `compositor/src/CMakeLists.txt` 运行时安装入口，以及已授权 scanner/协议迁移的 P 根 `CMakeLists.txt`、`qtwaylandscanner/CMakeLists.txt`、`qtwaylandscanner/qtwaylandscanner.cpp`、`protocols/compositor/CMakeLists.txt` 和 `protocols/compositor/xml/treeland-remote-subsurface-unstable-v1.xml`可逐文件声明 `structural_paths`，仍须证明补丁投影；不改 inventory、不放行任意生产路径或通配目录。没有迁移审批的运行保持原有严格行为。
+
+另获调用者明确批准时，既有 `compositor/src/core/qml/PrelaunchSplash.qml` 可作为精确 QML 集成路径，仅修正为已约定的 `WaylibShared.QuickSharedServer 1.0` 导入。仍须绑定具体来源审批和逐路径补丁证明；这不是整个 QML 目录的授权，不创建旧 URI 兼容模块。
 
 ## 5. R→C→P replay
 
@@ -198,7 +202,9 @@ python3 "$SKILL_DIR/scripts/deckshell_verify.py" \
 python3 "$SKILL_DIR/scripts/waylib_traces.py" \
   --source-repo "$SOURCE_REPO" --repo "$CHILD_WT" \
   --base "$CHILD_BASE" --head "$CHILD_CANDIDATE" \
-  --inventory "$ARTIFACT_ROOT/inventory.json" --output "$ARTIFACT_ROOT/waylib-traces.json"
+  --inventory "$ARTIFACT_ROOT/inventory.json" \
+  --evidence "$ARTIFACT_ROOT/waylib-evidence.json" --artifact-root "$ARTIFACT_ROOT" \
+  --output "$ARTIFACT_ROOT/waylib-traces.json"
 
 python3 "$SKILL_DIR/scripts/waylib_verify.py" \
   --source-repo "$SOURCE_REPO" --repo "$CHILD_WT" \
@@ -328,6 +334,8 @@ python3 "$SKILL_DIR/scripts/waylib_contract_audit.py" \
 
 安装审计通过真实 CMake 加载已安装 package，比较导出公共属性；pkg-config 固定本次安装树的 .pc 路径，比较变量展开后的动态/静态参数和依赖。仅归一化安装根路径，保留顺序；查询失败不退回文本扫描，单次 consumer 通过不能豁免漂移。旧字面快照必须重建。
 
+发生已授权公共迁移的分段，安装命令额外传 `--approved-migration` 指向独立安装审批。它精确绑定本段两侧真实安装快照、全部差异、manifest 中有序的源码迁移来源，以及候选全部命名空间头的固定绑定；退休旧头和编译新头都必须明确，不能依赖候选宏自适应。报告保留真实 `drift` 和批准内容，不将迁移伪装成无漂移；构建、consumer、命名空间编译、来源投影和其他门禁均不豁免。
+
 ## 10. 生成报告
 
 ```bash
@@ -382,10 +390,10 @@ closeout 按 R→C→P（R 不适用则 C→P）执行 expected-old CAS。部分
 - child/parent 顺序不满足 journal sequence，或 message/evidence/manifest 来源映射不一致。
 - adapted 缺补丁、实质说明或哈希；empty 缺等价证明；任何 silent skip。
 - `applied` 与来源补丁投影不一致；`adapted` 与获批补丁内容投影不一致，或逐路径取舍缺项、未批准、证明无效。
-- 任一中间 child 的源码合同审计缺失、哈希无效、与 Git 对象不符或显示漂移；不能用最终候选恢复原状抵消。
+- 任一中间 child 的源码合同审计缺失、哈希无效、与 Git 对象不符或显示未经精确批准的漂移；不能用最终候选恢复原状抵消。
 - 协议已触发但未冻结 protocol ref；候选结果被写成“确认对应”。
 - parent 构建前缺少 manifest 绑定的 child materialization，或 nested checkout HEAD/common Git directory/linked 状态/clean 状态不匹配。
-- child base/candidate 安装清单、public header、package config/targets、导出目标公共属性、核心 target、导出 namespace、public namespace、pkg-config 或 consumer 合同漂移。
+- child base/candidate 安装清单、public header、package config/targets、导出目标公共属性、核心 target、导出 namespace、public namespace、pkg-config 出现未经精确批准的漂移，或 consumer 失败。
 - fresh configure/build/CTest/consumer 失败、跳过或缺日志；0 tests 被标成 PASS。
 - replay/closeout 身份漂移、worktree 不 clean、目标 ref 已移动或仍被检出。
 - 来源路径、run-id、refs doc 或 adaptation note 含换行/控制字符，可能破坏结构化追溯格式。
@@ -394,3 +402,9 @@ closeout 按 R→C→P（R 不适用则 C→P）执行 expected-old CAS。部分
 ## 完成定义
 
 每段须来源映射齐全、八类结构化门禁（P/C/R verify、两层 gitlink、protocol advisory、Waylib contract、递归 materialization）通过、必需日志和本段完整报告有效，并完成获准的 closeout。全部冻结关键节点均满足这些条件才可声明整组本地同步完成；普通中间提交不作可构建承诺。R 不适用须由工具核验；隔离 fixture 不代表真实产品验证，远程发布另行授权。
+
+## 同步后的按仓记录
+
+需要把实际同步内容留在 P/C 仓库时，使用 [按仓记录生成](references/repo-records.md) 的 `generate_repo_records.py`，从统一 inventory、manifest、lane evidence、原验证结果及 Git 对象生成本仓总记录和 adapted 详情。不得手工从主题猜适配理由，或将 C/R 的源码适配写成 P 内容。独立初始化单列；普通输入不虚构旧目标，另行授权的历史整理输入须提供完整旧新映射。
+
+此入口只生成固定批次下的 Markdown，重复生成保持相同内容，冲突明确失败；不 replay、不暂存/提交、不改 refs，也不将文档生成称为新产品验收。历史整理、文档提交和工具维护提交仍由各自已授权任务执行。

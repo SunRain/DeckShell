@@ -56,7 +56,9 @@ rename 的 old/new 分别是删除/添加，均判断 owner；copy 的 old 只�
 - gitlink-only：P 只改 C gitlink，或 C 已登记且只改 R gitlink；首次 `.gitmodules` 登记必须 adapted。
 - not-applicable（节点动作）：仅表示该节点没有对应普通内容或 R lane，不冒充 empty、skipped 或成功回放；命令记录的空 R 基线例外见下文。
 
-C 的 overall action 与 `content_action` 分开：首次登记可为 adapted/content=applied；R-only 传播可为 gitlink-only/content=not-applicable。派生 `.gitmodules`/gitlink 由冻结 URL、真实 transition、消息和 diff 精确核验；不把它们混入普通源码的 adaptation_paths。唯一额外普通目标路径是显式审核的 C 根 `CMakeLists.txt`，见 [证据格式](evidence-schema.md)。
+C 的 overall action 与 `content_action` 分开：首次登记可为 adapted/content=applied；R-only 传播可为 gitlink-only/content=not-applicable。派生 `.gitmodules`/gitlink 由冻结 URL、真实 transition、消息和 diff 精确核验；不把它们混入普通源码的 adaptation_paths。默认唯一额外普通目标路径是显式审核的 C 根 `CMakeLists.txt`；另获公共迁移授权时，可通过 `contract_migration` 精确登记必要的本地包配置、consumer 与 P 测试调用方及现有 `compositor/src/CMakeLists.txt` 运行时安装入口，以及已授权 scanner/协议迁移的 P 根 `CMakeLists.txt`、`qtwaylandscanner/CMakeLists.txt`、`qtwaylandscanner/qtwaylandscanner.cpp`、`protocols/compositor/CMakeLists.txt` 和 `protocols/compositor/xml/treeland-remote-subsurface-unstable-v1.xml`，仍须完整逐路径证明，不改变普通 owner，见 [证据格式](evidence-schema.md#显式公共合同迁移)。
+
+另有明确的单文件 QML 授权时，允许将既有 `compositor/src/core/qml/PrelaunchSplash.qml` 的导入修正登记到对应来源的 `contract_migration`。仅映射为既定 `WaylibShared.QuickSharedServer 1.0`，不放行其兄弟文件、不建立旧 URI 兼容层；仍执行完整逐路径投影验证。
 
 ## Journal 与恢复
 

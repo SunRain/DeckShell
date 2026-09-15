@@ -1,0 +1,14 @@
+{
+  "nodes": [
+    {"name": "N1", "kind": "replay", "path": "evidence/release-A"},
+    {"name": "N2", "kind": "initialization", "path": "evidence/native-import/initialization"},
+    {
+      "name": "N3",
+      "kind": "replay",
+      "path": "evidence/release-B",
+      "previous_runs": [
+        {"name": "N3-previous", "kind": "replay", "path": "evidence/release-B-previous"}
+      ]
+    }
+  ]
+}

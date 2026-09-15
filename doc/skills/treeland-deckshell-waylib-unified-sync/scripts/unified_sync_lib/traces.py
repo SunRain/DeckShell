@@ -8,8 +8,9 @@ from pathlib import Path
 from typing import Any, Dict, List, Mapping, Optional, Tuple
 
 from .adaptations import ADAPTATION_KINDS
+from .contract_migration import migration_paths
 from .git_ops import changed_paths
-from .git_ops import commit_changes, resolve_commit, run_git, stable_unique
+from .git_ops import canonical_json_sha256, commit_changes, resolve_commit, run_git, stable_unique
 from .patches import source_metadata
 from .schema import CHILD_ACTIONS, CHILD_ROOTS, LANE_ACTIONS, WLROOTS_ROOT, child_inventory_entries
 
@@ -110,8 +111,25 @@ def _source_identity_errors(
     return errors
 
 
+def _trace_paths(repo, target, source, lane, migration_entries, artifact_root):
+    paths = stable_unique([path for change in commit_changes(repo, target)
+                           for path in changed_paths(change)])
+    extra, errors = [], []
+    if migration_entries is not None:
+        entry = migration_entries.get(target)
+        if not isinstance(entry, dict) or entry.get("source_commit") != source:
+            errors.append("migration trace evidence does not bind the target/source commit")
+        else:
+            extra, more = migration_paths(entry.get("artifacts", {}), artifact_root, source, lane)
+            errors.extend(more)
+    invalid = [path for path in paths if lane == "child" and not _within_child(path) and path not in extra]
+    errors.extend(f"path boundary violation in {target}: {path}" for path in invalid)
+    return paths, errors
+
+
 def _trace_commit(
-    repo: Path, sha: str, source_repo: Optional[Path], lane: str = "child"
+    repo: Path, sha: str, source_repo: Optional[Path], lane: str = "child",
+    migration_entries=None, artifact_root=None,
 ) -> Dict[str, Any]:
     message = str(run_git(repo, "show", "-s", "--format=%B", sha)).rstrip("\n")
     source, errors = _single_match(TRAILER, message, "Treeland-Commit trailer")
@@ -150,11 +168,8 @@ def _trace_commit(
         errors.append("child parent association must be manifest-only exactly once")
     if source_repo is not None and source:
         errors.extend(_source_identity_errors(source_repo, repo, source, sha, message))
-    paths: List[str] = []
-    for change in commit_changes(repo, sha):
-        paths.extend(changed_paths(change))
-    invalid = stable_unique([path for path in paths if lane == "child" and not _within_child(path)])
-    errors.extend(f"path boundary violation in {sha}: {path}" for path in invalid)
+    paths, more = _trace_paths(repo, sha, source, lane, migration_entries, artifact_root)
+    errors.extend(more)
     return {
         "target_commit": sha,
         "source_commit": source,
@@ -196,6 +211,25 @@ def _mapping_errors(
     return errors
 
 
+def _migration_entries(evidence, artifact_root, lane):
+    if (evidence is None) != (artifact_root is None):
+        raise ValueError("migration trace evidence and artifact root must be provided together")
+    if evidence is None:
+        return None
+    if (lane != "child" or not isinstance(evidence, dict)
+            or evidence.get("kind") != "treeland-unified-waylib-evidence"
+            or not isinstance(evidence.get("entries"), list)):
+        raise ValueError("migration trace input must be child-lane evidence")
+    entries = evidence["entries"]
+    if any(not isinstance(entry, dict) or not isinstance(entry.get("target_commit"), str)
+           for entry in entries):
+        raise ValueError("migration trace entries require target commits")
+    result = {entry["target_commit"]: entry for entry in entries}
+    if len(result) != len(entries):
+        raise ValueError("migration trace evidence contains duplicate target commits")
+    return result
+
+
 def build_waylib_traces(
     repo: Path,
     base: str,
@@ -203,13 +237,16 @@ def build_waylib_traces(
     inventory: Mapping[str, Any],
     source_repo: Optional[Path] = None,
     lane: str = "child",
+    evidence: Optional[Mapping[str, Any]] = None,
+    artifact_root: Optional[Path] = None,
 ) -> Dict[str, Any]:
     """Build deterministic child history traces and mapping diagnostics."""
 
     if lane not in {"child", "wlroots"}:
         raise ValueError("unsupported file lane")
     base_sha, head_sha, targets, merges = _target_commits(repo, base, head)
-    entries = [_trace_commit(repo, sha, source_repo, lane) for sha in targets]
+    migration_entries = _migration_entries(evidence, artifact_root, lane)
+    entries = [_trace_commit(repo, sha, source_repo, lane, migration_entries, artifact_root) for sha in targets]
     expected = child_inventory_entries(inventory) if lane == "child" else [item for item in inventory["commits"] if item["wlroots"]["included"]]
     blockers = [reason for entry in entries for reason in entry["blocked_reasons"]]
     blockers.extend(f"target range contains merge commit: {sha}" for sha in merges)
@@ -217,7 +254,7 @@ def build_waylib_traces(
     if source_repo is None:
         blockers.append("source repo is required for child identity verification")
     blockers = stable_unique(blockers)
-    return {
+    result = {
         "schema_version": 2,
         "kind": f"treeland-unified-{'waylib' if lane == 'child' else 'wlroots'}-traces",
         "target_range": {"base": base_sha, "head": head_sha},
@@ -227,3 +264,6 @@ def build_waylib_traces(
         "blocked_reasons": blockers,
         "outcome": "blocked" if blockers else "pass",
     }
+    if evidence is not None:
+        result["migration_evidence_sha256"] = canonical_json_sha256(evidence)
+    return result

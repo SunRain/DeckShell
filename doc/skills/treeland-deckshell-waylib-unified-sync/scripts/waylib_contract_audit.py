@@ -32,7 +32,9 @@ def parser() -> argparse.ArgumentParser:
     result.add_argument("--consumer", required=True, type=Path)
     result.add_argument("--artifact-root", required=True, type=Path)
     result.add_argument("--output", required=True, type=Path)
-    result.add_argument("--approved-additions", type=Path, help="逐项批准的新 wrapper 安装合同，不可修改既有合同")
+    approvals = result.add_mutually_exclusive_group()
+    approvals.add_argument("--approved-additions", type=Path, help="逐项批准的新 wrapper 安装合同，不可修改既有合同")
+    approvals.add_argument("--approved-migration", type=Path, help="绑定真实安装快照和头/命名空间的显式公共迁移审批")
     return result
 
 
@@ -52,10 +54,12 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         before = build_install_snapshot(args.before, source_before)
         after = build_install_snapshot(args.after, source_after)
         consumer = read_json(args.consumer)
-        probe = run_namespace_probe(before, after, args.artifact_root)
+        migration = read_json(args.approved_migration) if args.approved_migration else None
+        probe = run_namespace_probe(before, after, args.artifact_root, migration)
         result = compare_contract_snapshots(
             before, after, consumer, args.artifact_root, probe,
             read_json(args.approved_additions) if args.approved_additions else None,
+            migration,
         )
         result["install_roots"] = {
             "before": str(args.before.resolve()),

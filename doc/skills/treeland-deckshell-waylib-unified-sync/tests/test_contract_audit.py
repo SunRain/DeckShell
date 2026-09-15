@@ -97,6 +97,31 @@ class ContractAuditTests(unittest.TestCase):
         self.assertEqual(result["outcome"], "pass")
         self.assertEqual(result["drift"], {})
 
+    def test_namespace_probe_compiles_each_header_without_unity_include_collisions(self) -> None:
+        for root in (self.before, self.after):
+            self._write(root, "include/waylib/seat.h",
+                        '#include "server.h"\nnamespace Seat { class API {}; }\n')
+
+        result = self.compare()
+
+        self.assertEqual(result["outcome"], "pass", result["blocked_reasons"])
+        self.assertEqual(result["drift"], {})
+
+    def test_namespace_probe_does_not_borrow_a_namespace_from_another_header(self) -> None:
+        for root in (self.before, self.after):
+            self._write(root, "include/waylib/a_provider.h",
+                        "namespace HeaderLocal { class Provider {}; }\n")
+        self._write(self.before, "include/waylib/z_client.h",
+                    "namespace HeaderLocal { class Client {}; }\n")
+        self._write(self.after, "include/waylib/z_client.h", "class Client {};\n")
+        before = build_install_snapshot(self.before)
+        after = build_install_snapshot(self.after)
+        self.assertEqual(before["public_namespaces"], after["public_namespaces"])
+
+        probe = run_namespace_probe(before, after, self.artifacts)
+
+        self.assertEqual(probe["outcome"], "fail")
+
     def test_blocks_header_config_target_namespace_and_pkgconfig_drift(self) -> None:
         (self.after / "include/waylib/server.h").rename(
             self.after / "include/waylib/server-v2.h"

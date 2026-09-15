@@ -9,6 +9,7 @@ from typing import Any, List, Mapping, Sequence
 from .artifacts import artifact_errors, read_verified_artifact
 from .build_commands import full_build_command_errors
 from .contracts import compare_contract_snapshots
+from .contract_migration import read_migration
 from .ctest_results import ctest_evidence_errors, discovery_errors
 from .validation_dependencies import dependency_binding_errors
 from .native_validation import BASE_NATIVE_IDS, NATIVE_IDS, native_absence_errors, native_evidence_errors, native_path_errors
@@ -222,11 +223,38 @@ def _snapshot_binding_errors(
     if len(snapshots) == 2:
         expected = compare_contract_snapshots(
             snapshots["before"], snapshots["after"], audit.get("consumer"), artifact_root,
-            audit.get("namespace_probe"), audit.get("approved_additions"),
+            audit.get("namespace_probe"), audit.get("approved_additions"), audit.get("approved_migration"),
         )
         errors.extend(expected["blocked_reasons"])
         if audit.get("drift") != expected["drift"]:
             errors.append("contract drift differs from the recorded snapshots")
+    return errors
+
+
+def _migration_binding_errors(audit, manifest, root):
+    errors = []
+    sources = []
+    identity = manifest.get("identity")
+    refs_doc = identity.get("refs_doc") if isinstance(identity, dict) else None
+    for entry in manifest.get("entries", []):
+        if not isinstance(entry, dict) or not isinstance(entry.get("child"), dict):
+            errors.append("public migration binding requires valid manifest child entries")
+            continue
+        child = entry.get("child", {})
+        if "contract_migration" not in child:
+            continue
+        source = entry.get("source_commit")
+        approval, more = read_migration(child, root, source)
+        errors.extend(more)
+        if approval and approval.get("refs_doc") != refs_doc:
+            errors.append("source contract migration references a different plan")
+        sources.append(source)
+    installation = audit.get("approved_migration")
+    if sources or installation is not None:
+        if not isinstance(installation, dict) or installation.get("source_commits") != sources:
+            errors.append("installation migration differs from the ordered source migration approvals")
+        elif installation.get("refs_doc") != refs_doc:
+            errors.append("installation migration references a different plan")
     return errors
 
 
@@ -257,5 +285,6 @@ def contract_binding_errors(
     source_roots = audit.get("source_roots")
     if not isinstance(source_roots, dict) or source_roots.get("after") != identity.get("child_worktree"):
         errors.append("contract audit candidate source root differs from the child worktree")
+    errors.extend(_migration_binding_errors(audit, manifest, artifact_root))
     errors.extend(_snapshot_binding_errors(audit, artifact_root))
     return errors

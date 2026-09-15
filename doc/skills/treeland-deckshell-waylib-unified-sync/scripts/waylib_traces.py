@@ -8,7 +8,7 @@ import sys
 from pathlib import Path
 from typing import Optional, Sequence
 
-from unified_sync_lib.git_ops import atomic_write_json, canonical_repo
+from unified_sync_lib.git_ops import atomic_write_json, canonical_repo, read_json
 from unified_sync_lib.schema import load_inventory
 from unified_sync_lib.traces import build_waylib_traces
 
@@ -23,6 +23,8 @@ def parser() -> argparse.ArgumentParser:
     result.add_argument("--head", required=True, help="目标范围上界，包含")
     result.add_argument("--inventory", required=True, type=Path, help="统一 inventory JSON")
     result.add_argument("--output", required=True, type=Path, help="输出 traces JSON")
+    result.add_argument("--evidence", type=Path, help="含显式公共迁移审批的 child evidence")
+    result.add_argument("--artifact-root", type=Path, help="迁移工件根目录，与 --evidence 成对提供")
     return result
 
 
@@ -39,6 +41,8 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
             args.head,
             inventory,
             canonical_repo(args.source_repo),
+            evidence=read_json(args.evidence) if args.evidence else None,
+            artifact_root=args.artifact_root,
         )
     except (OSError, ValueError, RuntimeError) as error:
         result = {

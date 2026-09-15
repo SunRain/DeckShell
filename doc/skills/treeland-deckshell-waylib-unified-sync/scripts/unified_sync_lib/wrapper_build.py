@@ -189,6 +189,7 @@ def record_wrapper_build(command, cwd: Path, manifest: Mapping[str, Any], root: 
     """构建完成后保存编译数据库、codemodel 与 Ninja 实际命令。"""
 
     from .validation_paths import _resolved_option
+    from .native_wrapper import record_native_wrapper
     build = _resolved_option({"command": command, "cwd": str(cwd)}, "--build")
     if build is None:
         raise ValueError("wrapper build requires a CMake --build directory")
@@ -197,20 +198,26 @@ def record_wrapper_build(command, cwd: Path, manifest: Mapping[str, Any], root: 
     commands = json.loads((build / "compile_commands.json").read_text(encoding="utf-8"))
     links, raw_dependencies = _ninja_output(build, "commands"), _ninja_output(build, "deps")
     dependencies = _ninja_dependencies(raw_dependencies.decode("utf-8"), build)
-    errors = _wrapper_errors(model, commands, links.decode("utf-8"), child, build, dependencies)
+    native = record_native_wrapper(model, links.decode("utf-8"), dependencies, child, build, root, name)
+    errors = native["blocked_reasons"] if native is not None else _wrapper_errors(
+        model, commands, links.decode("utf-8"), child, build, dependencies)
     records = {key: write_artifact(root, f"wrapper/{name}-{key}.json", (json.dumps(value, sort_keys=True) + "\n").encode())
                for key, value in (("codemodel", model), ("compile_commands", commands))}
     records["link_commands"] = write_artifact(root, f"wrapper/{name}-commands.log", links)
     records["compiler_dependencies"] = write_artifact(root, f"wrapper/{name}-dependencies.log", raw_dependencies)
-    return {"manifest_sha256": canonical_json_sha256(manifest), "child": str(child), "build": str(build),
-            "generated_headers": _header_digests(commands, dependencies, build, child),
-            "artifacts": records, "blocked_reasons": errors, "outcome": "blocked" if errors else "pass"}
+    result = {"manifest_sha256": canonical_json_sha256(manifest), "child": str(child), "build": str(build),
+              "generated_headers": native["generated_headers"] if native is not None else _header_digests(commands, dependencies, build, child),
+              "artifacts": records, "blocked_reasons": errors, "outcome": "blocked" if errors else "pass"}
+    if native is not None:
+        result["native_meson"] = native
+    return result
 
 
 def wrapper_build_errors(entry: Mapping[str, Any], manifest: Mapping[str, Any], root: Path):
     """报告端重读原始构建证据，验证候选 R 与顶层构建的实际绑定。"""
 
     from .validation_paths import _resolved_option
+    from .native_wrapper import native_wrapper_errors
     record = entry.get("wrapper_build")
     if not isinstance(record, dict):
         return [f"wrapper build evidence is missing: {entry.get('id')}"]
@@ -229,8 +236,13 @@ def wrapper_build_errors(entry: Mapping[str, Any], manifest: Mapping[str, Any], 
             values[key] = raw.decode("utf-8") if key in {"link_commands", "compiler_dependencies"} else json.loads(raw.decode("utf-8"))
     if len(values) == 4:
         dependencies = _ninja_dependencies(values["compiler_dependencies"], build)
-        errors.extend(_wrapper_errors(values["codemodel"], values["compile_commands"], values["link_commands"], child, build, dependencies))
-        if record.get("generated_headers") != _header_digests(values["compile_commands"], dependencies, build, child):
+        if "native_meson" in record:
+            findings, headers = native_wrapper_errors(record["native_meson"], values["codemodel"], values["link_commands"], dependencies, child, build, root)
+            errors.extend(findings)
+        else:
+            errors.extend(_wrapper_errors(values["codemodel"], values["compile_commands"], values["link_commands"], child, build, dependencies))
+            headers = _header_digests(values["compile_commands"], dependencies, build, child)
+        if record.get("generated_headers") != headers:
             errors.append("wrapper generated header digests differ from actual compiler dependencies")
     if record.get("outcome") != "pass" or record.get("blocked_reasons") != []:
         errors.append("wrapper build did not pass")

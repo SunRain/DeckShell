@@ -9,6 +9,7 @@ from typing import Any, Dict, List, Mapping, Optional
 from .adaptations import adaptation_semantic_errors, lane_target_paths
 from .artifacts import artifact_errors, read_verified_artifact
 from .contracts import source_contract_audit_errors
+from .contract_migration import migration_paths, read_migration
 from .git_ops import canonical_json_sha256, resolve_commit, stable_unique
 from .patches import commit_diff, source_patch
 from .wlroots import nested_transition, updater_guard_errors, wlroots_source_audit
@@ -49,6 +50,49 @@ def _child_contract_errors(
     return source_contract_audit_errors(repo, f"{target}^", target, audit)
 
 
+def _contract_approval_errors(artifacts, root, source):
+    record = artifacts.get("source_contract_audit")
+    errors = artifact_errors(record, root, "child source contract audit")
+    if errors:
+        return errors
+    try:
+        _, raw = read_verified_artifact(record, root, "child source contract audit")
+        audit = json.loads(raw.decode("utf-8"))
+        if not isinstance(audit, dict):
+            return ["child source contract audit must be an object"]
+        approval = audit.get("approved_additions")
+        if approval is not None:
+            errors.extend(artifact_errors(artifacts.get("contract_additions"), root, "contract additions"))
+            if not errors:
+                _, data = read_verified_artifact(artifacts["contract_additions"], root, "contract additions")
+                if json.loads(data.decode("utf-8")) != approval:
+                    errors.append("contract additions differ from the approved artifact")
+        migration, more = read_migration(artifacts, root, source)
+        errors.extend(more)
+        if migration != audit.get("approved_migration"):
+            errors.append("contract migration differs from the approved artifact")
+    except (UnicodeDecodeError, ValueError) as error:
+        errors.append(f"invalid contract approval JSON: {error}")
+    return errors
+
+
+def _structural_paths(entry, root, lane):
+    extra = entry.get("structural_paths", [])
+    action = entry.get("content_action", entry.get("action"))
+    artifacts = entry.get("artifacts", {})
+    if not isinstance(artifacts, dict):
+        return [], ["entry artifacts must be an object"]
+    if "contract_migration" in artifacts:
+        approved, errors = migration_paths(artifacts, root, entry.get("source_commit"), lane)
+        if lane != "child" or action != "adapted" or extra != approved:
+            errors.append("child structural paths differ from approved public migration")
+        return (approved if not errors else []), errors
+    if extra and (lane != "child" or entry.get("nested_gitlink") is None
+                  or extra != ["CMakeLists.txt"] or action != "adapted"):
+        return [], ["unauthorized child structural paths"]
+    return extra if isinstance(extra, list) else [], []
+
+
 def _entry_artifact_errors(entry, expected, source_repo, target_repo, root, lane="child"):
     errors: List[str] = []
     action = entry.get("content_action", entry.get("action"))
@@ -64,17 +108,7 @@ def _entry_artifact_errors(entry, expected, source_repo, target_repo, root, lane
         if lane == "child":
             errors.extend(updater_guard_errors(source_repo, source_sha, target_repo, target_sha, f"{target_sha}^"))
             errors.extend(_child_contract_errors(artifacts.get("source_contract_audit"), root, target_repo, target_sha))
-            audit_record = artifacts.get("source_contract_audit")
-            if not artifact_errors(audit_record, root, "audit"):
-                _, raw = read_verified_artifact(audit_record, root, "audit")
-                audit = json.loads(raw.decode("utf-8"))
-                approval = audit.get("approved_additions")
-                if approval is not None:
-                    errors.extend(artifact_errors(artifacts.get("contract_additions"), root, "contract additions"))
-                    if not artifact_errors(artifacts.get("contract_additions"), root, "contract additions"):
-                        _, raw_approval = read_verified_artifact(artifacts["contract_additions"], root, "contract additions")
-                        if json.loads(raw_approval.decode("utf-8")) != approval:
-                            errors.append("contract additions differ from the approved artifact")
+            errors.extend(_contract_approval_errors(artifacts, root, source_sha))
         else:
             records = {**artifacts, "equivalence_proof": entry.get("equivalence_proof")}
             audit = wlroots_source_audit(source_repo, target_repo, expected, target_sha, action, entry.get("adaptation_paths", []), records, root)
@@ -88,8 +122,9 @@ def _entry_artifact_errors(entry, expected, source_repo, target_repo, root, lane
         if action == "applied":
             errors.extend(content_projection_errors(target_repo, target_sha, lane_target_paths(expected, lane), [(patch, None)], f"{lane} {source_sha}"))
         if action == "adapted" and lane == "child":
-            structural = entry.get("structural_paths", [])
-            paths = lane_target_paths(expected, lane) + (structural if structural == ["CMakeLists.txt"] else [])
+            structural, more = _structural_paths(entry, root, lane)
+            errors.extend(more)
+            paths = lane_target_paths(expected, lane) + structural
             errors.extend(adapted_content_projection_errors(target_repo, target_sha, paths, artifacts.get("adaptation_patch"), root, f"{lane} {source_sha}"))
     if action == "empty":
         errors.extend(artifact_errors(entry.get("equivalence_proof"), root, "equivalence_proof"))
@@ -140,11 +175,9 @@ def _entry_semantic_errors(entry, expected, trace, repo, artifact_root, lane="ch
     nested = entry.get("nested_gitlink")
     derived, nested_errors = _derived_child_paths(entry, trace, repo, target, lane)
     errors.extend(nested_errors)
-    extra = entry.get("structural_paths", [])
-    if extra and (lane != "child" or nested is None or extra != ["CMakeLists.txt"] or content_action != "adapted"):
-        errors.append("unauthorized child structural paths")
-        extra = []
-    paths = lane_target_paths(expected, lane) + (extra if isinstance(extra, list) else [])
+    extra, more = _structural_paths(entry, artifact_root, lane)
+    errors.extend(more)
+    paths = lane_target_paths(expected, lane) + extra
     content = actual - derived
     unexpected = sorted(content - set(paths))
     errors.extend(f"{lane} path expansion for {source}: {path}" for path in unexpected)
@@ -258,7 +291,9 @@ def verify_waylib_sync(
     blockers.extend(_trace_shape_errors(traces, lane))
     if source_repo is not None:
         from .traces import build_waylib_traces
-        if traces != build_waylib_traces(repo, base_sha, head_sha, inventory, source_repo, lane):
+        migration_input = ({"evidence": evidence, "artifact_root": artifact_root}
+                           if "migration_evidence_sha256" in traces else {})
+        if traces != build_waylib_traces(repo, base_sha, head_sha, inventory, source_repo, lane, **migration_input):
             blockers.append("traces differ from immutable Git history")
     if source_repo is None:
         blockers.append("source repo is required for source-patch verification")

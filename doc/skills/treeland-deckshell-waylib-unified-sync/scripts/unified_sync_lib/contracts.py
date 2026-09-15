@@ -1,4 +1,4 @@
-"""Installed Waylib package contract snapshot and comparison."""
+"""Waylib 安装合同快照与比较；要求 Python 3.9+。"""
 
 from __future__ import annotations
 
@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Mapping, Optional, Sequence
 
 from .artifacts import artifact_errors
+from .contract_migration import migration_contract_errors
 from .ctest_results import ctest_evidence_errors, discovery_errors
 from .namespace_contract import namespace_contract
 from .namespace_probe import namespace_probe_errors
@@ -72,12 +73,29 @@ def _package_cmake(relative: Path) -> bool:
     )
 
 
+def _namespace_include_roots(properties: Mapping[str, Any]) -> List[str]:
+    """从真实导出属性提取安装树内的公共 include 根，不猜测同名头的搜索顺序。"""
+
+    roots = set()
+    for target in properties.values():
+        for field in ("INTERFACE_INCLUDE_DIRECTORIES", "INTERFACE_SYSTEM_INCLUDE_DIRECTORIES"):
+            for directory in target.get(field, "").split(";"):
+                if directory == "<install-root>":
+                    roots.add(".")
+                elif directory.startswith("<install-root>/"):
+                    roots.add(directory.removeprefix("<install-root>/"))
+    return sorted(roots)
+
+
 def _snapshot_payload(root: Path, files: Sequence[Path]) -> Dict[str, Any]:
     relatives = [path.relative_to(root) for path in files]
     headers = [path for path in relatives if _is_public_header(path)]
     cmake_files = [path for path in relatives if _package_cmake(path)]
     properties = installed_target_properties(root, cmake_files)
-    namespace_data = namespace_contract({relative.as_posix(): _read_text(root / relative) for relative in headers})
+    namespace_data = namespace_contract(
+        {relative.as_posix(): _read_text(root / relative) for relative in headers},
+        _namespace_include_roots(properties),
+    )
     if namespace_data["errors"]:
         raise ValueError("; ".join(namespace_data["errors"]))
     exported = sorted(properties)
@@ -147,6 +165,7 @@ def source_contract_drift(
 
 def build_source_contract_audit(
     repo: Path, before: str, after: str, approved_additions: Any = None,
+    approved_migration: Any = None,
 ) -> Dict[str, Any]:
     """Compare source CMake contracts for one adjacent child commit transition."""
 
@@ -170,7 +189,17 @@ def build_source_contract_audit(
             blockers.append("wrapper approval cannot relax existing Waylib contracts")
         else:
             blockers = [value for value in blockers if not value.startswith("source contract drift:")]
-    return {
+    if approved_migration is not None:
+        errors = migration_contract_errors(
+            approved_migration, canonical_json_sha256(before_snapshot),
+            canonical_json_sha256(after_snapshot), drift, "source",
+        )
+        if approved_additions is not None:
+            errors.append("wrapper additions and public migration approvals are mutually exclusive")
+        blockers.extend(errors)
+        if not errors:
+            blockers = [value for value in blockers if not value.startswith("source contract drift:")]
+    result = {
         "schema_version": 2,
         "kind": "waylib-source-contract-audit",
         "before_commit": before_commit,
@@ -184,6 +213,9 @@ def build_source_contract_audit(
         "blocked_reasons": blockers,
         "outcome": "blocked" if blockers else "pass",
     }
+    if approved_migration is not None:
+        result["approved_migration"] = approved_migration
+    return result
 
 
 def source_contract_audit_errors(
@@ -193,7 +225,9 @@ def source_contract_audit_errors(
 
     if not isinstance(audit, dict):
         return ["child source contract audit is missing"]
-    expected = build_source_contract_audit(repo, before, after, audit.get("approved_additions"))
+    expected = build_source_contract_audit(
+        repo, before, after, audit.get("approved_additions"), audit.get("approved_migration")
+    )
     if audit != expected:
         return ["child source contract audit differs from Git objects"]
     if expected["outcome"] != "pass":
@@ -295,6 +329,7 @@ def compare_contract_snapshots(
     artifact_root: Path,
     namespace_probe: Any = None,
     approved_additions: Any = None,
+    approved_migration: Any = None,
 ) -> Dict[str, Any]:
     """Compare package contracts and require a content-addressed consumer run."""
 
@@ -303,15 +338,25 @@ def compare_contract_snapshots(
     drift = _contract_drift(before, after)
     blockers.extend(f"install contract drift: {field}" for field in drift)
     blockers.extend(_consumer_errors(consumer, artifact_root))
-    blockers.extend(namespace_probe_errors(namespace_probe, before, after, artifact_root))
+    blockers.extend(namespace_probe_errors(namespace_probe, before, after, artifact_root, approved_migration))
     if approved_additions is not None:
         from .wrapper_contract import installed_addition_errors
         errors = installed_addition_errors(before, after, drift, approved_additions)
         blockers.extend(errors)
         if not errors:
             blockers = [reason for reason in blockers if not reason.startswith("install contract drift:")]
+    if approved_migration is not None:
+        errors = migration_contract_errors(
+            approved_migration, before.get("snapshot_sha256"), after.get("snapshot_sha256"),
+            drift, "installation",
+        )
+        if approved_additions is not None:
+            errors.append("wrapper additions and public migration approvals are mutually exclusive")
+        blockers.extend(errors)
+        if not errors:
+            blockers = [reason for reason in blockers if not reason.startswith("install contract drift:")]
     blockers = stable_unique(blockers)
-    return {
+    result = {
         "schema_version": 2,
         "kind": "waylib-install-contract-audit",
         "before_snapshot_sha256": before.get("snapshot_sha256"),
@@ -323,3 +368,6 @@ def compare_contract_snapshots(
         "blocked_reasons": blockers,
         "outcome": "blocked" if blockers else "pass",
     }
+    if approved_migration is not None:
+        result["approved_migration"] = approved_migration
+    return result

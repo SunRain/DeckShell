@@ -81,12 +81,19 @@ artifact_root: <持久且位于所有 worktree 外的目录>
 | `validation_record.py` | 无 shell 执行验证；必需 CMake build 只接受默认完整构建；经 Git 证明的空 R 基线记录为不适用 |
 | `artifact_record.py` | 为 adapted/empty 决策复制并哈希工件 |
 | `generate_sync_report.py` | 仅从真实 JSON 证据生成当前分段终点报告，不声称覆盖其他 tag |
+| `generate_repo_records.py` | 从有序节点原证据、实际 Git 对象及可选旧新映射生成 P/C 各自的批次总记录和 adapted 详情，不执行同步或 Git 写操作 |
+
+## 同步记录留存
+
+同步内容提交固定后，可以独立生成面向仓库维护者的中文记录。P 仅展开 P 内容和依赖传播，C 展开 C 内容并单列独立 R 依赖；dual 通过同一 Treeland SHA 关联。N2 类独立初始化读取其专有报告和结构证明，不伪造普通 replay。原节点失败、未验证与 `NO_TESTS` 均保留，记录不能替代节点验收。
+
+调用参数、节点输入、可选历史映射及输出保护见 [按仓记录生成](references/repo-records.md)，输入示例见 [repo-records.example.json](examples/repo-records.example.json)。普通同步省略 `--history-map`；经另行授权重写历史后才提供完整旧新对应。输出只进入 P `doc/treeland-sync/<batch>/` 和 C `docs/treeland-sync/<batch>/`；任何已有内容冲突明确失败，不覆盖旧文档。
 
 ## 运行要求
 
-- Python 3.8+；仅使用标准库。
+- Python 3.9+；仅使用标准库。
 - Git 支持 linked worktree、`update-index --cacheinfo` 和 `update-ref <new> <old>`。
-- 安装合同审计及测试需要 CMake 3.21+、C/C++20 编译器、CTest、Ninja、Meson、pkg-config 及被审 package 的配置依赖；失败不能退回文本扫描或空属性快照。
+- 安装合同审计及测试需要 CMake 3.27+、C/C++20 编译器、CTest、Ninja、Meson、pkg-config 及被审 package 的配置依赖；失败不能退回文本扫描或空属性快照。
 - 产品验证还需要 Qt/Wayland 依赖；工具的隔离三仓 fixture 不替代真实产品验证。
 - replay 不负责解决内容冲突；冲突会写 journal 并阻断。人工适配需形成目标相对补丁和内容寻址记录后，用新运行重开。
 

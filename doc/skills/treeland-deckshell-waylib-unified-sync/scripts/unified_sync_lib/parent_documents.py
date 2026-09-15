@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any, List, Mapping
 
 from .artifacts import artifact_errors, read_verified_artifact
+from .contract_migration import migration_paths
 from .git_ops import canonical_json_sha256
 from .patches import commit_diff, source_patch
 from .projections import adapted_content_projection_errors, content_projection_errors
@@ -105,8 +106,10 @@ def parent_evidence_content_errors(
             )
         )
     if parent.get("action") == "adapted" and is_full_sha(target):
+        extra, more = migration_paths(artifacts, artifact_root, source, "parent")
+        errors.extend(more)
         errors.extend(adapted_content_projection_errors(
-            parent_repo, str(target), item["deckshell"]["target_paths"],
+            parent_repo, str(target), item["deckshell"]["target_paths"] + extra,
             artifacts.get("adaptation_patch"), artifact_root, f"parent {source}",
         ))
     return errors

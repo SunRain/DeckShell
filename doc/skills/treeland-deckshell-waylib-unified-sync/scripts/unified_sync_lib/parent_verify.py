@@ -8,6 +8,7 @@ from typing import Any, Dict, List, Mapping, Sequence, Tuple
 
 from .adaptations import adaptation_semantic_errors, lane_target_paths
 from .artifacts import artifact_errors
+from .contract_migration import migration_paths
 from .git_ops import changed_paths
 from .git_ops import (
     canonical_json_sha256,
@@ -168,12 +169,13 @@ def _author_errors(
 
 
 def _action_path_errors(
-    item: Mapping[str, Any], manifest_entry: Mapping[str, Any], actual: Sequence[str]
+    item: Mapping[str, Any], manifest_entry: Mapping[str, Any], actual: Sequence[str],
+    structural_paths: Sequence[str] = (),
 ) -> List[str]:
     source = item["source_commit"]
     action = manifest_entry.get("parent", {}).get("action")
     classification = item["classification"]
-    allowed_content = set(item["deckshell"]["target_paths"])
+    allowed_content = set(item["deckshell"]["target_paths"]) | set(structural_paths)
     allowed = set(allowed_content)
     if classification in CHILD_CLASSIFICATIONS:
         allowed.add(GITLINK_PATH)
@@ -196,17 +198,10 @@ def _action_path_errors(
     return errors
 
 
-def _evidence_errors(
-    source_repo: Path,
-    parent_repo: Path,
-    item: Mapping[str, Any],
-    manifest_entry: Mapping[str, Any],
-    evidence: Mapping[str, Any],
-    artifact_root: Path,
-) -> List[str]:
+def _evidence_identity_errors(item, manifest_entry, evidence):
     source = item["source_commit"]
     parent = manifest_entry.get("parent", {})
-    errors: List[str] = []
+    errors = []
     expected = (source, parent.get("commit"), item["classification"], parent.get("action"))
     actual = (
         evidence.get("source_commit"), evidence.get("target_commit"),
@@ -218,9 +213,28 @@ def _evidence_errors(
         errors.append(f"parent evidence drop paths mismatch for {source}")
     if evidence.get("target_paths") != item["deckshell"]["target_paths"]:
         errors.append(f"parent evidence target paths mismatch for {source}")
+    return errors
+
+
+def _evidence_errors(
+    source_repo: Path,
+    parent_repo: Path,
+    item: Mapping[str, Any],
+    manifest_entry: Mapping[str, Any],
+    evidence: Mapping[str, Any],
+    artifact_root: Path,
+) -> List[str]:
+    source = item["source_commit"]
+    parent = manifest_entry.get("parent", {})
+    errors: List[str] = []
+    errors.extend(_evidence_identity_errors(item, manifest_entry, evidence))
     artifacts = evidence.get("artifacts", {})
     if not isinstance(artifacts, dict):
         return errors + [f"parent artifacts must be an object for {source}"]
+    extra, more = migration_paths(artifacts, artifact_root, source, "parent")
+    errors.extend(more)
+    if "contract_migration" in artifacts and parent.get("action") != "adapted":
+        errors.append("parent public migration requires an adapted action")
     required = ["target_diff"]
     if item["deckshell"]["included"]:
         required.extend(["mapped_source_patch", "root_source_patch"])
@@ -234,7 +248,7 @@ def _evidence_errors(
                 parent_repo,
                 str(parent.get("commit")),
                 evidence.get("adaptation_paths"),
-                lane_target_paths(item, "parent"),
+                lane_target_paths(item, "parent") + extra,
                 _paths(parent_repo, str(parent.get("commit"))),
                 artifact_root,
                 f"parent {source}",
@@ -283,7 +297,9 @@ def _entry_verification_errors(
             errors.append(f"parent manifest lane is invalid at index {index}")
             continue
         actual_paths = _paths(parent_repo, parent["commit"])
-        errors.extend(_action_path_errors(item, mapped, actual_paths))
+        extra, more = migration_paths(proof.get("artifacts", {}), artifact_root, item["source_commit"], "parent")
+        errors.extend(more)
+        errors.extend(_action_path_errors(item, mapped, actual_paths, extra))
         errors.extend(
             _evidence_errors(
                 source_repo, parent_repo, item, mapped, proof, artifact_root

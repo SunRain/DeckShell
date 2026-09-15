@@ -9,6 +9,7 @@ from typing import Any, Dict, List, Mapping, Tuple
 
 from .adaptations import adaptation_path_errors, lane_target_paths
 from .artifacts import artifact_errors
+from .contract_migration import read_migration
 from .git_ops import (
     canonical_json_sha256,
     canonical_repo,
@@ -108,6 +109,20 @@ def _adaptation_note_errors(notes, action, label):
     return []
 
 
+def _contract_approval_decision_errors(decision, lane, action, label, artifact_root):
+    errors = []
+    if "contract_additions" in decision:
+        if lane != "child" or action == "empty":
+            errors.append(f"{label} contract additions require a nonempty child action")
+        errors.extend(artifact_errors(decision["contract_additions"], artifact_root, f"{label} contract additions"))
+    if "contract_migration" in decision:
+        if lane not in {"child", "parent"} or action != "adapted":
+            errors.append(f"{label} public migration requires an adapted child or parent lane")
+        if "contract_additions" in decision:
+            errors.append(f"{label} cannot combine wrapper and public migration approvals")
+    return errors
+
+
 def _lane_decision_errors(
     source: str,
     lane: str,
@@ -126,6 +141,7 @@ def _lane_decision_errors(
         "equivalence_proof",
         "structural_paths",
         "contract_additions",
+        "contract_migration",
     }
     errors = [
         f"{label} has unsupported field: {name}"
@@ -135,10 +151,7 @@ def _lane_decision_errors(
     action = decision.get("action")
     if not isinstance(action, str) or action not in LANE_ACTIONS:
         return errors + [f"{label} has unsupported action: {action}"]
-    if "contract_additions" in decision:
-        if lane != "child" or action == "empty":
-            errors.append(f"{label} contract additions require a nonempty child action")
-        errors.extend(artifact_errors(decision["contract_additions"], artifact_root, f"{label} contract additions"))
+    errors.extend(_contract_approval_decision_errors(decision, lane, action, label, artifact_root))
     notes = decision.get("adaptation_notes", ["none"])
     errors.extend(_adaptation_note_errors(notes, action, label))
     required = (
@@ -169,9 +182,27 @@ def _lane_decision_errors(
     return errors
 
 
+def _decision_structural_paths(source, lane, decision, root, wlroots_active, refs_doc):
+    if not isinstance(decision, dict):
+        return [], []
+    extra = decision.get("structural_paths", [])
+    if "contract_migration" in decision:
+        approval, errors = read_migration(decision, root, source)
+        approved = approval.get("structural_paths", {}).get(lane, []) if approval else []
+        if extra != approved:
+            errors.append(f"decision for {source}/{lane} differs from approved migration paths")
+        if approval and refs_doc is not None and approval["refs_doc"] != refs_doc:
+            errors.append(f"decision for {source}/{lane} migration references a different plan")
+        return (approved if not errors else []), errors
+    if extra and (not wlroots_active or lane != "child" or extra != ["CMakeLists.txt"]
+                  or decision.get("action") != "adapted"):
+        return [], [f"decision for {source}/{lane} has unauthorized structural paths"]
+    return extra, []
+
+
 def _decision_errors(
     decisions: Mapping[str, Any], inventory: Mapping[str, Any], artifact_root: Path,
-    wlroots_active: bool = False,
+    wlroots_active: bool = False, refs_doc: str | None = None,
 ) -> List[str]:
     entries, errors = _decision_entries(decisions)
     by_source = {
@@ -202,10 +233,10 @@ def _decision_errors(
         )
         for lane in permitted & set(value):
             decision = value[lane]
-            extra = decision.get("structural_paths", []) if isinstance(decision, dict) else []
-            if extra and (not wlroots_active or lane != "child" or extra != ["CMakeLists.txt"] or decision.get("action") != "adapted"):
-                errors.append(f"decision for {source}/{lane} has unauthorized structural paths")
-                extra = []
+            extra, more = _decision_structural_paths(
+                source, lane, decision, artifact_root, wlroots_active, refs_doc
+            )
+            errors.extend(more)
             errors.extend(
                 _lane_decision_errors(
                     source,
@@ -335,7 +366,8 @@ def run_static_preflight(request: ReplayRequest) -> None:
         errors.append("inventory outcome must be pass before replay")
     wlroots = frozen_wlroots_identity(request) if not errors else None
     errors.extend(
-        _decision_errors(request.decisions, request.inventory, request.artifact_root, wlroots is not None)
+        _decision_errors(request.decisions, request.inventory, request.artifact_root,
+                         wlroots is not None, request.refs_doc)
     )
     if not errors:
         errors.extend(_source_inventory_errors(request))

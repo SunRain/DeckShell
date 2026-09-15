@@ -7,6 +7,7 @@ from typing import Any, Dict, List, Mapping, Optional, Sequence, Set, Tuple
 
 from .artifacts import artifact_errors, read_verified_artifact, write_artifact
 from .contracts import build_source_contract_audit
+from .contract_migration import migration_paths
 from .git_ops import run_git, stable_unique
 from .messages import child_message, parent_message
 from .patches import (
@@ -130,6 +131,18 @@ def _wrapper_safety(request, item):
                 raise ReplayBlocked("UPSTREAM pure-source pin must not be replaced with a target commit")
 
 
+def _child_contract_approvals(request, decision, artifacts):
+    approvals = []
+    for name in ("contract_additions", "contract_migration"):
+        approval = None
+        if name in decision:
+            record, content = _decision_artifact(request, decision, name, f"child {name}")
+            approval = json.loads(content.decode("utf-8"))
+            artifacts[name] = dict(record)
+        approvals.append(approval)
+    return approvals
+
+
 def child_stage(request: ReplayRequest, item: Mapping[str, Any], wlroots_sha: Optional[str] = None):
     """把 C 普通内容与同一来源的 R gitlink 原子地放入同一个 C 提交。"""
 
@@ -165,14 +178,12 @@ def child_stage(request: ReplayRequest, item: Mapping[str, Any], wlroots_sha: Op
                             request.refs_doc, content_action=content_action, nested_gitlink=nested)
     commit = create_commit(request.child_worktree, metadata, message, allow_empty=not actual_all)
     artifacts["target_diff"] = write_artifact(request.artifact_root, f"commits/{source_sha}/child-target.diff", commit_diff(request.child_worktree, commit))
-    approval = None
-    if "contract_additions" in decision:
-        record, content = _decision_artifact(request, decision, "contract_additions", "child contract additions")
-        approval = json.loads(content.decode("utf-8"))
-        artifacts["contract_additions"] = dict(record)
-    audit = build_source_contract_audit(request.child_worktree, f"{commit}^", commit, approval)
+    approvals = _child_contract_approvals(request, decision, artifacts)
+    audit = build_source_contract_audit(request.child_worktree, f"{commit}^", commit, *approvals)
     artifacts["source_contract_audit"] = write_artifact(request.artifact_root, f"commits/{source_sha}/child-source-contract-audit.json", (json.dumps(audit, ensure_ascii=True, indent=2) + "\n").encode())
     details = {"content_action": content_action, "structural_paths": structural, "nested_gitlink": nested}
+    if approvals[1] is not None:
+        details["contract_migration"] = artifacts["contract_migration"]
     return commit, action, notes, adaptations, artifacts, details
 
 
@@ -228,6 +239,9 @@ def _apply_parent_content(
         "mapped_source_patch": mapped_record,
         "root_source_patch": root_record,
     }
+    if "contract_migration" in decision:
+        record, _ = _decision_artifact(request, decision, "contract_migration", "parent contract migration")
+        artifacts["contract_migration"] = dict(record)
     if action == "applied":
         _apply_generated_parent_patches(
             request, source_sha, parent, mapped_patch, root_patch
@@ -248,9 +262,14 @@ def _verify_parent_staging(
     item: Mapping[str, Any],
     action: str,
     child_sha: Optional[str],
+    decision: Mapping[str, Any],
 ) -> List[str]:
     source_sha = item["source_commit"]
     allowed = set(item["deckshell"]["target_paths"])
+    extra, errors = migration_paths(decision, request.artifact_root, source_sha, "parent")
+    if errors or decision.get("structural_paths", []) != extra:
+        raise ReplayBlocked("; ".join(errors or ["parent structural paths differ from migration approval"]))
+    allowed.update(extra)
     required: Set[str] = set(allowed) if action == "applied" else set()
     if child_sha:
         allowed.add(request.gitlink_path)
@@ -304,6 +323,7 @@ def parent_stage(
         notes = ["DeckShell contains only the gitlink update.", "这是一个单纯的 gitlink 变更。"]
         adaptation_paths: List[Dict[str, Any]] = []
         artifacts: Dict[str, Any] = {}
+        decision: Mapping[str, Any] = {}
     else:
         action, notes, adaptation_paths, decision = _decision(
             request, source_sha, "parent", "applied"
@@ -312,7 +332,7 @@ def parent_stage(
     if child_sha:
         update_gitlink(request.parent_worktree, request.gitlink_path, child_sha)
         notes = list(notes) + [f"Includes waylib-shared update to {child_sha}.", "此次包含了 DeckShell/3rdparty/waylib-shared/ 的更新。"]
-    actual = _verify_parent_staging(request, item, action, child_sha)
+    actual = _verify_parent_staging(request, item, action, child_sha, decision)
     commit = _create_parent_commit(
         request, item, child_sha, action, adaptation_paths, notes, actual
     )

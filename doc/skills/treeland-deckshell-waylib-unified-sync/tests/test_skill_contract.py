@@ -13,6 +13,7 @@ PUBLIC_SCRIPTS = (
     "artifact_record.py",
     "deckshell_verify.py",
     "generate_sync_report.py",
+    "generate_repo_records.py",
     "gitlink_verify.py",
     "protocol_tracker.py",
     "unified_sync.py",

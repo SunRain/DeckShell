@@ -43,7 +43,7 @@ paths 必须按字典序覆盖全部 type/mode/blob 差异。来源子树不存�
 | proof | 内容寻址工件，覆盖该路径的取舍 |
 | review_state | approved；不能替未完成的审核代填 |
 
-C 仅可在 R 模式的 adapted 决策中指定 `structural_paths: ["CMakeLists.txt"]`；把这个路径追加在 inventory 普通目标路径之后并提供同样的逐路径证明。`.gitmodules` 和 R gitlink 由工具生成并精确核验 transition，不允许 adaptation patch 任意改写。
+默认 C 仅可在 R 模式的 adapted 决策中指定 `structural_paths: ["CMakeLists.txt"]`；把这个路径追加在 inventory 普通目标路径之后并提供同样的逐路径证明。下面另行授权的公共迁移可登记有限的本地集成路径。`.gitmodules` 和 R gitlink 仍由工具生成并精确核验 transition，不允许 adaptation patch 任意改写。
 
 新增 wrapper 核心/安装/导出定义还需 child `contract_additions` 工件，正文绑定逐节点源码快照：
 
@@ -57,6 +57,35 @@ C 仅可在 R 模式的 adapted 决策中指定 `structural_paths: ["CMakeLists.
 ```
 
 additions 精确覆盖全部 drift.added；旧值不得删除、重命名或改变，新增项必须来自 wrapper，公共 namespace 不可借此变化。安装审计的 `--approved-additions` 则读取另一份正文 JSON：相同两侧安装快照摘要、完整 drift、review_state、非空 reason、全部新增 installed_paths。两类批准不可混用，不能只写 adaptation note 代替。
+
+## 显式公共合同迁移
+
+用户已授权公共 API/包迁移时，adapted C/P decision 可提供 `contract_migration` 工件记录，与 `contract_additions` 互斥。正文为：
+
+```json
+{
+  "kind": "waylib-public-contract-migration",
+  "scope": "source",
+  "review_state": "approved",
+  "reason": "已授权迁移的具体内容和必要性",
+  "refs_doc": "与 replay 相同的方案路径",
+  "source_commits": ["本次唯一来源的完整 SHA"],
+  "before_snapshot_sha256": "相邻源码基线快照摘要",
+  "after_snapshot_sha256": "相邻源码候选快照摘要",
+  "drift": {},
+  "structural_paths": {"child": [], "parent": []}
+}
+```
+
+`drift` 必须是从真实快照生成、逐项审核后的完整变化，不能只列字段名或填空对象忽略变化。源码审计保留实际 drift，并在有审批时增加 `approved_migration`；C manifest 同时记录审批工件。默认缺省字段不改变旧审计结构或规则。
+
+集成路径只能是具体文件：C 的根 `CMakeLists.txt`、既有 `test_project/` 调用方或 `waylib/src/cmake/` 本地包配置；P 的既有 `compositor/tests/` 调用方，以及唯一现有运行时安装入口 `compositor/src/CMakeLists.txt`。运行时入口用于补齐原生库依赖；已授权 scanner/协议迁移另可精确登记 P 根 `CMakeLists.txt`、`qtwaylandscanner/CMakeLists.txt`、`qtwaylandscanner/qtwaylandscanner.cpp`、`protocols/compositor/CMakeLists.txt` 和 `protocols/compositor/xml/treeland-remote-subsurface-unstable-v1.xml`，用于迁移工具与安装冻结的 Git 协议输入。不授权其他生产文件、协议 XML 或 CMake 目录。禁止通配、路径穿越和任意 P 生产文件。decision 的列表必须与当前来源审批对应 lane 完全一致，按顺序追加到普通 inventory 目标后，并逐路径提供 adapted 证明。P evidence 的 `target_paths` 仍表示规范来源目标，附加路径从审批读取；两个 verifier 都验证实际 type/mode/blob，不只接受消息标记。
+
+单独获准的 QML 导入修正另有一个精确例外：既有 `compositor/src/core/qml/PrelaunchSplash.qml` 可在对应来源的 `structural_paths.parent` 中登记，仅将导入映射为既定 `WaylibShared.QuickSharedServer 1.0`。无审批仍拒绝；不放行 QML 目录或其他生产文件，也不豁免实际补丁内容验证。
+
+包含迁移集成路径的 C 追溯使用 `waylib_traces.py --evidence ... --artifact-root ...`，两个参数必须成对；输出额外绑定 `migration_evidence_sha256`。不提供审批输入时仍拒绝额外路径，独立 Waylib verifier 用当前 evidence 重算追溯。
+
+安装审批由 `waylib_contract_audit.py --approved-migration FILE` 读取，使用同一 kind、`scope: installation`、本段有序的迁移 `source_commits`、真实安装快照摘要和完整安装 drift；另需 `namespace_bindings` 精确等于已审核候选快照的全部 `namespace_headers`。按这些明确的全限定命名空间逐头独立编译候选，不让新头补齐其他头的缺失定义；旧头的删除不再被伪装为兼容。报告核对安装审批与 manifest 的源码审批顺序及 refs_doc，并继续要求完整有效的 consumer。
 
 ## Lane evidence 与提交消息
 
@@ -79,6 +108,8 @@ waylib-install-contract-snapshot 保存安装路径、public_headers、file_sha2
 `pkg_config` 按安装相对 .pc 路径覆盖全部包；每项为原生求值后的 Name、Version、Requires、Requires.private、Cflags、Libs、Cflags.static、Libs.static 字符串。动态/静态参数包含实际依赖，保留参数顺序，仅归一化安装根。缺求值字段的旧快照直接阻断，不能补字段、重哈希冒充本次查询。
 
 waylib-fixed-namespace-probe 绑定两侧快照摘要、固定基线全限定 namespace 的 probe.cpp 及 configure/build 日志。源码预处理保留项目 include、宏条件和 undef；外部头由最终编译探针验证。candidate consumer 使用自身宏能编译，不代表固定基线 namespace 存在。
+
+`probe.cpp` 按基线头生成固定选择分支，CMake 为每个头建立独立编译单元并完整构建。头选择只由探针构建定义，不取候选包的 namespace 宏；旧的合并翻译单元探针须重新生成，不能用其他头的声明代替本头的检查。
 
 ## 递归物化与命令记录
 
@@ -112,6 +143,8 @@ R 的 native_discovery 来自 Meson introspect --tests，native_test_log 保存�
 记录器与报告从冻结 Git 对象重新证明上述两项事实，不接受只改 JSON、重哈希日志或删除 `meson.build` 来获得豁免。记录器 exit 0 表示证明已核验、记录已写入，不表示 Meson 已执行；报告显示 `NOT_APPLICABLE` 而非 PASS/NO_TESTS。R 候选及 C/P 不能使用此状态，两个 R gate 仍为 `verified`，不是 R lane 整体不适用。
 
 C/P wrapper_build 保存 codemodel、compile_commands、Ninja 命令、真实编译依赖和生成头摘要，绑定 manifest。报告按具体消费目标的 codemodel 链接库及真实链接命令输入核验完整产物路径，不用全局产物名搜索，也不把纯构建顺序关系当作链接；系统 wlroots 仍拒绝。
+
+原生 Meson 包装层额外记录 `wrapper_build.native_meson`：固定 source/build 路径、Meson 目标元数据、原生 compile_commands/Ninja 命令/依赖工件及实际生成头摘要。报告从这些原件重算来源、编译和 C/P 消费关系；不把 utility target 当编译证明，不接受只有哈希正确但来源或链接不匹配的工件。
 
 ## 报告与收口
 

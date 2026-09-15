@@ -7,7 +7,7 @@ import re
 import subprocess
 import tempfile
 from pathlib import Path, PurePosixPath
-from typing import Any, Dict, Mapping
+from typing import Any, Dict, Mapping, Sequence
 
 
 HEADERS = {".h", ".hh", ".hpp", ".hxx"}
@@ -26,7 +26,7 @@ def _without_comments(content: str) -> str:
     )
 
 
-def _include_path(path: str, argument: str, contents: Mapping[str, str]):
+def _include_path(path: str, argument: str, contents: Mapping[str, str], include_roots=()):
     match = INCLUDE.fullmatch(argument.strip())
     if match is None:
         return None
@@ -34,13 +34,19 @@ def _include_path(path: str, argument: str, contents: Mapping[str, str]):
     relative = (PurePosixPath(path).parent / name).as_posix()
     if relative in contents:
         return relative
+    public_matches = sorted({(PurePosixPath(root) / name).as_posix() for root in include_roots}
+                            .intersection(contents))
+    if len(public_matches) == 1:
+        return public_matches[0]
+    if len(public_matches) > 1:
+        raise ValueError(f"ambiguous project namespace include: {path}: {name}")
     matches = [key for key in contents if key == name or key.endswith("/" + name)]
     if len(matches) > 1:
         raise ValueError(f"ambiguous project namespace include: {path}: {name}")
     return matches[0] if matches else None
 
 
-def _header_lines(path: str, content: str, contents: Mapping[str, str]):
+def _header_lines(path: str, content: str, contents: Mapping[str, str], include_roots=()):
     rows, stack, groups = [], [], {}
     for index, line in enumerate(content.splitlines()):
         match = DIRECTIVE.match(line)
@@ -51,7 +57,7 @@ def _header_lines(path: str, content: str, contents: Mapping[str, str]):
         if kind in {"if", "ifdef", "ifndef", "elif", "else", "endif"} and stack:
             groups[stack[-1]]["lines"].append(index)
             groups[stack[-1]]["tokens"].update(IDENTIFIER.findall(argument))
-        include = _include_path(path, argument, contents) if kind == "include" else None
+        include = _include_path(path, argument, contents, include_roots) if kind == "include" else None
         rows.append({"line": line, "kind": kind, "argument": argument,
                      "guards": tuple(stack), "include": include})
         if kind == "endif" and stack:
@@ -115,7 +121,7 @@ def _project_header(path, rows, groups, relevant, filenames):
                 projected.append(row["line"])
         elif kind is None or index in conditional_lines or (kind == "pragma" and row["argument"] == "once"):
             projected.append(row["line"])
-        elif kind in {"error", "warning"} and guards.intersection(row["guards"]):
+        elif kind in {"error", "warning"} and row["guards"] and row["guards"][-1] in guards:
             projected.append(row["line"])
     return "\n".join(projected) + "\n"
 
@@ -188,13 +194,13 @@ def _namespace_headers(output, paths):
     return {path: sorted(values) for path, values in sorted(headers.items())}
 
 
-def namespace_contract(contents: Mapping[str, str]) -> Dict[str, Any]:
+def namespace_contract(contents: Mapping[str, str], include_roots: Sequence[str] = ()) -> Dict[str, Any]:
     """展开项目命名空间宏；保留条件/undef，外部依赖由最终安装编译探针验证。"""
 
     cleaned = {path: _without_comments(text) for path, text in sorted(contents.items())}
     definitions, namespaces, errors = [], {}, []
     try:
-        headers = {path: _header_lines(path, text, cleaned) for path, text in cleaned.items()}
+        headers = {path: _header_lines(path, text, cleaned, include_roots) for path, text in cleaned.items()}
         relevant = _relevant_macros(headers)
         definitions = [f'{path}:{row["line"].strip()}' for path, (rows, _) in headers.items()
                        for row in rows if row["kind"] == "define"

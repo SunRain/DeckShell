@@ -1,3 +1,18 @@
+# ============================================================================
+# DEPRECATED: treeland-personalization-manager-v1
+#
+# This module is frozen. The old treeland-personalization-manager-v1 protocol
+# has been split into separate protocols in treeland-protocols 0.6.0:
+#   - treeland-appearance-unstable-v1        → src/modules/appearance/
+#   - treeland-appearance-manager-unstable-v1 → src/modules/appearance/
+#   - treeland-decoration-unstable-v1        → (not yet implemented)
+#
+# No new features will be added here. New code should use the new modules.
+# This module is kept only for backward compatibility during the transition.
+# ============================================================================
+
+
+# --- Deprecated protocol (kept for backward compatibility) ---
 waylib_generate_qtwayland_server_protocol(libdeckcompositor
     PROTOCOL ${DECKCOMPOSITOR_PROTOCOLS_DATA_DIR}/treeland-personalization-manager-v1.xml
     BASENAME treeland-personalization-manager-v1
@@ -31,4 +46,6 @@ qt_add_resources(libdeckcompositor "default_background"
 
 if(TREELAND_INSTALL_DEV)
     install(FILES ${PUBLIC_HEADERS} DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/treeland/modules/personalization")
+    install(FILES ${PROJECT_SOURCE_DIR}/src/common/windowdecorations.h
+            DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/treeland/common")
 endif()

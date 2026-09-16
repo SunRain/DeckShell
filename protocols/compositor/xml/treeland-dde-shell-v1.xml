@@ -4,17 +4,32 @@
     SPDX-FileCopyrightText: 2024 UnionTech Software Technology Co., Ltd.
     SPDX-License-Identifier: MIT
     ]]></copyright>
+
+    <description summary="DDE shell integration for treeland">
+        Warning! This protocol is EXPERIMENTAL and under active development.
+        It may change at any time, including in backward-incompatible ways,
+        without incrementing the interface major version and without prior
+        notice. No compatibility guarantees of any kind are provided. Clients
+        and compositors must track the upstream definition in treeland-protocols
+        and must not rely on the current interface names, requests, events, or
+        semantics remaining stable across releases.
+    </description>
+
     <interface name="treeland_dde_shell_manager_v1" version="2">
         <description summary="dde shell manager">
-            This interface allows DDE change some treeland function.
-
-            Warning! The protocol described in this file is currently in the testing
-            phase. Backward compatible changes may be added together with the
-            corresponding interface version bump. Backward incompatible changes can
-            only be done by creating a new major version of the extension.
+            This interface allows DDE to configure some treeland functions.
         </description>
         <request name="get_window_overlap_checker">
-            <arg name="id" type="new_id" interface="treeland_window_overlap_checker" />
+            <description summary="create a window overlap checker">
+                Deprecated: this request is non-functional. The created
+                object never emits events, and its requests have no
+                effect apart from destroy.
+
+                Superseded by the treeland_region_watch_manager_v1
+                global of the treeland-region-watch-unstable-v1
+                protocol.
+            </description>
+            <arg name="id" type="new_id" interface="treeland_window_overlap_checker" summary="the new window overlap checker object"/>
         </request>
 
         <request name="get_shell_surface">
@@ -26,12 +41,18 @@
                 Recommended for use with xdg_surface.
             </description>
             <arg name="id" type="new_id" interface="treeland_dde_shell_surface_v1"/>
-            <arg name="surface" type="object" interface="wl_surface"/>
+            <arg name="surface" type="object" interface="wl_surface" summary="the surface to create a shell surface for"/>
         </request>
 
         <request name="get_treeland_dde_active">
             <description summary="create a new dde active">
-                Create a new dde active for a given seat.
+                Deprecated: this request is non-functional. The created
+                object never emits events, and its requests have no
+                effect apart from destroy.
+
+                Superseded by the treeland_active_notify_manager_v1
+                global of the treeland-active-notify-unstable-v1
+                protocol.
             </description>
             <arg name="id" type="new_id" interface="treeland_dde_active_v1"/>
             <arg name="seat" type="object" interface="wl_seat" summary="seat associated with the dde_active"/>
@@ -39,7 +60,11 @@
 
         <request name="get_treeland_multitaskview">
             <description summary="create a new multitaskview context">
-                Create a new multitaskview context for toggle.
+                Deprecated: superseded by the open_multitask_view,
+                close_multitask_view, and toggle_multitask_view actions of
+                the treeland_compositor_action_v1 global of the
+                treeland-compositor-action-unstable-v1 protocol. This
+                request must not be used in new code.
             </description>
             <arg name="id" type="new_id" interface="treeland_multitaskview_v1"/>
         </request>
@@ -53,27 +78,27 @@
 
         <request name="get_treeland_lockscreen">
             <description summary="create a new lockscreen context">
-                Create a new lockscreen context for toggle.
+                Deprecated: superseded by the lockscreen, shutdown_menu,
+                and show_user_switch actions of the
+                treeland_compositor_action_v1 global of the
+                treeland-compositor-action-unstable-v1 protocol. This
+                request must not be used in new code.
             </description>
             <arg name="id" type="new_id" interface="treeland_lockscreen_v1"/>
         </request>
 
         <request name="set_xwindow_position_relative">
             <description summary="Move a XWayland surface to a position relative to a wl_surface">
-                Move the top-left point of a XWayland surface
-                specified with Window ID, to a position that has
-                (dx, dy) offset from the top-left point of a wl_surface
-
-                Once the server finished process it send "done" to the
-                callback. The callback data 0 means no error occured,
-                1 means something went wrong and the move cannot be
-                done.
+                Deprecated: this request is non-functional and has no
+                effect. Superseded by the set_xwindow_position_relative
+                request of the treeland_xwindow_control_v1 global of the
+                treeland-xwindow-control-unstable-v1 protocol.
             </description>
             <arg name="callback" type="new_id" interface="wl_callback"/>
-            <arg name="wid" type="uint"/>
-            <arg name="anchor" type="object" interface="wl_surface"/>
-            <arg name="dx" type="fixed"/>
-            <arg name="dy" type="fixed"/>
+            <arg name="wid" type="uint" summary="X11 window ID"/>
+            <arg name="anchor" type="object" interface="wl_surface" summary="the reference surface"/>
+            <arg name="dx" type="fixed" summary="horizontal offset from anchor"/>
+            <arg name="dy" type="fixed" summary="vertical offset from anchor"/>
         </request>
 
         <request name="destroy" type="destructor" since="2">
@@ -84,27 +109,29 @@
     </interface>
 
     <interface name="treeland_window_overlap_checker" version="1">
-        <description summary="An opened toplevel">
-            A treeland_dde_shell_handle_v1 object represents an opened toplevel window. Each
-            app may have multiple opened toplevels.
+        <description summary="A window overlap checker">
+            Deprecated: this interface is non-functional. Apart from
+            the destroy request, all requests have no effect and no
+            events are ever emitted. New code must not use it.
 
-            Warning! The protocol described in this file is currently in the testing
-            phase. Backward compatible changes may be added together with the
-            corresponding interface version bump. Backward incompatible changes can
-            only be done by creating a new major version of the extension.
+            Superseded by the treeland_region_watch_manager_v1
+            global of the treeland-region-watch-unstable-v1
+            protocol.
         </description>
 
         <event name="enter">
-            <description summary="Window has overlapped">
-                This event is sent when windows overlapped.
-                This event is sent only once.
+            <description summary="detected window has become overlapped">
+                Sent when the detected window region begins to overlap
+                with any xdg-shell toplevel.  Sent at most once per
+                update cycle.
             </description>
         </event>
 
         <event name="leave">
-            <description summary="Window not has overlapped">
-                This event is sent when windows not overlapped.
-                This event is sent only once.
+            <description summary="detected window is no longer overlapped">
+                Sent when the detected window region no longer overlaps
+                with any xdg-shell toplevel.  Sent at most once per
+                update cycle.
             </description>
         </event>
 
@@ -126,8 +153,8 @@
                 The window position will only be recorded when this interface is called.
                 If the window moves, this interface needs to be called again.
             </description>
-            <arg name="width" type="int" />
-            <arg name="height" type="int" />
+            <arg name="width" type="int" summary="width of the detected window region"/>
+            <arg name="height" type="int" summary="height of the detected window region"/>
             <arg name="anchor" type="uint" enum="anchor" />
             <arg name="output" type="object" interface="wl_output" allow-null="false" />
         </request>
@@ -136,9 +163,8 @@
             <description summary="destroy the treeland_window_overlap_checker object">
                 Destroys the treeland_window_overlap_checker object.
 
-                This request should be called either when the client does not want to
-                use the toplevel anymore or after the closed event to finalize the
-                destruction of the object.
+                Send this request when the client no longer needs overlap
+                notifications from this object.
             </description>
         </request>
     </interface>
@@ -161,7 +187,7 @@
             <description summary="destroy the treeland_dde_shell_surface_v1 object">
                 The treeland_dde_shell_surface_v1 interface is removed from the
                 wl_surface object that was turned into a shell surface with the
-                treeland_shell_v1.get_treeland_dde_shell_surface request.
+                treeland_dde_shell_manager_v1.get_shell_surface request.
 
                 The shell surface role is lost and wl_surface is unmapped.
             </description>
@@ -188,14 +214,14 @@
                 Multiple surfaces can share a single role, and ordering within a single
                 role is undefined.
             </description>
-            <entry name="overlay" value="1"/>
+            <entry name="overlay" value="1" summary="overlay role"/>
         </enum>
 
         <request name="set_role">
             <description summary="assign a role to this surface">
                 Assign a role to a shell surface.
             </description>
-            <arg name="role" type="uint" enum="treeland_dde_shell_surface_v1.role"/>
+            <arg name="role" type="uint" enum="role"/>
         </request>
 
         <request name="set_auto_placement">
@@ -244,28 +270,34 @@
 
     <interface name="treeland_dde_active_v1" version="1">
         <description summary="metadata interface">
-            An interface used to monitor special events.
+            Deprecated: this interface is non-functional. Apart from
+            the destroy request, all requests have no effect and no
+            events are ever emitted. New code must not use it.
+
+            Superseded by the treeland_active_notify_manager_v1 global of
+            the treeland-active-notify-unstable-v1 protocol.
         </description>
 
         <request name="destroy" type="destructor">
             <description summary="destroy the treeland_dde_active_v1 object">
+                Destroy this object.
             </description>
         </request>
 
         <enum name="reason">
             <description summary="event reason"/>
-            <entry name="mouse" value="0"/>
-            <entry name="wheel" value="1"/>
+            <entry name="mouse" value="0" summary="mouse triggered"/>
+            <entry name="wheel" value="1" summary="mouse wheel triggered"/>
         </enum>
 
         <event name="active_in">
-            <description summary="activeIn event"/>
-        <arg name="reason" type="uint" enum="treeland_dde_active_v1.reason"/>
+            <description summary="active in event was triggered"/>
+            <arg name="reason" type="uint" enum="reason"/>
         </event>
 
         <event name="active_out">
-            <description summary="activeOut event"/>
-        <arg name="reason" type="uint" enum="treeland_dde_active_v1.reason"/>
+            <description summary="active out event was triggered"/>
+            <arg name="reason" type="uint" enum="reason"/>
         </event>
 
         <event name="start_drag">
@@ -273,17 +305,24 @@
         </event>
 
         <event name="drop">
-            <description summary="sent when the compositor drop operation"/>
+            <description summary="sent when the compositor completes a drop operation"/>
         </event>
     </interface>
 
     <interface name="treeland_multitaskview_v1" version="1">
         <description summary="multitaskview context interface">
             An interface used to control multitaskview.
+
+            Deprecated: superseded by the open_multitask_view,
+            close_multitask_view, and toggle_multitask_view actions of the
+            treeland_compositor_action_v1 global of the
+            treeland-compositor-action-unstable-v1 protocol. The interface
+            must not be used in new code.
         </description>
 
         <request name="destroy" type="destructor">
             <description summary="destroy the treeland_multitaskview_v1 object">
+                Destroy this multitaskview context object.
             </description>
         </request>
 
@@ -301,6 +340,7 @@
 
         <request name="destroy" type="destructor">
             <description summary="destroy the treeland_window_picker_v1 object">
+                Destroy this window picker object.
             </description>
         </request>
 
@@ -315,17 +355,23 @@
             <description summary="window picked">
                 Picked window information.
             </description>
-            <arg name="pid" type="int" summary="Pid of picked window"/>
+            <arg name="pid" type="int" summary="PID of the picked window"/>
         </event>
     </interface>
 
     <interface name="treeland_lockscreen_v1" version="1">
         <description summary="lockscreen interface">
             An interface used to operate lockscreen.
+
+            Deprecated: superseded by the lockscreen, shutdown_menu, and
+            show_user_switch actions of the treeland_compositor_action_v1
+            global of the treeland-compositor-action-unstable-v1 protocol.
+            The interface must not be used in new code.
         </description>
 
         <request name="destroy" type="destructor">
             <description summary="destroy the treeland_lockscreen_v1 object">
+                Destroy this lockscreen context object.
             </description>
         </request>
 

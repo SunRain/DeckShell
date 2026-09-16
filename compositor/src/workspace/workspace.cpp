@@ -341,7 +341,7 @@ void Workspace::reloadFromConfig()
         config->setNumWorkspace(1);
     }
     auto targetIndex = static_cast<int>(config->currentWorkspace());
-    
+
     for (int need = targetCount - count(); need > 0; --need)
         doCreateModel(QStringLiteral("workspace-%1").arg(count()), false);
 

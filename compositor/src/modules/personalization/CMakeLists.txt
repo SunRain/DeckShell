@@ -46,6 +46,4 @@ qt_add_resources(libdeckcompositor "default_background"
 
 if(TREELAND_INSTALL_DEV)
     install(FILES ${PUBLIC_HEADERS} DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/treeland/modules/personalization")
-    install(FILES ${PROJECT_SOURCE_DIR}/src/common/windowdecorations.h
-            DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/treeland/common")
 endif()

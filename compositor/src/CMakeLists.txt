@@ -133,6 +133,8 @@ qt_add_qml_module(libdeckcompositor
         ${SEAT_USER_CONFIG}
         common/treelandlogging.cpp
         common/treelandlogging.h
+        common/shellaction.cpp
+        common/shellaction.h
         common/windowdecorations.h
         core/layersurfacecontainer.cpp
         core/layersurfacecontainer.h
@@ -475,6 +477,12 @@ target_link_libraries(${BIN_NAME} PRIVATE
 install(TARGETS ${BIN_NAME} RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}")
 install(PROGRAMS treeland.sh DESTINATION "${CMAKE_INSTALL_BINDIR}")
 include("${PROJECT_SOURCE_DIR}/cmake/InstallQmlRuntime.cmake")
+if(TREELAND_INSTALL_DEV)
+    install(FILES
+        common/shellaction.h
+        common/windowdecorations.h
+        DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/treeland/common")
+endif()
 
 ## systemd socket
 

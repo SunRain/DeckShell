@@ -16,6 +16,7 @@ set(DECKCOMPOSITOR_PROTOCOLS_INSTALL_CMAKEDIR
 add_subdirectory(cmake)
 
 set(XML
+    xml/treeland-compositor-action-unstable-v1.xml
     xml/treeland-region-watch-unstable-v1.xml
     xml/treeland-active-notify-unstable-v1.xml
     xml/treeland-decoration-unstable-v1.xml

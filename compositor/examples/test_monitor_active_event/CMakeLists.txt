@@ -9,7 +9,7 @@ qt_add_executable(${BIN_NAME}
 qt_generate_wayland_protocol_client_sources(${BIN_NAME}
     NO_INCLUDE_CORE_ONLY
     FILES
-        ${DECKCOMPOSITOR_PROTOCOLS_DATA_DIR}/treeland-dde-shell-v1.xml
+        ${DECKCOMPOSITOR_PROTOCOLS_DATA_DIR}/treeland-active-notify-unstable-v1.xml
 )
 
 target_link_libraries(${BIN_NAME}

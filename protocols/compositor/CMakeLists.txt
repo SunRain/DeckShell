@@ -16,6 +16,7 @@ set(DECKCOMPOSITOR_PROTOCOLS_INSTALL_CMAKEDIR
 add_subdirectory(cmake)
 
 set(XML
+    xml/treeland-active-notify-unstable-v1.xml
     xml/treeland-decoration-unstable-v1.xml
     xml/treeland-appearance-manager-unstable-v1.xml
     xml/treeland-appearance-unstable-v1.xml

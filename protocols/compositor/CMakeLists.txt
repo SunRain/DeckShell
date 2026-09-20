@@ -16,6 +16,7 @@ set(DECKCOMPOSITOR_PROTOCOLS_INSTALL_CMAKEDIR
 add_subdirectory(cmake)
 
 set(XML
+    xml/treeland-window-transition-unstable-v1.xml
     xml/treeland-dde-shell-unstable-v2.xml
     xml/treeland-snap-target-unstable-v1.xml
     xml/treeland-compositor-action-unstable-v1.xml

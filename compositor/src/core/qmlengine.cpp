@@ -43,6 +43,7 @@ QmlEngine::QmlEngine(QObject *parent)
     , xdgShadowComponent(this, "DeckShell.Compositor", "XdgShadow")
     , taskSwitchComponent(this, "DeckShell.Compositor", "TaskSwitcher")
     , geometryAnimationComponent(this, "DeckShell.Compositor", "GeometryAnimation")
+    , windowTransitionComponent(this, "DeckShell.Compositor", "WindowTransition")
     , menuBarComponent(this, "DeckShell.Compositor", "OutputMenuBar")
     , workspaceSwitcher(this, "DeckShell.Compositor", "WorkspaceSwitcher")
     , newAnimationComponent(this, "DeckShell.Compositor", "NewAnimation")
@@ -146,6 +147,24 @@ QQuickItem *QmlEngine::createGeometryAnimation(SurfaceWrapper *surface,
                                { "surface", QVariant::fromValue(surface) },
                                { "fromGeometry", QVariant::fromValue(startGeo) },
                                { "toGeometry", QVariant::fromValue(endGeo) },
+                           });
+}
+
+QQuickItem *QmlEngine::createWindowTransition(SurfaceWrapper *surface,
+                                              const QRectF &startGeo,
+                                              const QRectF &endGeo,
+                                              QQuickItem *parent,
+                                              WSurface *sourceSurface,
+                                              int direction)
+{
+    return createComponent(windowTransitionComponent,
+                           parent,
+                           {
+                               { "surface", QVariant::fromValue(surface) },
+                               { "fromGeometry", QVariant::fromValue(startGeo) },
+                               { "toGeometry", QVariant::fromValue(endGeo) },
+                               { "sourceSurface", QVariant::fromValue(sourceSurface) },
+                               { "direction", QVariant::fromValue(direction) },
                            });
 }
 

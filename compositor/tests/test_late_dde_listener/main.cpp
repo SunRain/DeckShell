@@ -1,9 +1,12 @@
 // Copyright (C) 2026 UnionTech Software Technology Co., Ltd.
 // SPDX-License-Identifier: Apache-2.0 OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
 
+#include "core/dconfigmanager.h"
 #include "core/rootsurfacecontainer.h"
 #include "core/treeland.h"
 #include "lateclient.h"
+#include "test-accounts-service.h"
+#include "test-dconfig-service.h"
 #include "modules/dde-shell/ddeshellmanagerinterfacev1.h"
 #include "seat/helper.h"
 #include "session/session.h"
@@ -103,11 +106,13 @@ void LateDdeListenerTest::initTestCase()
     QVERIFY2(m_runtimeDir->isValid(), "failed to create XDG runtime directory");
     qputenv("XDG_RUNTIME_DIR", m_runtimeDir->path().toUtf8());
 
+    QVERIFY(DConfigManager::instance());
+    QTRY_VERIFY_WITH_TIMEOUT(DConfigManager::instance()->isInitializeSucceeded(), 5000);
     WRenderHelper::setupRendererBackend();
     m_treeland = std::make_unique<Treeland::Treeland>();
 
+    QTRY_VERIFY_WITH_TIMEOUT(Helper::instance(), 5000);
     auto *helper = Helper::instance();
-    QVERIFY(helper);
     const auto session = helper->sessionManager()->globalSession();
     QVERIFY(session);
     QVERIFY(session->socket());
@@ -218,6 +223,12 @@ int main(int argc, char *argv[])
     qputenv("WLR_LIBINPUT_NO_DEVICES", "1");
     qunsetenv("QT_QPA_PLATFORM");
 
+    TestDConfigService dconfigService;
+    if (!dconfigService.start()) {
+        dconfigService.stop();
+        return 1;
+    }
+
     WServer::initializeQPA();
     QGuiApplication::setQuitOnLastWindowClosed(false);
 
@@ -227,8 +238,16 @@ int main(int argc, char *argv[])
     app.setOrganizationName(QStringLiteral("deepin"));
     app.setApplicationName(QStringLiteral("test-late-dde-listener"));
 
+    TestAccountsService accountsService;
+    if (!dconfigService.waitForService() || !accountsService.registerObjects()) {
+        dconfigService.stop();
+        return 1;
+    }
+    DConfigManager dconfigManager(&app);
     LateDdeListenerTest test;
-    return QTest::qExec(&test, argc, argv);
+    const int result = QTest::qExec(&test, argc, argv);
+    dconfigService.stop();
+    return result;
 }
 
 #include "main.moc"

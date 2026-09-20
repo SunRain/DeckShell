@@ -132,7 +132,7 @@ void init(std::function<void()> onInitialized)
                            << initialUserName;
 
         auto *userConfig = configManager->initialUserConfig();
-        auto *seatConfig = configManager->seatUserConfig(initialUserName);
+        auto *seatConfig = configManager->userSeatConfig(initialUserName, QStringLiteral("seat0"));
         auto initialized = std::make_shared<bool>(false);
         auto initializeWhenReady = [initializeTreeland,
                                     userConfig,

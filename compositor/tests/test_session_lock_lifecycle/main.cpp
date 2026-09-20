@@ -3,6 +3,8 @@
 
 #include "outputresizeclient.h"
 #include "sessionlockclient.h"
+#include "test-accounts-service.h"
+#include "test-dconfig-service.h"
 
 #include <QElapsedTimer>
 #include <QFile>
@@ -19,6 +21,8 @@ class SessionLockLifecycleTest : public QObject
     Q_OBJECT
 
 private Q_SLOTS:
+    void initTestCase();
+    void cleanupTestCase();
     void init();
     void externalClientLocksAndUnlocksTwice();
     void lockSurfacesAcknowledgeConfigureAndCommitForEveryOutput();
@@ -32,10 +36,24 @@ private:
     QString diagnostics();
     void stopCompositor();
 
+    TestDConfigService m_dconfig;
+    TestAccountsService m_accounts;
     std::unique_ptr<QTemporaryDir> m_runtimeDir;
     QProcess m_compositor;
     QByteArray m_output;
 };
+
+void SessionLockLifecycleTest::initTestCase()
+{
+    QVERIFY2(m_dconfig.start(), "failed to start isolated DConfig service");
+    QVERIFY2(m_dconfig.waitForService(), "isolated DConfig service did not become ready");
+    QVERIFY2(m_accounts.registerObjects(), "failed to register isolated AccountsService");
+}
+
+void SessionLockLifecycleTest::cleanupTestCase()
+{
+    m_dconfig.stop();
+}
 
 bool SessionLockLifecycleTest::waitForSocket()
 {
@@ -46,6 +64,7 @@ bool SessionLockLifecycleTest::waitForSocket()
     while (!QFile::exists(socketPath) && timer.elapsed() < 10000) {
         if (m_compositor.state() == QProcess::NotRunning)
             return false;
+        QCoreApplication::processEvents(QEventLoop::AllEvents, 20);
         m_compositor.waitForReadyRead(50);
         m_output.append(m_compositor.readAll());
         QThread::msleep(20);

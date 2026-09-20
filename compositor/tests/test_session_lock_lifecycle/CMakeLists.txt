@@ -1,7 +1,7 @@
 # Copyright (C) 2026 UnionTech Software Technology Co., Ltd.
 # SPDX-License-Identifier: Apache-2.0 OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
 
-find_package(Qt6 REQUIRED COMPONENTS Core Test)
+find_package(Qt6 REQUIRED COMPONENTS Core DBus Test)
 find_package(PkgConfig REQUIRED)
 pkg_search_module(WAYLAND_CLIENT REQUIRED IMPORTED_TARGET wayland-client)
 pkg_get_variable(WLR_PROTOCOLS_DATA_DIR wlr-protocols pkgdatadir)
@@ -62,6 +62,8 @@ add_executable(test_session_lock_lifecycle
     sessionlockclient.h
     outputresizeclient.cpp
     outputresizeclient.h
+    ../protocols/framework/test-dconfig-service.cpp
+    ../protocols/framework/test-accounts-service.cpp
     ${PROTOCOL_HEADER}
     ${PROTOCOL_CODE}
     ${OUTPUT_MANAGEMENT_HEADER}
@@ -83,11 +85,13 @@ endif()
 target_include_directories(test_session_lock_lifecycle
     PRIVATE
         ${CMAKE_CURRENT_BINARY_DIR}
+        ${CMAKE_CURRENT_SOURCE_DIR}/../protocols/framework
 )
 
 target_link_libraries(test_session_lock_lifecycle
     PRIVATE
         Qt::Core
+        Qt::DBus
         Qt::Test
         PkgConfig::WAYLAND_CLIENT
 )
@@ -95,4 +99,7 @@ target_link_libraries(test_session_lock_lifecycle
 add_dependencies(test_session_lock_lifecycle deckcompositor)
 
 add_test(NAME test_session_lock_lifecycle COMMAND test_session_lock_lifecycle)
-set_tests_properties(test_session_lock_lifecycle PROPERTIES TIMEOUT 60)
+set_tests_properties(test_session_lock_lifecycle PROPERTIES
+    TIMEOUT 60
+    ENVIRONMENT "DSG_DATA_DIRS=${CMAKE_BINARY_DIR}/compositor/tests/protocols/dsg:/usr/share/dsg;TREELAND_PROTOCOL_TEST_DSG_DIR=${CMAKE_BINARY_DIR}/compositor/tests/protocols/dsg;WLR_XWAYLAND=$<TARGET_FILE:treeland-xwayland>"
+)

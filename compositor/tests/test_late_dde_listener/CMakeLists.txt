@@ -1,7 +1,7 @@
 # Copyright (C) 2026 UnionTech Software Technology Co., Ltd.
 # SPDX-License-Identifier: Apache-2.0 OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
 
-find_package(Qt6 REQUIRED COMPONENTS Gui Test)
+find_package(Qt6 REQUIRED COMPONENTS DBus Gui Test)
 find_package(PkgConfig REQUIRED)
 pkg_get_variable(WAYLAND_PROTOCOLS_DATA_DIR wayland-protocols pkgdatadir)
 pkg_search_module(WAYLAND_CLIENT REQUIRED IMPORTED_TARGET wayland-client)
@@ -58,6 +58,8 @@ add_executable(test_late_dde_listener
     main.cpp
     lateclient.cpp
     lateclient.h
+    ../protocols/framework/test-dconfig-service.cpp
+    ../protocols/framework/test-accounts-service.cpp
     ${XDG_SHELL_HEADER}
     ${XDG_SHELL_CODE}
     ${DDE_SHELL_HEADER}
@@ -68,11 +70,13 @@ target_include_directories(test_late_dde_listener
     PRIVATE
         ${CMAKE_SOURCE_DIR}/compositor/src
         ${CMAKE_CURRENT_BINARY_DIR}
+        ${CMAKE_CURRENT_SOURCE_DIR}/../protocols/framework
 )
 
 target_link_libraries(test_late_dde_listener
     PRIVATE
         libdeckcompositor
+        Qt::DBus
         Qt::Gui
         Qt::Test
         PkgConfig::WAYLAND_CLIENT
@@ -80,4 +84,7 @@ target_link_libraries(test_late_dde_listener
 )
 
 add_test(NAME test_late_dde_listener COMMAND test_late_dde_listener)
-set_tests_properties(test_late_dde_listener PROPERTIES TIMEOUT 60)
+set_tests_properties(test_late_dde_listener PROPERTIES
+    TIMEOUT 60
+    ENVIRONMENT "DSG_DATA_DIRS=${CMAKE_BINARY_DIR}/compositor/tests/protocols/dsg:/usr/share/dsg;TREELAND_PROTOCOL_TEST_DSG_DIR=${CMAKE_BINARY_DIR}/compositor/tests/protocols/dsg;WLR_XWAYLAND=$<TARGET_FILE:treeland-xwayland>"
+)

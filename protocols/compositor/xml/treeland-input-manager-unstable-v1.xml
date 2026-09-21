@@ -19,9 +19,20 @@
         disable-while-typing and tap-to-click are managed through a
         treeland_pointer_device_configuration_v1 object created from the
         device-specific settings interface.
+
+        Keyboard settings include repeat behavior, num lock state, and XKB
+        layout, model, variant, and option strings for the target seat.
+
+        Warning! This protocol is EXPERIMENTAL and under active development.
+        It may change at any time, including in backward-incompatible ways,
+        without incrementing the interface major version and without prior
+        notice. No compatibility guarantees of any kind are provided. Clients
+        and compositors must track the upstream definition in treeland-protocols
+        and must not rely on the current interface names, requests, events, or
+        semantics remaining stable across releases.
     </description>
 
-    <interface name="treeland_input_manager_v1" version="1">
+    <interface name="treeland_input_manager_v1" version="2">
         <description summary="global input device manager">
             The treeland_input_manager_v1 interface is a global object used to
             create per-device settings objects for input devices exposed by the
@@ -343,7 +354,7 @@
                 does not by itself cause an acceleration_profile event to be
                 emitted.
             </description>
-            <arg name="profile" type="uint" enum="treeland_pointer_device_configuration_v1.acceleration_profile"
+            <arg name="profile" type="uint" enum="acceleration_profile"
                  summary="desired acceleration profile"/>
         </request>
 
@@ -358,7 +369,7 @@
                 object. Sending this request, or the following apply request,
                 does not by itself cause a send_events_mode event to be emitted.
             </description>
-            <arg name="mode" type="uint" enum="treeland_pointer_device_configuration_v1.send_events_mode"
+            <arg name="mode" type="uint" enum="send_events_mode"
                  summary="desired pointer event delivery mode"/>
         </request>
 
@@ -487,7 +498,7 @@
                 Changes requested through set_acceleration_profile do not cause
                 this event to be emitted automatically.
             </description>
-            <arg name="profile" type="uint" enum="treeland_pointer_device_configuration_v1.acceleration_profile"
+            <arg name="profile" type="uint" enum="acceleration_profile"
                  summary="current acceleration profile"/>
         </event>
 
@@ -503,7 +514,7 @@
                 Changes requested through set_send_events_mode do not cause
                 this event to be emitted automatically.
             </description>
-            <arg name="mode" type="uint" enum="treeland_pointer_device_configuration_v1.send_events_mode"
+            <arg name="mode" type="uint" enum="send_events_mode"
                  summary="current pointer event delivery mode"/>
         </event>
 
@@ -669,10 +680,10 @@
         </request>
     </interface>
 
-    <interface name="treeland_keyboard_settings_v1" version="1">
+    <interface name="treeland_keyboard_settings_v1" version="2">
         <description summary="keyboard settings object">
             The treeland_keyboard_settings_v1 interface represents pending
-            settings for all keyboard associated with the target seat.
+            settings for all keyboards associated with the target seat.
 
             Requests on this object update pending keyboard state. The
             compositor applies the accumulated settings when the client sends
@@ -737,7 +748,7 @@
                 object. Sending this request, or the following apply request,
                 does not by itself cause a num_lock event to be emitted.
             </description>
-            <arg name="state" type="uint" enum="treeland_keyboard_settings_v1.toggle_state"
+            <arg name="state" type="uint" enum="toggle_state"
                  summary="desired num lock state"/>
         </request>
 
@@ -746,6 +757,44 @@
                 Ask the compositor to apply the pending keyboard settings
                 carried by this object.
             </description>
+        </request>
+
+        <request name="set_xkb_rules" since="2">
+            <description summary="set the pending XKB rules configuration">
+                Set the XKB layout, model, variant, and options to apply on the
+                next apply request. These four values form one configuration
+                snapshot and replace the complete pending XKB rules state.
+
+                Layout contains one or more comma-separated layout names, for
+                example "us" or "cz,us". An empty layout selects the XKB
+                default layout, which is "us".
+
+                Model identifies the keyboard model, for example "pc104" or
+                "pc105". An empty model selects the XKB default model.
+
+                Variant contains a comma-separated list whose entries
+                correspond to the layouts, for example "" or ",dvorak".
+                Empty entries select no variant for the corresponding layout.
+
+                Options contains a comma-separated list of XKB options, for
+                example "grp:win_space_toggle". An empty options string
+                selects no extra options.
+
+                This request updates only the pending state tracked by this
+                object. Multiple calls before apply replace the complete
+                pending XKB rules configuration; only the last configuration
+                is applied. Sending this request, or the following apply
+                request, does not by itself cause an xkb_rules event to be
+                emitted.
+            </description>
+            <arg name="layout" type="string" allow-null="true"
+                 summary="comma-separated XKB layout names, or empty for the default"/>
+            <arg name="model" type="string" allow-null="true"
+                 summary="XKB keyboard model, or empty for the default"/>
+            <arg name="variant" type="string" allow-null="true"
+                 summary="comma-separated XKB variants, or empty for none"/>
+            <arg name="options" type="string" allow-null="true"
+                 summary="comma-separated XKB options, or empty for none"/>
         </request>
 
         <event name="feature">
@@ -792,7 +841,7 @@
                 Changes requested through set_num_lock do not cause this event
                 to be emitted automatically.
             </description>
-            <arg name="state" type="uint" enum="treeland_keyboard_settings_v1.toggle_state"
+            <arg name="state" type="uint" enum="toggle_state"
                  summary="current num lock state"/>
         </event>
 
@@ -815,6 +864,27 @@
                 with this event, regardless of whether it sends the initial
                 state or a later update.
             </description>
+        </event>
+
+        <event name="xkb_rules" since="2">
+            <description summary="report the current XKB rules configuration">
+                This event reports the current XKB layout, model, variant, and
+                options as one consistent configuration snapshot. The string
+                formats and empty-value semantics match set_xkb_rules.
+
+                The compositor sends this event after object creation as part
+                of the initial keyboard state batch. It may send the event
+                again in a later batch when any effective XKB rules value
+                changes.
+            </description>
+            <arg name="layout" type="string"
+                 summary="comma-separated XKB layout names, or empty for the default"/>
+            <arg name="model" type="string"
+                 summary="XKB keyboard model, or empty for the default"/>
+            <arg name="variant" type="string"
+                 summary="comma-separated XKB variants, or empty for none"/>
+            <arg name="options" type="string"
+                 summary="comma-separated XKB options, or empty for none"/>
         </event>
     </interface>
 </protocol>

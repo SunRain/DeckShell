@@ -13,6 +13,7 @@ SCRIPTS = Path(__file__).resolve().parents[1] / "scripts"
 sys.path.insert(0, str(SCRIPTS))
 
 from three_repo_fixture import build_fixture
+from pairing_report_fixture import report_pairing
 from support import run
 from validation_record import main as record_main
 from waylib_contract_audit import main as audit_main
@@ -126,6 +127,7 @@ class ThreeRepositoryBuildTests(unittest.TestCase):
             "waylib_verify": verify_waylib_sync(q.child_worktree, q.child_base, m["final_child_head"], q.inventory, traces, read_json(q.waylib_evidence_path), q.artifact_root, q.source_repo),
             "gitlink_verify": verify_gitlink_consistency(q.parent_worktree, q.child_worktree, q.parent_base, q.child_base, m),
             "protocol_tracking": read_json(protocol_path),
+            "protocol_pairing": report_pairing(q.inventory, m, read_json(self.bundle)),
             "contract_audit": audit, "child_materialization": self.materialization,
         }
 

@@ -78,8 +78,15 @@ schema_version 为 2。identity 绑定 source repo、P/C/R 工作树与 common G
 
 四个必需 CMake build ID 只能执行默认完整构建，不接受目标选择、原生工具参数、帮助或空跑；不能通过关闭必需产品配置来绕过。pkg-config 合同比较本次安装树实际展开的依赖与动态/静态参数，查询失败或旧字面快照均不放行。
 
-完整报告要求八项 gate、C base/candidate fresh build/install/CTest、已有 test_project consumer、固定基线命名空间探针、P build/compositor CTest；R 激活时还要求 R base/candidate Meson 记录和 C/P wrapper 的实际消费目标链接输入。仅当 Git 对象证明来源基线无该子树且 R0 整个根树为空时，三个 R 基线记录可由工具生成 `not-applicable`，明确未执行并保存证明；否则必须有当前执行日志。R 候选、C/P 验证及两个 R gate 不获豁免。仅构建顺序依赖、自身产物输出和复用旧测试日志都不算证据。R 零注册测试如实 NO_TESTS，不等于基线不适用，不能替代构建或豁免必需 CTest。
+完整报告要求九项 gate、C base/candidate fresh build/install/CTest、已有 test_project consumer、固定基线命名空间探针、P build/compositor CTest；R 激活时还要求 R base/candidate Meson 记录和 C/P wrapper 的实际消费目标链接输入。仅当 Git 对象证明来源基线无该子树且 R0 整个根树为空时，三个 R 基线记录可由工具生成 `not-applicable`，明确未执行并保存证明；否则必须有当前执行日志。R 候选、C/P 验证及两个 R gate 不获豁免。仅构建顺序依赖、自身产物输出和复用旧测试日志都不算证据。R 零注册测试如实 NO_TESTS，不等于基线不适用，不能替代构建或豁免必需 CTest。
 
 另获收口授权后，closeout 时的已激活仓库的完整 `refs/heads/**` 必须未被检出，且满足 expected-old 和可快进关系；按 R→C→P CAS。部分成功保留已更新下层 ref，失败记入 journal，同身份 resume 只续作剩余部分，不自动反向 reset。
 
 只写指定工作树、证据目录、构建物化目录和获准的本地 refs。不操作外层 HA-DeckShell、远端 refs、tag 或 push；fixture 通过不表示真实来源区间或产品构建已完成。
+
+## 每轮协议配套
+
+remote-subsurface 的独立来源范围、配套回放、审查和真实交互验证见
+[协议配套检查](protocol-pairing.md)。`protocol_pairing` 是每轮必需的第九项 gate；
+`protocol_tracking` 仍为 advisory，不替代配套结论。缺失或失败报告“尚未适配”，
+最终报告和 `closeout` 均拒绝接受。普通构建只使用库内 XML，不运行同步工具。

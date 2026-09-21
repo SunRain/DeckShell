@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from .protocol_update import companion_lane_errors, replay_head
+
 import re
 from pathlib import Path
 from typing import Any, Dict, List, Mapping, Sequence, Tuple
@@ -378,11 +380,16 @@ def verify_parent_sync(
     head_sha = resolve_commit(parent_repo, parent_head)
     blockers = inventory_errors(inventory)
     blockers.extend(parent_document_errors(inventory, manifest, evidence, head_sha))
+    update = manifest.get("protocol_update")
+    if update is not None:
+        if update != evidence.get("protocol_update") or update.get("parent", {}).get("head") != head_sha:
+            blockers.append("parent protocol companion differs from manifest/evidence/head")
+        blockers.extend(companion_lane_errors(parent_repo, update, "parent", artifact_root))
     mapping_errors, verified_entries = _mapping_verification_errors(
         source_repo,
         parent_repo,
         base_sha,
-        head_sha,
+        replay_head(manifest, "parent"),
         inventory,
         manifest,
         evidence,

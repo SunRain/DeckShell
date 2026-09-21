@@ -8,6 +8,7 @@ from typing import Any, Callable, Dict, List, Mapping, Optional
 
 from .git_ops import (
     atomic_write_json,
+    canonical_json_sha256,
     canonical_repo,
     common_git_dir,
     git_succeeds,
@@ -21,6 +22,7 @@ from .patches import tree_entry
 from .replay_types import GITLINK_PATH
 from .schema import SHA256, is_full_sha
 from .wlroots import registration
+from .protocol_sources import read_pair
 
 
 REPORT_GATES = {
@@ -28,6 +30,7 @@ REPORT_GATES = {
     "waylib_verify",
     "gitlink_verify",
     "protocol_tracking",
+    "protocol_pairing",
     "contract_audit",
     "child_materialization",
     "wlroots_verify",
@@ -121,6 +124,15 @@ def _report_errors(report: Mapping[str, Any]) -> List[str]:
         errors.append("gate_sha256 contains an invalid digest")
     if report.get("blocked_reasons") != []:
         errors.append("blocked_reasons must be an empty array")
+    pairing = report.get("protocol_pairing")
+    if (not isinstance(pairing, dict) or pairing.get("outcome") != "pass"
+            or pairing.get("status") != "paired" or pairing.get("blocked_reasons") != []
+            or pairing.get("unfinished") != [] or not pairing.get("last_accepted_pair")
+            or not pairing.get("candidate_pair")):
+        errors.append("尚未适配：closeout requires the complete protocol pairing conclusion")
+    elif (not isinstance(gate_digests, dict)
+          or gate_digests.get("protocol_pairing") != canonical_json_sha256(pairing)):
+        errors.append("尚未适配：protocol pairing differs from the report gate")
     errors.extend(_report_artifact_errors(report.get("report")))
     return errors
 
@@ -337,6 +349,16 @@ def _validate_replay_identity(report, parent_repo, child_repo, parent_old, child
         raise CloseoutBlocked("closeout repositories differ from frozen object stores")
 
 
+def _validate_protocol_pair(report, child_repo, child_old, child_new):
+    pairing = report["protocol_pairing"]
+    try:
+        if (read_pair(child_repo, child_old) != pairing["last_accepted_pair"]
+                or read_pair(child_repo, child_new) != pairing["candidate_pair"]):
+            raise ValueError("source-shipped pair differs from the accepted report")
+    except (OSError, ValueError, RuntimeError) as error:
+        raise CloseoutBlocked(f"尚未适配：{error}") from error
+
+
 def closeout_refs(
     parent_repo: Path,
     child_repo: Path,
@@ -373,6 +395,7 @@ def closeout_refs(
         child_old, parent_new, child_new, report,
     )
     _validate_replay_identity(report, parent_repo, child_repo, parent_old, child_old)
+    _validate_protocol_pair(report, child_repo, child_old, child_new)
     identity.update(_wlroots_closeout_identity(wlroots_repo, wlroots_ref, wlroots_expected_old, wlroots_new,
                                                report, child_repo, child_old, child_new, resume))
     rows = list(_ref_rows(identity))

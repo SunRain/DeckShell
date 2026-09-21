@@ -22,6 +22,7 @@ from .replay_types import ReplayBlocked, ReplayRequest
 from .schema import CHILD_CLASSIFICATIONS
 from .wlroots import nested_transition, required_by_inventory, updater_guard_errors, wlroots_source_audit
 from .schema import WLROOTS_ROOT
+from .protocol_update import companion_lane_errors, run_protocol_update
 
 
 StageHook = Callable[[str, str, str], None]
@@ -89,6 +90,9 @@ def _checkpoint_history_errors(
             for item in request.inventory["commits"]
             if nodes[item["source_commit"]][lane]["commit"]
         ]
+        companion = journal.get("protocol_update", {}).get(lane)
+        if companion and companion["head"] != companion["base"]:
+            expected.append(companion["head"])
         actual = str(run_git(repo, "rev-list", "--reverse", f"{base}..{head}")).split()
         if actual != expected:
             errors.append(f"{lane} history differs from replay journal checkpoints")
@@ -97,6 +101,13 @@ def _checkpoint_history_errors(
         node = nodes[item["source_commit"]]
         if node["parent"]["commit"]:
             expected_gitlink = node["gitlink"].get("to")
+    update = journal.get("protocol_update", {})
+    if "parent" in update:
+        expected_gitlink = update["child"]["head"]
+    for lane in ("child", "parent"):
+        if lane in update:
+            errors.extend(companion_lane_errors(getattr(request, f"{lane}_worktree"),
+                                                update, lane, request.artifact_root))
     actual_gitlink = tree_entry(
         request.parent_worktree, journal["current_parent_head"], request.gitlink_path
     )
@@ -336,6 +347,8 @@ def run_replay(
             if not node["parent"]["commit"]:
                 current_stage = "parent"
                 _checkpoint_parent(request, item, node, journal, stage_hook)
+        current_source, current_stage = "", "protocol-pairing"
+        run_protocol_update(request, journal, stage_hook)
         return _finish(request, journal)
     except Exception as error:
         _record_block(request, journal, current_source, current_stage, error)

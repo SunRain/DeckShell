@@ -9,6 +9,7 @@ from .git_ops import canonical_json_sha256, stable_unique
 from .schema import inventory_errors
 from .materialization import recursive_materialization_errors
 from .validation_gates import contract_binding_errors, validation_errors
+from .protocol_pairing import PAIRING_KIND, pairing_report_errors
 
 
 GATE_KINDS = {
@@ -16,6 +17,7 @@ GATE_KINDS = {
     "waylib_verify": "treeland-unified-waylib-verify",
     "gitlink_verify": "treeland-unified-gitlink-verify",
     "protocol_tracking": "treeland-unified-protocol-candidates",
+    "protocol_pairing": PAIRING_KIND,
     "contract_audit": "waylib-install-contract-audit",
     "child_materialization": "treeland-unified-child-materialization",
     "wlroots_verify": "treeland-unified-wlroots-verify",
@@ -274,6 +276,10 @@ def _markdown(
         "",
         *_protocol_table(gates.get("protocol_tracking")),
         "",
+        "## remote-subsurface 配套结论",
+        "",
+        *_pairing_summary(gates.get("protocol_pairing")),
+        "",
         "## 阻断项",
         "",
     ]
@@ -281,6 +287,20 @@ def _markdown(
     if not blockers:
         lines.append("- 无。")
     return "\n".join(lines) + "\n"
+
+
+def _pairing_summary(pairing):
+    if not isinstance(pairing, dict):
+        return ["- **尚未适配**：缺少每轮必需的协议配套结论；advisory 不能代替。"]
+    result = [f"- 配套状态：**{pairing.get('status', '尚未适配')}**",
+              f"- 目标范围：`{pairing.get('target_ranges')}`",
+              f"- 最后已接受配对：`{pairing.get('last_accepted_pair')}`",
+              f"- 候选配对：`{pairing.get('candidate_pair')}`",
+              f"- 失败阶段：`{pairing.get('failure_stage') or 'none'}`"]
+    result.extend(f"- 未完成：{item}" for item in pairing.get("unfinished", []))
+    result.extend(f"- 已有验证 `{row.get('id')}`：{row.get('outcome')}"
+                  for row in pairing.get("validation_results", []))
+    return result
 
 
 def build_sync_report(
@@ -294,6 +314,8 @@ def build_sync_report(
 
     blockers = _mapping_errors(inventory, manifest)
     blockers.extend(_gate_errors(gates, inventory, manifest))
+    blockers.extend(pairing_report_errors(gates.get("protocol_pairing"), inventory, manifest, validations,
+                                          artifact_root))
     blockers.extend(validation_errors(validations, artifact_root, manifest, gates))
     blockers.extend(contract_binding_errors(gates, validations, manifest, artifact_root))
     audit = gates.get("contract_audit") or {}
@@ -319,6 +341,7 @@ def build_sync_report(
             for name, gate in gates.items()
             if isinstance(gate, dict)
         },
+        "protocol_pairing": gates.get("protocol_pairing"),
         "validations_sha256": canonical_json_sha256(validations),
         "blocked_reasons": blockers,
         "markdown": _markdown(inventory, manifest, gates, validations, blockers),

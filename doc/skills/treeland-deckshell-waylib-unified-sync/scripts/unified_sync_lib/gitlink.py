@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from .protocol_update import companion_lane_errors, replay_head
+
 import json
 from pathlib import Path
 from typing import Any, Dict, List, Mapping, Sequence, Tuple
@@ -227,9 +229,18 @@ def verify_gitlink_consistency(
     blockers.extend(
         _history_alignment_errors(
             parent_repo, child_repo, parent_base_sha, child_base_sha,
-            final_parent, final_child, entries,
+            replay_head(manifest, "parent"), replay_head(manifest, "child"), entries,
         )
     )
+    update = manifest.get("protocol_update")
+    if update is not None:
+        for lane, repo, head in (("child", child_repo, final_child), ("parent", parent_repo, final_parent)):
+            if update.get(lane, {}).get("head") != head:
+                blockers.append(f"protocol {lane} companion differs from the final head")
+            blockers.extend(companion_lane_errors(repo, update, lane))
+        if update.get("child", {}).get("base") != current_child:
+            blockers.append("protocol companion does not start at the ordinary child replay head")
+        current_child = final_child
     blockers.extend(
         _final_gitlink_errors(parent_repo, final_parent, current_child, GITLINK_PATH)
     )
@@ -348,6 +359,8 @@ def verify_nested_gitlink_consistency(child_repo, wlroots_repo, inventory, manif
     }
     try:
         child = canonical_repo(child_repo)
+        if manifest.get("protocol_update") is not None:
+            errors.extend(companion_lane_errors(child, manifest["protocol_update"], "child", artifact_root))
         if not active:
             if required_by_inventory(inventory) or tree_entry(child, manifest["final_child_head"], WLROOTS_ROOT) or manifest.get("final_wlroots_head") is not None:
                 errors.append("wlroots cannot be marked not-applicable for this source/target layout")

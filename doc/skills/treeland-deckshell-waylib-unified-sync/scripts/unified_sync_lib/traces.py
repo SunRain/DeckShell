@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from .protocol_update import companion_lane_errors
+
 import json
 import re
 from pathlib import Path
@@ -245,10 +247,23 @@ def build_waylib_traces(
     if lane not in {"child", "wlroots"}:
         raise ValueError("unsupported file lane")
     base_sha, head_sha, targets, merges = _target_commits(repo, base, head)
+    companion_errors = []
+    update = evidence.get("protocol_update") if isinstance(evidence, dict) and lane == "child" else None
+    if update is not None:
+        row = update.get("child", {})
+        if row.get("head") != head_sha:
+            companion_errors.append("protocol child companion does not end at the requested head")
+        companion_errors.extend(companion_lane_errors(repo, update, "child", artifact_root))
+        if row.get("head") != row.get("base"):
+            if targets and targets[-1] == row.get("head"):
+                targets = targets[:-1]
+            else:
+                companion_errors.append("protocol child companion is not the final adjacent commit")
     migration_entries = _migration_entries(evidence, artifact_root, lane)
     entries = [_trace_commit(repo, sha, source_repo, lane, migration_entries, artifact_root) for sha in targets]
     expected = child_inventory_entries(inventory) if lane == "child" else [item for item in inventory["commits"] if item["wlroots"]["included"]]
     blockers = [reason for entry in entries for reason in entry["blocked_reasons"]]
+    blockers.extend(companion_errors)
     blockers.extend(f"target range contains merge commit: {sha}" for sha in merges)
     blockers.extend(_mapping_errors(entries, expected, lane))
     if source_repo is None:

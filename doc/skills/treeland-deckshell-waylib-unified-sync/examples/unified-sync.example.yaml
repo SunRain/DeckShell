@@ -28,6 +28,13 @@ wlroots_work_branch: sync/unified-aaaaaaaa-bbbbbbbb
 wlroots_worktree: /srv/worktrees/wlroots-unified-sync
 wlroots_submodule_url: /srv/git/wlroots-local
 
+protocol_update:
+  selection:
+    repo: /srv/git/treeland-protocols
+    base: eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee # C 基线记录的已接受 XML
+    head: ffffffffffffffffffffffffffffffffffffffff # 本轮所选协议终点
+    path: xml/treeland-remote-subsurface-unstable-v1.xml
+
 protocol_tracking:
   enabled: true
   protocol_repo: /srv/git/treeland-protocols

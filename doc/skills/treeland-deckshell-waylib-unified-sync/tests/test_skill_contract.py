@@ -158,7 +158,7 @@ class SkillContractTests(unittest.TestCase):
             self.assertIn(validation_id, waylib_contract)
         self.assertIn("--no-tests=error", waylib_contract)
         self.assertIn("materialize-child", skill)
-        self.assertIn("八类结构化门禁", skill)
+        self.assertIn("九类结构化门禁", skill)
         self.assertIn("protocols/compositor/**/*.xml", skill)
         self.assertIn("source_ref", skill)
         self.assertIn("可省略", skill)

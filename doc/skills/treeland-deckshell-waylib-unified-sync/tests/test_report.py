@@ -15,6 +15,7 @@ from unified_sync_lib.git_ops import canonical_json_sha256
 from unified_sync_lib.report import build_sync_report
 from unified_sync_lib.namespace_probe import probe_source
 from support import ctest_fixture
+from pairing_report_fixture import report_pairing
 
 
 SOURCE_ONE = "1" * 40
@@ -271,6 +272,9 @@ class ReportTests(unittest.TestCase):
             "commands": [{"command": command, "exit_code": 0, "log": write_artifact(self.root, f"probe-{index}.log", b"fixture compile result\n")}
                          for index, command in enumerate((["cmake", "-S", "probe", "-B", "build"], ["cmake", "--build", "build"]))],
         }
+
+        self.gates["protocol_pairing"] = report_pairing(self.inventory, self.manifest, self.validations)
+        self.gates["contract_audit"]["consumer"].update(consumer)
 
     def tearDown(self) -> None:
         self.tempdir.cleanup()

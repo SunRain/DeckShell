@@ -1,6 +1,6 @@
 ---
 name: treeland-deckshell-waylib-unified-sync
-description: 将指定 Treeland ref 的显式左开右闭 commit 区间逐提交同步到 DeckShell、waylib-shared 和嵌套 wlroots 仓库，按所选关键节点分段验收；用于统一同步、恢复回放、核验两层 gitlink 与安装合同、追踪协议候选。不要求普通中间提交编译，不猜来源范围，不自动远程发布。
+description: 将指定 Treeland ref 的显式左开右闭 commit 区间逐提交同步到 DeckShell、waylib-shared 和嵌套 wlroots 仓库，按所选关键节点分段验收；用于统一同步、恢复回放、核验两层 gitlink 与安装合同、追踪协议候选并完成每轮协议配套验证。不要求普通中间提交编译，不猜来源范围，不自动远程发布。
 ---
 
 # Treeland → DeckShell + waylib-shared + wlroots 统一同步
@@ -13,7 +13,7 @@ description: 将指定 Treeland ref 的显式左开右闭 commit 区间逐提交
 4. 分类只允许 `deckshell-only`、`waylib-only`、`dual`、`unowned-skip`；输入缺口使用 `blocked`。禁止再用 `dependency-only` 表示 child-owned 内容。
 5. 每个相关来源节点严格 R（若有变化）→ C（内容与 R gitlink 同一提交）→ P。R 内容审计、C 源码合同审计失败都不得推进上层。`waylib-only` 的 P 只能改 C gitlink；`dual` 的 P 同时包含授权内容和 C gitlink。
 6. 上层只引用已存在的下层 commit；R/C 不引用未来父 SHA。完整三仓映射写 manifest/report。C 的首次 `.gitmodules` 登记是 `adapted`，不是纯 gitlink 变更。
-7. 协议追踪由两类事实独立触发：来源提交实际修改 `protocols/**/*.xml`，或 parent candidate 实际修改 `protocols/compositor/**/*.xml`。treeland-protocols 的零、单、多候选都是 advisory；多候选不得伪装成唯一确认提交。
+7. 每轮先按 [协议配套检查](references/protocol-pairing.md) 检查实现与 XML 独立范围，更新并验证受影响实现、两份 XML、客户端和来源记录；失败报告“尚未适配”，不得接受。原有 advisory 协议追踪由两类事实独立触发：来源提交实际修改 `protocols/**/*.xml`，或 parent candidate 实际修改 `protocols/compositor/**/*.xml`。treeland-protocols 的零、单、多候选都是 advisory；多候选不得伪装成唯一确认提交。
 8. replay 只写显式、互不重叠的 linked worktree；artifact/build/install 位于源码工作树之外。正式证据不得只放 `/tmp`；临时 fixture 的例外不用于真实同步。
 9. 失败时保留 worktree 与 journal，不自动 reset、abort、清理、回滚或改写用户分支。`--resume` 只接受完全相同的冻结身份和与 journal 一致的 clean HEAD。
 10. 不改外层 `HA-DeckShell -> DeckShell` gitlink，不自动 fetch、push、tag。每段完整报告通过且授权覆盖该段后，显式执行 R→C→P expected-old CAS，再接续下一段；跨仓及跨分段不原子，不自动回滚。
@@ -22,7 +22,7 @@ description: 将指定 Treeland ref 的显式左开右闭 commit 区间逐提交
 
 - 开始前读取 [关键节点分段验收](references/key-node-validation.md)、[统一合同](references/unified-contract.md) 与 [路径策略引用](references/path-policy.md)，再加载其中指向的 DeckShell 权威 path-policy。
 - 准备 replay 或 adapted/empty 决策时读取 [提交消息](references/commit-messages.md) 与 [证据格式](references/evidence-schema.md)。
-- inventory 触达协议目标时读取 [协议候选](references/protocol-tracking.md)。
+- 每轮读取 [协议配套检查](references/protocol-pairing.md)；inventory 触达协议目标时另读 [协议候选](references/protocol-tracking.md)。
 - 存在 child lane 时读取 [Waylib 合同](references/waylib-contract.md)。
 - 不要把所有 reference 内容复制进上下文；仅在进入对应阶段时读取。
 
@@ -58,7 +58,7 @@ R0 必须是真实 commit，不是来源 tree SHA 或未经证明的 `UPSTREAM` 
 
 来源基线无 R 子树时只接受真实空树 R0；其构建豁免必须由 Git 对象证明，不能靠缺少 `meson.build` 推定。首次 subtree 导入若是 merge，须在单独授权、审核的初始化中建立导入后的基线，再同步后续非 merge 区间；空 R0 不开放 merge 回放，见 [初始化边界](references/unified-contract.md#首次-subtree-导入边界)。
 
-协议触发时还需要：
+每轮还需要 remote-subsurface 的 `protocol-update.json`：明确 XML 仓库、已接受 base、所选 head 和必要的新路径，见 [协议配套检查](references/protocol-pairing.md)。下列输入另用于 advisory 候选追踪：
 
 ```yaml
 protocol_repo: <包含用户手工指定协议来源对象的本地 Git 仓库>
@@ -69,19 +69,19 @@ protocol_ref: <用户手工输入并可解析的协议 ref 或完整 SHA>
 
 ## 顺序检查清单
 
-- [ ] 冻结来源 tip、整体范围、关键节点清单及本段范围；确认所有分段连续且通过预检，再冻结本段协议 ref（若触发）与 P/C/R 目标 SHA；不检查 remote 名称或 URL。
+- [ ] 冻结来源 tip、整体范围、关键节点清单及本段范围；确认所有分段连续且通过预检，再冻结每轮必需的协议范围和 advisory ref（若触发）与 P/C/R 目标 SHA；不检查 remote 名称或 URL。
 - [ ] 确认 P0→C0；R 启用时核对 R0 来源子树投影、已有 C0→R0、登记 URL 和独立对象库。
 - [ ] 生成一次统一 inventory；`outcome` 必须为 `pass`。
 - [ ] 人工复核 `unowned-skip`、review-only 批准、rename 两侧，以及 copy 的 old 来源关系与 new 实际变更。
 - [ ] 建立两个或三个 clean linked worktree；证据目录位于其外且可持久保存。
-- [ ] 按 inventory 逐节点 R→C→P 回放，审计不过不推进上层。
+- [ ] 检查两个来源范围；给 replay 提供 `--protocol-update`，逐节点 R→C→P 回放后完成同一 journal 内的协议配套更新，审计不过不推进上层。
 - [ ] 运行 P/C/R 内容验证与两层 gitlink 验证；确认 `applied` 投影、`adapted` 逐路径证据和每个 C 合同审计均有效。
 - [ ] 协议触发时冻结 protocol ref 后生成 advisory 候选；未触发时写 `not-triggered` 证据。
 - [ ] 物化 C 基线、C 候选及 P 候选的依赖；对 C base/candidate 分别 fresh build/install/CTest，运行已有 `test_project` consumer 和固定基线命名空间探针。
 - [ ] R 启用时取得 base/candidate 六条 Meson 记录；仅经 Git 证明的空 R 基线记 `not-applicable`，候选仍实际执行，核对 C/P 编译数据库、生成头和链接命令使用本次 R。
 - [ ] 对 parent candidate fresh configure/build/CTest；顶层 0 tests 原样记为 `NO_TESTS`，不能写成 PASS。
-- [ ] 报告生成器结果必须为 `pass`；不得手写补成 PASS。
-- [ ] 八项 gate 和本段完整报告通过且授权覆盖后，目标 refs 未被检出时执行 R→C→P closeout；新 SHA 成为下一段基线。
+- [ ] 完成受影响客户端/真实交互验证和 `protocol-verify`；报告生成器接收 `--protocol-pairing` 且结果必须为 `pass`，不得手写补成 PASS。
+- [ ] 九项 gate 和本段完整报告通过且授权覆盖后，目标 refs 未被检出时执行 R→C→P closeout；新 SHA 成为下一段基线。
 - [ ] 逐段复核 refs、gitlink、journal 和节点报告；未验节点不得用最后一段 PASS 替代，保持 remote push 为未执行。
 
 ## 1. 冻结输入
@@ -176,6 +176,7 @@ python3 "$SKILL_DIR/scripts/unified_sync.py" replay \
   --child-base "$CHILD_BASE" \
   --inventory "$ARTIFACT_ROOT/inventory.json" \
   --artifact-root "$ARTIFACT_ROOT" \
+  --protocol-update "$ARTIFACT_ROOT/protocol-update.json" \
   --run-id "$RUN_ID" \
   --refs-doc "$REFS_DOC" "${WLROOTS_REPLAY_ARGS[@]}"
 ```
@@ -345,6 +346,7 @@ python3 "$SKILL_DIR/scripts/generate_sync_report.py" \
   --waylib-verify "$ARTIFACT_ROOT/waylib-verify.json" \
   --gitlink-verify "$ARTIFACT_ROOT/gitlink-verify.json" \
   --protocol-tracking "$ARTIFACT_ROOT/protocol-candidates.json" \
+  --protocol-pairing "$ARTIFACT_ROOT/protocol-pairing.json" \
   --contract-audit "$ARTIFACT_ROOT/waylib-contract-audit.json" \
   --child-materialization "$ARTIFACT_ROOT/child-materialization.json" \
   --wlroots-verify "$ARTIFACT_ROOT/wlroots-verify.json" \
@@ -401,7 +403,7 @@ closeout 按 R→C→P（R 不适用则 C→P）执行 expected-old CAS。部分
 
 ## 完成定义
 
-每段须来源映射齐全、八类结构化门禁（P/C/R verify、两层 gitlink、protocol advisory、Waylib contract、递归 materialization）通过、必需日志和本段完整报告有效，并完成获准的 closeout。全部冻结关键节点均满足这些条件才可声明整组本地同步完成；普通中间提交不作可构建承诺。R 不适用须由工具核验；隔离 fixture 不代表真实产品验证，远程发布另行授权。
+每段须来源映射齐全、九类结构化门禁（P/C/R verify、两层 gitlink、protocol advisory、protocol pairing、Waylib contract、递归 materialization）通过、必需日志和本段完整报告有效，并完成获准的 closeout。全部冻结关键节点均满足这些条件才可声明整组本地同步完成；普通中间提交不作可构建承诺。R 不适用须由工具核验；隔离 fixture 不代表真实产品验证，远程发布另行授权。
 
 ## 同步后的按仓记录
 

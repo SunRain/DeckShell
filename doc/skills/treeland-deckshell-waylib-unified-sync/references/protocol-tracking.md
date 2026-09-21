@@ -1,5 +1,8 @@
 # treeland-protocols advisory 候选
 
+本页仅描述候选发现。每轮 remote-subsurface 独立范围检查和接受条件见
+[协议配套检查](protocol-pairing.md)；下文未触发追踪不豁免配套检查。
+
 ## 触发边界
 
 协议追踪有两个独立触发信号：

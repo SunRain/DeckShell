@@ -148,7 +148,7 @@ C/P wrapper_build 保存 codemodel、compile_commands、Ninja 命令、真实编
 
 ## 报告与收口
 
-八个 gate 名称固定为：
+九个 gate 名称固定为：
 
 ```text
 deckshell_verify
@@ -157,6 +157,7 @@ wlroots_verify
 gitlink_verify
 nested_gitlink_verify
 protocol_tracking
+protocol_pairing
 contract_audit
 child_materialization
 ```
@@ -166,3 +167,10 @@ child_materialization
 `build_scope = {kind: range-head-only, source_head: <本段 range.head 完整 SHA>}` 明确只验收本段终点对应候选及必需基线；普通中间提交不要求构建，不证明其他 tag 已通过。closeout 拒绝缺少该范围声明的旧报告；须通过当前生成器重新验收，不是手填字段升级。多节点汇总只在已有 refs_doc 中链接各段真实报告，不新增能替代它们的全局 PASS 工件，见 [分段规则](key-node-validation.md)。
 
 treeland-unified-closeout-journal 保存 R/C/P expected-old CAS 身份、更新标记、事件与部分失败。完整 report 通过不是收口授权；获准后只更新未被检出的指定 refs，不自动回滚或 push。
+
+## 每轮协议配套
+
+remote-subsurface 的独立来源范围、配套回放、审查和真实交互验证见
+[协议配套检查](protocol-pairing.md)。`protocol_pairing` 是每轮必需的第九项 gate；
+`protocol_tracking` 仍为 advisory，不替代配套结论。缺失或失败报告“尚未适配”，
+最终报告和 `closeout` 均拒绝接受。普通构建只使用库内 XML，不运行同步工具。

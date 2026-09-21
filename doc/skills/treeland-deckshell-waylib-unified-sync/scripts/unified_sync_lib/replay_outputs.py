@@ -26,7 +26,7 @@ def build_manifest(
                 "nested_gitlink": node["nested_gitlink"],
             }
         )
-    return {
+    result = {
         "schema_version": 2,
         "kind": "treeland-unified-sync-manifest",
         "outcome": "pass",
@@ -36,6 +36,9 @@ def build_manifest(
         "final_wlroots_head": journal["current_wlroots_head"],
         "entries": entries,
     }
+    if "protocol_update" in journal:
+        result["protocol_update"] = journal["protocol_update"]
+    return result
 
 
 def _child_evidence_entry(
@@ -111,7 +114,7 @@ def build_evidence_documents(
             child_entries.append(_child_evidence_entry(source_sha, item, node))
         if node["parent"]["commit"]:
             parent_entries.append(_parent_evidence_entry(source_sha, item, node))
-    return (
+    documents = (
         {
             "schema_version": 2,
             "kind": "treeland-unified-waylib-evidence",
@@ -123,3 +126,7 @@ def build_evidence_documents(
             "entries": parent_entries,
         },
     )
+    if "protocol_update" in journal:
+        for document in documents:
+            document["protocol_update"] = journal["protocol_update"]
+    return documents

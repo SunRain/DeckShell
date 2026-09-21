@@ -22,6 +22,7 @@ def parser() -> argparse.ArgumentParser:
     result.add_argument("--waylib-verify", required=True, type=Path)
     result.add_argument("--gitlink-verify", required=True, type=Path)
     result.add_argument("--protocol-tracking", required=True, type=Path)
+    result.add_argument("--protocol-pairing", type=Path, help="每轮必需；缺失时生成尚未适配报告并阻止接受")
     result.add_argument("--contract-audit", required=True, type=Path)
     result.add_argument("--child-materialization", required=True, type=Path)
     result.add_argument("--wlroots-verify", required=True, type=Path)
@@ -43,6 +44,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
             "waylib_verify": read_json(args.waylib_verify),
             "gitlink_verify": read_json(args.gitlink_verify),
             "protocol_tracking": read_json(args.protocol_tracking),
+            "protocol_pairing": read_json(args.protocol_pairing) if args.protocol_pairing else None,
             "contract_audit": read_json(args.contract_audit),
             "child_materialization": read_json(args.child_materialization),
             "wlroots_verify": read_json(args.wlroots_verify),

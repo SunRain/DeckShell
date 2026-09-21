@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from .protocol_update import companion_lane_errors
+
 import json
 from pathlib import Path
 from typing import Any, Dict, List, Mapping, Optional
@@ -289,6 +291,8 @@ def verify_waylib_sync(
         blockers.append("inventory outcome must be pass")
     blockers.extend(_evidence_shape_errors(evidence, lane))
     blockers.extend(_trace_shape_errors(traces, lane))
+    if lane == "child" and evidence.get("protocol_update") is not None:
+        blockers.extend(companion_lane_errors(repo, evidence["protocol_update"], "child", artifact_root))
     if source_repo is not None:
         from .traces import build_waylib_traces
         migration_input = ({"evidence": evidence, "artifact_root": artifact_root}

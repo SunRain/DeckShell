@@ -40,6 +40,7 @@ class ReplayRequest:
     wlroots_target_ref: Optional[str] = None
     wlroots_submodule_url: Optional[str] = None
     wlroots_baseline_proof: Optional[Dict[str, Any]] = None
+    protocol_update: Optional[Dict[str, Any]] = None
 
     @property
     def wlroots_evidence_path(self) -> Path:

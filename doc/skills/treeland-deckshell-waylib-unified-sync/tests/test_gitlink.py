@@ -10,13 +10,14 @@ from pathlib import Path
 SCRIPTS = Path(__file__).resolve().parents[1] / "scripts"
 sys.path.insert(0, str(SCRIPTS))
 
-from unified_sync_lib.git_ops import read_json, sha256_file
+from unified_sync_lib.git_ops import read_json, sha256_file, canonical_json_sha256
 from unified_sync_lib.closeout import CloseoutBlocked, closeout_refs
 from unified_sync_lib.gitlink import verify_gitlink_consistency
 from unified_sync_lib.inventory import build_unified_inventory
 from unified_sync_lib.policy import load_policy
 from unified_sync_lib.replay import ReplayRequest, run_replay
 
+from pairing_report_fixture import PAIR, PROVENANCE_PATH
 from support import add_worktree, commit_files, init_repo, run, write_policy
 
 
@@ -31,7 +32,7 @@ class GitlinkVerifierTests(unittest.TestCase):
         self.source_sha = commit_files(
             self.source, {"qwlroots/a.cpp": "a\n"}, "fix(qwlroots): sync"
         )
-        self.child_base = commit_files(self.child, {"README.local": "base\n"}, "base")
+        self.child_base = commit_files(self.child, {"README.local": "base\n", PROVENANCE_PATH: json.dumps(PAIR)}, "base")
         run(
             self.parent,
             "update-index",
@@ -91,7 +92,7 @@ class GitlinkVerifierTests(unittest.TestCase):
     def passing_report(self):
         markdown = self.root / "sync-report.md"
         markdown.write_text("# passing fixture report\n", encoding="utf-8")
-        return {
+        result = {
             "schema_version": 2,
             "kind": "treeland-unified-sync-report",
             "outcome": "pass",
@@ -110,6 +111,7 @@ class GitlinkVerifierTests(unittest.TestCase):
                         "waylib_verify",
                         "gitlink_verify",
                         "protocol_tracking",
+                        "protocol_pairing",
                         "contract_audit",
                         "child_materialization",
                         "wlroots_verify",
@@ -118,6 +120,8 @@ class GitlinkVerifierTests(unittest.TestCase):
                     start=1,
                 )
             },
+            "protocol_pairing": {"outcome": "pass", "status": "paired", "blocked_reasons": [],
+                                 "unfinished": [], "last_accepted_pair": PAIR, "candidate_pair": PAIR},
             "validations_sha256": "6" * 64,
             "blocked_reasons": [],
             "report": {
@@ -126,6 +130,9 @@ class GitlinkVerifierTests(unittest.TestCase):
                 "sha256": sha256_file(markdown),
             },
         }
+
+        result["gate_sha256"]["protocol_pairing"] = canonical_json_sha256(result["protocol_pairing"])
+        return result
 
     def test_accepts_mode_object_reachability_and_gitlink_only_purity(self) -> None:
         result = self.verify()

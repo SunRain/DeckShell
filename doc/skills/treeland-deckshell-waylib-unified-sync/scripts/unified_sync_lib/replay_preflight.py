@@ -23,6 +23,7 @@ from .git_ops import (
 from .replay_types import GITLINK_PATH, ReplayBlocked, ReplayRequest
 from .schema import LANE_ACTIONS, inventory_errors
 from .wlroots import frozen_wlroots_identity
+from .protocol_update import freeze_protocol_update
 
 
 TRACE_TRAILER = re.compile(r"(?m)^Treeland-Commit: ([0-9a-f]{40})$")
@@ -68,6 +69,7 @@ def build_replay_identity(request: ReplayRequest) -> Dict[str, Any]:
         "parent_common_git_dir": str(common_git_dir(request.parent_worktree)),
         "child_common_git_dir": str(common_git_dir(request.child_worktree)),
         "wlroots": frozen_wlroots_identity(request),
+        "protocol_update": freeze_protocol_update(request),
     }
 
 

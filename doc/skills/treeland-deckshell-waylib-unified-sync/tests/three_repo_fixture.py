@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from pairing_report_fixture import PAIR, PROVENANCE_PATH
 from support import add_worktree, commit_files, init_repo, run, write_policy
 from unified_sync_lib.inventory import build_unified_inventory
 from unified_sync_lib.policy import load_policy
@@ -22,6 +23,7 @@ R_FILES = {
                    "library('fixture-wlroots', 'core.c')\n",
 }
 C_FILES = {
+    PROVENANCE_PATH: json.dumps(PAIR),
     "CMakeLists.txt": "cmake_minimum_required(VERSION 3.21)\n"
                        "project(WaylibShared VERSION 1.0 LANGUAGES C CXX)\n"
                        "add_subdirectory(wlroots)\nadd_subdirectory(waylib)\n",

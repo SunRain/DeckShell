@@ -15,6 +15,7 @@ from unified_sync_lib.materialization import MaterializationBlocked, materialize
 from unified_sync_lib.policy import load_policy
 from unified_sync_lib.replay import ReplayBlocked, ReplayRequest, run_replay
 from unified_sync_lib.schema import load_inventory
+from unified_sync_lib.protocol_cli import add_protocol_parsers, run_protocol_command
 
 
 def _inventory_parser(subparsers) -> None:
@@ -52,6 +53,7 @@ def _replay_parser(subparsers) -> None:
     command.add_argument("--waylib-evidence", type=Path)
     command.add_argument("--parent-evidence", type=Path)
     command.add_argument("--decisions", type=Path)
+    command.add_argument("--protocol-update", type=Path, help="独立协议范围及配套适配补丁；最终接受前必须完成配套验证")
     command.add_argument("--run-id", required=True)
     command.add_argument("--refs-doc", required=True)
     command.add_argument("--resume", action="store_true")
@@ -103,6 +105,7 @@ def build_parser() -> argparse.ArgumentParser:
     _replay_parser(subparsers)
     _materialize_parser(subparsers)
     _closeout_parser(subparsers)
+    add_protocol_parsers(subparsers)
     return result
 
 
@@ -164,6 +167,7 @@ def _replay(args: argparse.Namespace) -> int:
             wlroots_target_ref=args.wlroots_target_ref,
             wlroots_submodule_url=args.wlroots_submodule_url,
             wlroots_baseline_proof=read_json(args.wlroots_baseline_proof) if args.wlroots_baseline_proof else None,
+            protocol_update=read_json(args.protocol_update) if args.protocol_update else None,
         )
         run_replay(request, resume=args.resume)
         return 0
@@ -247,6 +251,8 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         return _materialize(args)
     if args.command == "closeout":
         return _closeout(args)
+    if args.command in {"protocol-inspect", "protocol-verify"}:
+        return run_protocol_command(args)
     raise AssertionError(f"unknown command: {args.command}")
 
 

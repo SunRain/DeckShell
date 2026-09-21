@@ -4,22 +4,18 @@
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
-#include <QHash>
 #include <QProcess>
 #include <QProcessEnvironment>
-#include <QRegularExpression>
-#include <QSaveFile>
 #include <QTemporaryDir>
 #include <QTest>
-
-#include <utility>
 
 namespace {
 
 QString runProcess(const QString &program,
                    const QStringList &arguments,
                    const QProcessEnvironment &environment,
-                   int timeout)
+                   int timeout,
+                   QString *output = nullptr)
 {
     QProcess process;
     process.setProcessEnvironment(environment);
@@ -30,155 +26,63 @@ QString runProcess(const QString &program,
     if (!process.waitForFinished(timeout)) {
         process.kill();
         process.waitForFinished();
-        return QStringLiteral("process timed out");
+        return QStringLiteral("process timed out: ") + program;
     }
+    const QString processOutput = QString::fromLocal8Bit(process.readAll());
+    if (output)
+        *output = processOutput;
     if (process.exitStatus() != QProcess::NormalExit || process.exitCode() != 0) {
-        const QString output = QString::fromLocal8Bit(process.readAll());
-        constexpr qsizetype maximumErrorLength = 12000;
-        if (output.size() > maximumErrorLength)
-            return QStringLiteral("... install output truncated ...\n")
-                + output.right(maximumErrorLength);
-        return output;
+        return QStringLiteral("%1 failed (exit %2, status %3):\n%4")
+            .arg(program)
+            .arg(process.exitCode())
+            .arg(process.exitStatus())
+            .arg(processOutput.right(12000));
     }
     return { };
 }
 
-QStringList runtimeInstallScripts()
+QProcessEnvironment cleanEnvironment()
 {
-    const QDir buildDirectory(QString::fromUtf8(DECKSHELL_BUILD_DIRECTORY));
-    return {
-        buildDirectory.filePath(
-            QStringLiteral("3rdparty/waylib-shared/waylib/src/server/cmake_install.cmake")),
-        buildDirectory.filePath(
-            QStringLiteral("compositor/src/modules/capture/cmake_install.cmake")),
-        buildDirectory.filePath(QStringLiteral("compositor/src/cmake_install.cmake")),
-    };
+    auto environment = QProcessEnvironment::systemEnvironment();
+    for (const char *name : { "LD_LIBRARY_PATH",
+                              "LD_PRELOAD",
+                              "LD_AUDIT",
+                              "QML_IMPORT_PATH",
+                              "QML2_IMPORT_PATH",
+                              "QT_QML_IMPORT_PATH" }) {
+        environment.remove(QString::fromLatin1(name));
+    }
+    return environment;
 }
 
-QString runRuntimeInstall(const QStringList &installScripts,
-                          const QProcessEnvironment &environment,
-                          int timeout)
+QString stagedInstallPath(const QString &stage, const QString &installDirectory)
 {
-    for (const QString &installScript : installScripts) {
-        const QString error =
-            runProcess(QString::fromUtf8(CMAKE_EXECUTABLE_PATH),
-                       { QStringLiteral("-DCMAKE_INSTALL_PREFIX=/usr/local"),
-                         QStringLiteral("-DCMAKE_INSTALL_COMPONENT=DeckShellQmlRuntime"),
-                         QStringLiteral("-DCMAKE_INSTALL_LOCAL_ONLY=TRUE"),
-                         QStringLiteral("-P"),
-                         installScript },
-                       environment,
-                       timeout);
-        if (!error.isEmpty())
-            return error;
+    const QString destination = QDir::isAbsolutePath(installDirectory)
+        ? installDirectory
+        : QDir(QStringLiteral("/usr/local")).filePath(installDirectory);
+    return QDir(stage).filePath(destination.mid(1));
+}
+
+QString stageEmbeddedRuntime(const QString &stage)
+{
+#if EMBEDDED_WAYLIB_BUILD
+    // 内嵌库没有外部包的链接目录；测试仅将配套已安装的两个 DSO 放入隔离部署树。
+    // 不执行 child 安装、不复制开发文件，正式外部包测试不需要此准备步骤。
+    const QDir source(QString::fromUtf8(WAYLIB_RUNTIME_LIBRARY_DIRECTORY));
+    const QString destination =
+        stagedInstallPath(stage, QString::fromUtf8(DECKSHELL_LIBRARY_INSTALL_DIRECTORY));
+    if (!QDir().mkpath(destination))
+        return QStringLiteral("cannot create runtime staging directory: ") + destination;
+    for (const char *name : { WAYLIB_RUNTIME_LIBRARY_FILENAME, WAYLIB_NATIVE_LIBRARY_FILENAME }) {
+        QFile library(source.filePath(QString::fromUtf8(name)));
+        if (!library.copy(QDir(destination).filePath(QString::fromUtf8(name))))
+            return library.fileName() + QStringLiteral(": ") + library.errorString();
     }
+#else
+    Q_UNUSED(stage)
+#endif
     return { };
 }
-
-class InstallScriptRpathCompatibilityPatch
-{
-public:
-    explicit InstallScriptRpathCompatibilityPatch(QStringList installScripts)
-        : m_installScripts(std::move(installScripts))
-    {
-    }
-
-    ~InstallScriptRpathCompatibilityPatch()
-    {
-        QString ignoredError;
-        restore(&ignoredError);
-    }
-
-    bool apply(QString *error)
-    {
-        for (const QString &path : m_installScripts) {
-            QFile file(path);
-            if (!file.open(QIODevice::ReadOnly)) {
-                *error = file.errorString();
-                return false;
-            }
-
-            const QByteArray original = file.readAll();
-            const QByteArray patched = removeNormalizedRpathPadding(original);
-            if (patched == original)
-                continue;
-
-            if (!writeFile(path, patched, error))
-                return false;
-            m_originals.insert(path, original);
-        }
-
-        if (m_originals.isEmpty()) {
-            *error = QStringLiteral("no generated install RPATH entries were found");
-            return false;
-        }
-        return true;
-    }
-
-private:
-    static QByteArray removeNormalizedRpathPadding(const QByteArray &contents)
-    {
-        static const QRegularExpression expression(QStringLiteral(R"(OLD_RPATH "([^"]*):")"));
-
-        QString patched = QString::fromUtf8(contents);
-
-        struct Replacement
-        {
-            qsizetype offset;
-            qsizetype length;
-            QString text;
-        };
-
-        QList<Replacement> replacements;
-
-        auto matchIterator = expression.globalMatch(patched);
-        while (matchIterator.hasNext()) {
-            const QRegularExpressionMatch match = matchIterator.next();
-            QString oldRpath = match.captured(1);
-            if (QString(oldRpath).remove(QLatin1Char(':')).isEmpty())
-                oldRpath.clear();
-            replacements.append(
-                { match.capturedStart(),
-                  match.capturedLength(),
-                  QStringLiteral("OLD_RPATH \"") + oldRpath + QStringLiteral("\"") });
-        }
-
-        for (auto iterator = replacements.crbegin(); iterator != replacements.crend(); ++iterator)
-            patched.replace(iterator->offset, iterator->length, iterator->text);
-        return patched.toUtf8();
-    }
-
-    static bool writeFile(const QString &path, const QByteArray &contents, QString *error)
-    {
-        QSaveFile file(path);
-        if (!file.open(QIODevice::WriteOnly)) {
-            *error = file.errorString();
-            return false;
-        }
-        if (file.write(contents) != contents.size()) {
-            *error = file.errorString();
-            file.cancelWriting();
-            return false;
-        }
-        if (!file.commit()) {
-            *error = file.errorString();
-            return false;
-        }
-        return true;
-    }
-
-    void restore(QString *error)
-    {
-        for (auto iterator = m_originals.cbegin(); iterator != m_originals.cend(); ++iterator) {
-            if (!writeFile(iterator.key(), iterator.value(), error))
-                return;
-        }
-        m_originals.clear();
-    }
-
-    QStringList m_installScripts;
-    QHash<QString, QByteArray> m_originals;
-};
 
 } // namespace
 
@@ -187,107 +91,103 @@ class QmlInstallSmokeTest : public QObject
     Q_OBJECT
 
 private Q_SLOTS:
+    void initTestCase();
+    void stagedModuleIncludesItsPluginAndQml();
+    void stagedPluginHasNoSourceOrBuildRpath();
     void stagedInstallLoadsDeckShellCompositorWithoutBuildTreeImports();
+
+private:
+    QTemporaryDir m_stage;
+    QString m_qmlRoot;
+    QString m_moduleDirectory;
+    QString m_pluginPath;
 };
+
+void QmlInstallSmokeTest::initTestCase()
+{
+    QVERIFY2(m_stage.isValid(), "failed to create install staging directory");
+    const QString waylibQmlRoot = QString::fromUtf8(WAYLIB_RUNTIME_QML_IMPORT_DIRECTORY);
+    QVERIFY2(
+        !waylibQmlRoot.isEmpty(),
+        "embedded builds require DECKSHELL_TEST_WAYLIB_PREFIX pointing to a matching installed "
+        "WaylibShared runtime; installed-only builds use their selected package");
+    QVERIFY2(
+        QFileInfo::exists(
+            QDir(waylibQmlRoot).filePath(QStringLiteral("WaylibShared/QuickSharedServer/qmldir"))),
+        "the selected WaylibShared runtime has no installed QML module");
+
+    auto installEnvironment = cleanEnvironment();
+    installEnvironment.insert(QStringLiteral("DESTDIR"), m_stage.path());
+    const QString installError = runProcess(QString::fromUtf8(CMAKE_EXECUTABLE_PATH),
+                                            { QStringLiteral("--install"),
+                                              QString::fromUtf8(DECKSHELL_BUILD_DIRECTORY),
+                                              QStringLiteral("--prefix"),
+                                              QStringLiteral("/usr/local"),
+                                              QStringLiteral("--component"),
+                                              QStringLiteral("DeckShellQmlRuntime") },
+                                            installEnvironment,
+                                            30000);
+    QVERIFY2(installError.isEmpty(), qPrintable(installError));
+    const QString runtimeError = stageEmbeddedRuntime(m_stage.path());
+    QVERIFY2(runtimeError.isEmpty(), qPrintable(runtimeError));
+
+    m_qmlRoot =
+        stagedInstallPath(m_stage.path(), QString::fromUtf8(DECKSHELL_QML_INSTALL_DIRECTORY));
+    m_moduleDirectory = QDir(m_qmlRoot).filePath(QStringLiteral("DeckShell/Compositor"));
+    m_pluginPath =
+        QDir(m_moduleDirectory).filePath(QString::fromUtf8(DECKSHELL_QML_PLUGIN_FILENAME));
+}
+
+void QmlInstallSmokeTest::stagedModuleIncludesItsPluginAndQml()
+{
+    QVERIFY2(QFileInfo::exists(m_moduleDirectory + QStringLiteral("/qmldir")),
+             "installed qmldir is missing");
+    QVERIFY2(QFileInfo::exists(m_moduleDirectory + QStringLiteral("/core/qml/PrelaunchSplash.qml")),
+             "installed QML implementation is missing");
+    QVERIFY2(QFileInfo::exists(m_pluginPath), "installed QML plugin is missing");
+}
+
+void QmlInstallSmokeTest::stagedPluginHasNoSourceOrBuildRpath()
+{
+    QString dynamicSection;
+    const QString error = runProcess(QString::fromUtf8(READELF_EXECUTABLE_PATH),
+                                     { QStringLiteral("-d"), m_pluginPath },
+                                     cleanEnvironment(),
+                                     10000,
+                                     &dynamicSection);
+    QVERIFY2(error.isEmpty(), qPrintable(error));
+    QVERIFY2(!dynamicSection.contains(QString::fromUtf8(DECKSHELL_BUILD_DIRECTORY)),
+             qPrintable(dynamicSection));
+    QVERIFY2(!dynamicSection.contains(QString::fromUtf8(DECKSHELL_SOURCE_DIRECTORY)),
+             qPrintable(dynamicSection));
+}
 
 void QmlInstallSmokeTest::stagedInstallLoadsDeckShellCompositorWithoutBuildTreeImports()
 {
-    QTemporaryDir stage;
-    QVERIFY2(stage.isValid(), "failed to create install staging directory");
-    QTemporaryDir compatibilityStage;
-
-    auto installEnvironment = QProcessEnvironment::systemEnvironment();
-    installEnvironment.insert(QStringLiteral("DESTDIR"), stage.path());
-    const QStringList installScripts = runtimeInstallScripts();
-    QString installError = runRuntimeInstall(installScripts, installEnvironment, 30000);
-
-    QString activeStagePath = stage.path();
-    if (!installError.isEmpty()) {
-        QVERIFY2(
-            installError.contains(QStringLiteral("file RPATH_CHANGE could not write new RPATH")),
-            qPrintable(installError));
-        QVERIFY2(compatibilityStage.isValid(), "failed to create compatibility staging directory");
-
-        InstallScriptRpathCompatibilityPatch compatibilityPatch(installScripts);
-        QString patchError;
-        QVERIFY2(compatibilityPatch.apply(&patchError), qPrintable(patchError));
-
-        qWarning().noquote()
-            << "CMake generated a normalized ELF RUNPATH mismatch; retrying the staged install"
-            << "with transactionally patched generated install scripts.";
-        installEnvironment.insert(QStringLiteral("DESTDIR"), compatibilityStage.path());
-        installError = runRuntimeInstall(installScripts, installEnvironment, 30000);
-        activeStagePath = compatibilityStage.path();
-    }
-    if (!installError.isEmpty())
-        qWarning().noquote() << installError;
-    QVERIFY2(installError.isEmpty(), qPrintable(installError));
-
-    const QString prefix = QDir(activeStagePath).filePath(QStringLiteral("usr/local"));
-    const QString qmlRoot = prefix + QStringLiteral("/lib/qt6/qml");
-    const QString moduleDir = qmlRoot + QStringLiteral("/DeckShell/Compositor");
-    const QString pluginPath = moduleDir + QStringLiteral("/liblibdeckcompositorplugin.so");
-
-    QVERIFY2(QFileInfo::exists(moduleDir + QStringLiteral("/qmldir")),
-             "installed qmldir is missing");
-    QVERIFY2(QFileInfo::exists(moduleDir + QStringLiteral("/core/qml/PrelaunchSplash.qml")),
-             "installed QML implementation is missing");
-    QVERIFY2(QFileInfo::exists(pluginPath), "installed QML plugin is missing");
-
-    const auto cleanEnvironment = [] {
-        auto environment = QProcessEnvironment::systemEnvironment();
-        environment.remove(QStringLiteral("LD_LIBRARY_PATH"));
-        environment.remove(QStringLiteral("QML_IMPORT_PATH"));
-        environment.remove(QStringLiteral("QML2_IMPORT_PATH"));
-        return environment;
-    };
-
-    const QString readelfError = runProcess(QString::fromUtf8(READELF_EXECUTABLE_PATH),
-                                            { QStringLiteral("-d"), pluginPath },
-                                            cleanEnvironment(),
-                                            10000);
-    QVERIFY2(readelfError.isEmpty(), qPrintable(readelfError));
-
-    QProcess readelf;
-    readelf.setProcessEnvironment(cleanEnvironment());
-    readelf.setProcessChannelMode(QProcess::MergedChannels);
-    readelf.start(QString::fromUtf8(READELF_EXECUTABLE_PATH), { QStringLiteral("-d"), pluginPath });
-    QVERIFY2(readelf.waitForFinished(10000), qPrintable(readelf.errorString()));
-    const QString dynamicSection = QString::fromLocal8Bit(readelf.readAll());
-    QVERIFY2(!dynamicSection.contains(QString::fromUtf8(DECKSHELL_BUILD_DIRECTORY)),
-             qPrintable(dynamicSection));
-
-    const QString sourcePath = QDir(activeStagePath).filePath(QStringLiteral("ImportSmoke.qml"));
+    const QString sourcePath = QDir(m_stage.path()).filePath(QStringLiteral("ImportSmoke.qml"));
     QFile source(sourcePath);
     QVERIFY2(source.open(QIODevice::WriteOnly | QIODevice::Truncate),
              qPrintable(source.errorString()));
-    source.write("import QtQuick\n"
-                 "import QtQml 2.15\n"
-                 "import DeckShell.Compositor 2.0\n"
-                 "Item {\n"
-                 "    width: 1\n"
-                 "    height: 1\n"
-                 "    Border { anchors.fill: parent }\n"
-                 "    Component.onCompleted: Qt.quit()\n"
-                 "}\n");
+    const QByteArray contents = "import QtQuick\n"
+                                "import QtQml 2.15\n"
+                                "import DeckShell.Compositor 2.0\n"
+                                "Item {\n"
+                                "    width: 1\n"
+                                "    height: 1\n"
+                                "    Border { anchors.fill: parent }\n"
+                                "    Component.onCompleted: Qt.quit()\n"
+                                "}\n";
+    QCOMPARE(source.write(contents), contents.size());
     source.close();
 
-    auto qmlEnvironment = cleanEnvironment();
-#ifdef EXTERNAL_RUNTIME_LIBRARY_DIRECTORY
-    // DDM is a separately packaged runtime dependency. The staged DeckShell
-    // install must not copy or claim ownership of it, but the loader still
-    // needs the directory of the DDM installation used for this build.
-    qmlEnvironment.insert(QStringLiteral("LD_LIBRARY_PATH"),
-                          QString::fromUtf8(EXTERNAL_RUNTIME_LIBRARY_DIRECTORY));
-#endif
-    qmlEnvironment.insert(QStringLiteral("QML_IMPORT_PATH"), qmlRoot);
-    qmlEnvironment.insert(QStringLiteral("QML2_IMPORT_PATH"), qmlRoot);
-    qmlEnvironment.insert(QStringLiteral("QT_QPA_PLATFORM"), QStringLiteral("offscreen"));
-    const QString qmlError = runProcess(QString::fromUtf8(QML_EXECUTABLE_PATH),
-                                        { QStringLiteral("-I"), qmlRoot, sourcePath },
-                                        qmlEnvironment,
-                                        15000);
-    QVERIFY2(qmlError.isEmpty(), qPrintable(qmlError));
+    auto environment = cleanEnvironment();
+    const QString importPaths =
+        m_qmlRoot + QDir::listSeparator() + QString::fromUtf8(WAYLIB_RUNTIME_QML_IMPORT_DIRECTORY);
+    environment.insert(QStringLiteral("QML_IMPORT_PATH"), importPaths);
+    environment.insert(QStringLiteral("QT_QPA_PLATFORM"), QStringLiteral("offscreen"));
+    const QString error =
+        runProcess(QString::fromUtf8(QML_EXECUTABLE_PATH), { sourcePath }, environment, 15000);
+    QVERIFY2(error.isEmpty(), qPrintable(error));
 }
 
 QTEST_GUILESS_MAIN(QmlInstallSmokeTest)

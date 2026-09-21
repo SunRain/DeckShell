@@ -50,7 +50,7 @@ PRIVATE
 
 target_link_libraries(${MODULE_NAME}
     PRIVATE
-        Wlroots::wlroots
+        WaylibShared::waylib-wlroots
         WaylibShared::SharedServer
         Qt6::Core
         Qt6::Gui
@@ -68,6 +68,7 @@ impl_deckcompositor(
 install(TARGETS ${MODULE_NAME}
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
     NAMELINK_SKIP
+    COMPONENT DeckShellQmlRuntime
 )
 if(TREELAND_INSTALL_DEV)
     install(TARGETS ${MODULE_NAME}

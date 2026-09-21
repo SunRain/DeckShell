@@ -34,10 +34,6 @@ include(cmake/DefineTarget.cmake)
 # Include translation utilities
 include(cmake/TranslationUtils.cmake)
 
-# option(WITH_SUBMODULE_WAYLIB "Use the waylib from git submodule" ON)
-# add_feature_info(submodule_waylib WITH_SUBMODULE_WAYLIB
-#                  "Use waylib from submodule")
-
 option(ADDRESS_SANITIZER "Enable address sanitizer" OFF)
 add_feature_info(ASanSupport ADDRESS_SANITIZER
     "https://github.com/google/sanitizers/wiki/AddressSanitizer")
@@ -111,32 +107,41 @@ endif()
 # NOTE: Enable Qt logging with context.
 add_definitions("-DQT_MESSAGELOGCONTEXT")
 
-set(LOCAL_QML_IMPORT_PATH "${QML_IMPORT_PATH}")
-list(APPEND LOCAL_QML_IMPORT_PATH "${PROJECT_BINARY_DIR}")
-list(APPEND LOCAL_QML_IMPORT_PATH "${PROJECT_BINARY_DIR}/qt/qml")
-list(APPEND LOCAL_QML_IMPORT_PATH "${PROJECT_BINARY_DIR}/waylib/src/server")
-
-# Waylib/native wlroots are provided once by the top-level waylib-shared entry.
-# Protocol consumers use Waylib's own helpers after qwlroots retirement.
-include(${CMAKE_CURRENT_SOURCE_DIR}/../3rdparty/waylib-shared/waylib/cmake/WaylandScannerHelpers.cmake)
-
-set(QML_IMPORT_PATH "${LOCAL_QML_IMPORT_PATH}" CACHE STRING "For LSP" FORCE)
-
 # PKG-CONFIG
 find_package(PkgConfig REQUIRED)
 find_package(Qt6 CONFIG REQUIRED
     Core DBus Gui Qml Quick QuickControls2 LinguistTools Test QuickTest QuickPrivate)
 
-if(NOT TARGET Wlroots::wlroots)
-    message(FATAL_ERROR "DeckCompositor requires the local waylib-shared wlroots target")
-endif()
-
-# Find WaylibShared (allow using submodule build if provided by parent project)
+# Both installed and embedded Waylib provide the same public package contract.
 if (NOT TARGET WaylibShared::SharedServer)
     find_package(WaylibShared REQUIRED COMPONENTS SharedServer)
 endif()
+foreach(_waylib_target SharedServer waylib-wlroots qtwaylandscanner)
+    if(NOT TARGET WaylibShared::${_waylib_target})
+        message(FATAL_ERROR "WaylibShared development package is missing WaylibShared::${_waylib_target}")
+    endif()
+endforeach()
+if(NOT COMMAND waylib_generate_qtwayland_server_protocol)
+    message(FATAL_ERROR "WaylibShared development package is missing its protocol generation helper")
+endif()
+if(NOT IS_ABSOLUTE "${WaylibShared_QML_IMPORT_DIR}")
+    message(FATAL_ERROR "WaylibShared must provide its absolute QML import directory")
+endif()
+
+set(LOCAL_QML_IMPORT_PATH "${QML_IMPORT_PATH}")
+list(APPEND LOCAL_QML_IMPORT_PATH
+    "${PROJECT_BINARY_DIR}"
+    "${PROJECT_BINARY_DIR}/qt/qml"
+    "${WaylibShared_QML_IMPORT_DIR}")
+list(REMOVE_DUPLICATES LOCAL_QML_IMPORT_PATH)
+set(QML_IMPORT_PATH "${LOCAL_QML_IMPORT_PATH}" CACHE STRING "For LSP" FORCE)
 
 qt_standard_project_setup(REQUIRES 6.8)
+
+set(DECKSHELL_QML_INSTALL_DIR "${QT6_INSTALL_QML}")
+if(NOT DECKSHELL_QML_INSTALL_DIR OR IS_ABSOLUTE "${DECKSHELL_QML_INSTALL_DIR}")
+    set(DECKSHELL_QML_INSTALL_DIR "${CMAKE_INSTALL_LIBDIR}/qt6/qml")
+endif()
 
 # Set constants
 set(TREELAND_DATA_DIR

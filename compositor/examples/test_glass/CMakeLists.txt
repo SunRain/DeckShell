@@ -13,9 +13,7 @@ if(POLICY CMP0071)
     cmake_policy(SET CMP0071 NEW)
 endif()
 
-set(WAYLIB_SHARED_QML_IMPORT_PATH
-    "${CMAKE_BINARY_DIR}/3rdparty/waylib-shared/waylib/src/server")
-set(QML_IMPORT_PATH "${WAYLIB_SHARED_QML_IMPORT_PATH};${QML_IMPORT_PATH}" CACHE STRING "For LSP" FORCE)
+set(QML_IMPORT_PATH "${WaylibShared_QML_IMPORT_DIR};${QML_IMPORT_PATH}" CACHE STRING "For LSP" FORCE)
 
 find_package(PkgConfig REQUIRED)
 pkg_search_module(PIXMAN REQUIRED IMPORTED_TARGET pixman-1)

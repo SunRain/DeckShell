@@ -1,42 +1,39 @@
-# Treeland
+# DeckCompositor
 
-treeland 是一个基于 wlroots 和 QtQuick 开发的 Wayland 合成器，旨在提供高效且灵活的图形界面支持。
+DeckCompositor 是 DeckShell 中基于 QtQuick、WaylibShared 及其配套 native wlroots
+的 Wayland 合成器。请从 DeckShell 仓库根构建；完整依赖准备、安装和验证步骤见
+[../README.md](../README.md)。
 
 ## 依赖
 
-查看 `debian/control` 文件来了解具体的构建与运行时依赖，或者使用 `cmake` 检查缺失的必要组件。
+使用 Qt 6.8 及以上版本、与之配套的 Qt Private 开发文件、Dtk6，以及 CMake/
+pkg-config 检查的系统依赖。WaylibShared 开发包与 runtime 必须配套，包含同一
+构建的 native wlroots；独立系统 wlroots 和已退役的 qwlroots 包不能替代它。
 
-核心构建依赖：
-
-- [waylib](https://github.com/vioken/waylib) 整合 wlroots 和 QtQuick 的 Wayland 合成器开发库
-  - Qt >= 6.8.0
-  - wlroots = 0.19
-- [treeland-protocols](https://github.com/linuxdeepin/treeland-protocols) treeland 使用的私有 wayland 协议
-
-推荐的运行时依赖：
-
-- [ddm](https://github.com/linuxdeepin/ddm) 为多用户优化的登录管理器
+DeckShell 的协议 XML 由仓内 `protocols/compositor` 提供。Waylib 构建使用自身
+`waylib/protocols/` 中随配套实现提供的 remote-subsurface XML，不读取父源码，
+也不需要预装 `DeckCompositorProtocols` 数据包；库内 XML 缺失会明确失败，
+不回退到旧 Treeland 协议安装。
 
 ## 构建
 
-treeland 使用 cmake 进行构建，`WITH_SUBMODULE_WAYLIB` 选项可以强制使用子模块中的 `waylib` 代码，如果希望使用系统提供的 `waylib` 应该设置为 `OFF`。
+默认 `WITH_SUBMODULE_WAYLIB=OFF` 消费已安装的 WaylibShared 包。以下从
+**DeckShell 仓库根**执行，`waylib_prefix` 指向该包的安装前缀：
 
-使用系统库提供的 `waylib`：
-
-```shell
-$ git clone git@github.com:linuxdeepin/treeland.git
-$ cd treeland
-$ cmake -Bbuild -DWITH_SUBMODULE_WAYLIB=OFF
-$ cmake --build build
+```sh
+cmake -S . -B build -G Ninja -DCMAKE_PREFIX_PATH="$waylib_prefix"
+cmake --build build --parallel 6
+ctest --test-dir build --no-tests=error --output-on-failure
 ```
-使用子模块中的 `waylib`：
 
-```shell
-$ git clone git@github.com:linuxdeepin/treeland.git --recursive
-$ cd treeland
-$ cmake -Bbuild -DWITH_SUBMODULE_WAYLIB=ON
-$ cmake --build build
-```
+仅在显式内嵌开发时使用 `-DWITH_SUBMODULE_WAYLIB=ON`，并初始化
+`3rdparty/waylib-shared` 及其 wlroots 子模块。两种模式统一使用
+`WaylibShared::SharedServer`、`WaylibShared::waylib-wlroots` 和包提供的协议 helper。
+DeckShell 只安装自身产物，Waylib 的 DSO 与 QML 模块由独立 runtime 包提供。
+
+安装 smoke 使用真实 runtime，不靠 `LD_LIBRARY_PATH`。内嵌模式执行该测试时，
+还需提供 `-DDECKSHELL_TEST_WAYLIB_PREFIX="$waylib_prefix"`；未提供不阻断普通配置
+或构建。QML import 路径及依赖运行环境的测试条件见根 README。
 
 ## 打包
 

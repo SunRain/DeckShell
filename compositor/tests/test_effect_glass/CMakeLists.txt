@@ -22,8 +22,6 @@ find_package(PkgConfig REQUIRED)
 pkg_search_module(PIXMAN REQUIRED IMPORTED_TARGET pixman-1)
 pkg_search_module(WAYLAND REQUIRED IMPORTED_TARGET wayland-server)
 
-set(WAYLIB_SHARED_QML_IMPORT_PATH
-    "${CMAKE_BINARY_DIR}/3rdparty/waylib-shared/waylib/src/server")
 set(GLASS_SHADER_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../misc/shaders")
 set(GLASS_EFFECT_QML "${CMAKE_CURRENT_SOURCE_DIR}/../../src/core/qml/Effects/GlassEffect.qml")
 set_source_files_properties(${GLASS_EFFECT_QML}
@@ -77,13 +75,13 @@ target_link_libraries(test_effect_glass
         PkgConfig::WAYLAND
 )
 
-# waylib QML imports are generated in the build tree.
+# The selected package supplies the QML path in both supported build modes.
 set_target_properties(test_effect_glass PROPERTIES
-    QT_QML_IMPORT_PATH "${WAYLIB_SHARED_QML_IMPORT_PATH}"
+    QT_QML_IMPORT_PATH "${WaylibShared_QML_IMPORT_DIR}"
 )
 
 add_test(NAME test_effect_glass COMMAND test_effect_glass)
 set_tests_properties(test_effect_glass PROPERTIES
-    ENVIRONMENT "WLR_BACKENDS=headless;QT_QML_IMPORT_PATH=${WAYLIB_SHARED_QML_IMPORT_PATH}"
+    ENVIRONMENT "WLR_BACKENDS=headless;QML_IMPORT_PATH=${WaylibShared_QML_IMPORT_DIR}"
     TIMEOUT 60
 )

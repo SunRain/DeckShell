@@ -10,7 +10,7 @@ impl_deckcompositor(
         ${CMAKE_CURRENT_SOURCE_DIR}/virtualoutputmanagerinterfacev1.h
         ${CMAKE_CURRENT_SOURCE_DIR}/virtualoutputmanagerinterfacev1.cpp
     LINK
-        Wlroots::wlroots
+        WaylibShared::waylib-wlroots
         WaylibShared::SharedServer
         Qt6::Core
         Qt6::Gui

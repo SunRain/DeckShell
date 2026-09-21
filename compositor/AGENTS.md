@@ -22,7 +22,7 @@ ctest --preset ci
 ```
 
 - For daily development prefer the `ci` preset: it mirrors CI's `-Wall -Wextra -Werror` flags, so warnings that would fail CI are caught locally before push. Other presets in `CMakePresets.json`: `default`, `clang`, `ci-clang`.
-- `WITH_SUBMODULE_WAYLIB=ON|OFF` selects submodule vs system waylib. Default preference is `ON`.
+- `WITH_SUBMODULE_WAYLIB=ON|OFF` selects embedded development vs installed WaylibShared. The default is `OFF`; both modes use the public `WaylibShared::SharedServer` and `WaylibShared::waylib-wlroots` targets. See `../README.md` for dependency preparation and runtime requirements.
 
 ## Project Rules
 - Use C++20 and Qt6 only.

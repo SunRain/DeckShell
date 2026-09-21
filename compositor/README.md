@@ -1,43 +1,44 @@
-# Treeland
+# DeckCompositor
 
-treeland is a wayland compositor based on wlroots and QtQuick, designed to provide efficient and flexible graphical interface support.
+DeckCompositor is DeckShell's Wayland compositor built on QtQuick, WaylibShared,
+and its matching native wlroots library. Build it from the DeckShell repository
+root; the complete dependency, installation, and test workflow is documented in
+[../README.md](../README.md).
 
 ## Dependencies
 
-Check the `debian/control` file to understand specific build and runtime dependencies, or use `cmake` to check for missing necessary components.
+Use Qt 6.8 or newer, the matching Qt Private development files, Dtk6, and the
+system dependencies checked by CMake/pkg-config. The installed WaylibShared
+**development and runtime packages must match**, including native wlroots;
+a separate system wlroots or the retired qwlroots package is not a substitute.
 
-Core build dependencies:
-
-- [waylib](https://github.com/vioken/waylib): A Wayland compositor development library based on wlroots and QtQuick
-  - Qt >= 6.8.0
-  - wlroots = 0.19
-- [treeland-protocols](https://github.com/linuxdeepin/treeland-protocols): Private Wayland protocols used by treeland
-
-Recommended runtime dependencies:
-
-- [ddm](https://github.com/linuxdeepin/ddm): A display manager optimized for multiple users
+DeckShell owns its protocol XML in `protocols/compositor`. Waylib builds use the
+remote-subsurface XML bundled with the matching implementation in their own
+`waylib/protocols/` directory. They require neither this source tree nor an
+installed `DeckCompositorProtocols` package; missing bundled XML is an error,
+not a reason to fall back to an old Treeland installation.
 
 ## Building
 
-Treeland uses cmake for building. The WITH_SUBMODULE_WAYLIB option can force the use of the waylib code from the submodule. If you want to use the system-provided waylib, set this option to OFF.
+The default `WITH_SUBMODULE_WAYLIB=OFF` uses the installed WaylibShared package.
+Run from the **DeckShell root**, with `waylib_prefix` set to its installation:
 
-Using the system-provided waylib:
-
-```shell
-$ git clone git@github.com:linuxdeepin/treeland.git
-$ cd treeland
-$ cmake -Bbuild -DWITH_SUBMODULE_WAYLIB=OFF
-$ cmake --build build
+```sh
+cmake -S . -B build -G Ninja -DCMAKE_PREFIX_PATH="$waylib_prefix"
+cmake --build build --parallel 6
+ctest --test-dir build --no-tests=error --output-on-failure
 ```
 
-Using the waylib from the submodule:
+Use `-DWITH_SUBMODULE_WAYLIB=ON` only for explicit embedded development, after
+initializing `3rdparty/waylib-shared` and its wlroots submodule. Both modes use
+`WaylibShared::SharedServer`, `WaylibShared::waylib-wlroots`, and the package's
+protocol helper. DeckShell installs only its own files; the separately installed
+Waylib runtime supplies its DSOs and QML module.
 
-```shell
-$ git clone git@github.com:linuxdeepin/treeland.git --recursive
-$ cd treeland
-$ cmake -Bbuild -DWITH_SUBMODULE_WAYLIB=ON
-$ cmake --build build
-```
+The install smoke uses that real runtime without `LD_LIBRARY_PATH`. Embedded
+builds additionally need `-DDECKSHELL_TEST_WAYLIB_PREFIX="$waylib_prefix"` when
+running this test; omitting it does not block ordinary configuration or builds.
+See the root README for runtime import paths and environment-dependent tests.
 
 ## Packaging
 

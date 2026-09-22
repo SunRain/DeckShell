@@ -342,6 +342,8 @@ private Q_SLOTS:
 
 private:
     void onOutputAdded(WOutput *output);
+    void finishInitialOutputScanIfReady();
+    void processOutputAdded(WOutput *output);
     void onOutputRemoved(WOutput *output);
     void onSurfaceModeChanged(WSurface *surface, WXdgDecorationManager::DecorationMode mode);
     void setGamma(struct wlr_gamma_control_manager_v1_set_gamma_event *event);
@@ -363,6 +365,7 @@ private:
                                 TreelandUserConfig *config,
                                 SeatUserDConfig *seatConfig);
 #endif
+
 private:
     friend class PointerConstraintsManager;
     friend class SessionManager;
@@ -529,6 +532,7 @@ private:
 
     // private data
     QList<Output *> m_outputList;
+    QSet<WOutput *> m_pendingOutputs;
     QSet<wlr_output *> m_powerOffOutputs;
     OutputManager *m_outputManagerHelper = nullptr;
     QPointer<QQuickItem> m_taskSwitch;
@@ -553,7 +557,8 @@ private:
 
     bool m_noAnimation{ false };
     bool m_isDDMDisplay{ false };
-    bool scanned{ false };
+    bool m_backendStartFinished{ false };
+    bool m_initialOutputScanFinished{ false };
     void tryInitRemoteSource();
 
     TreelandRemoteSource *m_treelandRemoteSource = nullptr;

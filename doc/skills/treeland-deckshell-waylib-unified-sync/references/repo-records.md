@@ -62,16 +62,18 @@ python3 "$SKILL_DIR/scripts/generate_repo_records.py" \
 
 ## 输出与归属
 
-| 仓库 | 总记录 | adapted 详情 |
-|---|---|---|
-| P | `doc/treeland-sync/<batch>/summary.md` | 同目录 `adaptations/<P 当前目标完整 SHA>.md` |
-| C | `docs/treeland-sync/<batch>/summary.md` | 同目录 `adaptations/<C 当前目标完整 SHA>.md` |
+| 仓库 | 总记录 | adapted 详情 | 只读方案副本 |
+|---|---|---|---|
+| P | `doc/treeland-sync/<batch>/summary.md` | 同目录 `adaptations/<P 当前目标完整 SHA>.md` | 同目录 `plan.md`、`prd.md` |
+| C | `docs/treeland-sync/<batch>/summary.md` | 同目录 `adaptations/<C 当前目标完整 SHA>.md` | 同目录 `plan.md`、`prd.md` |
 
 - P/C 各自展开本仓内容、实际路径、保留/排除范围及适配；dual 以同一 Treeland SHA 和对方仓库标识关联，不使用无法解析的跨仓相对链接。
 - P 的纯 C gitlink 传播不生成伪源码适配。C 的普通 `wlroots/**` 包装层与 R 的源码分开，R 普通提交、路径、适配与旧新目标在 C 的独立依赖章节记录；R 不新增文档目录。
 - overall `adapted` 与 `content_action` 分开。首次登记 `.gitmodules` 可以是 overall adapted，而普通内容仍为 applied 或不适用；不捏造空的 C 源码适配理由。
 - 适配详情以逐路径审核为依据，对比“来源父提交 → 来源提交”与“原目标父提交 → 原目标”的零上下文增量，并列出 mode/type/blob。补丁的文本对照会保留 hunk 位置与既有本地差异；尾空格和 Tab 分别显示为 `␠` 和 `⇥`，避免把原补丁空白变成新 Markdown 的格式错误。对照不宣称是可直接应用的纯适配 delta，也不拿完整目标 diff 或整树长期差异冒充纯适配；原始字节仍可按 Git 对象与原工件定位核对。
 - 总记录明确验收属于原节点、原候选、原环境；新旧内容对应核对不等于重新运行产品构建或测试。N2 独立初始化不混入普通来源计数。
-- 批次根的 `prd.md`/`plan.md` 已同时存在时，总记录链接本仓副本；否则标记为外部资料。生成器不自行复制方案、日志、工作树或安装树。
+- 仅在表列规范批次目录中发现本仓方案。`prd.md` 和 `plan.md` 两份普通文件同时存在时，总记录使用 `prd.md`、`plan.md` 同目录相对链接；缺少任一份时标记为外部资料，不回退到仓库根部的 `<batch>/` 查找。
+- 规范批次目录根部的 `plan.md`、`prd.md` 是受保护的只读输入，不是生成文件；无论是否成对存在，生成器均不创建、复制、覆盖或删除它们，也不计入输出文件数。符号链接和同名目录不能充当方案副本；日志、工作树或安装树也不由生成器复制。
+- 只允许上述两个精确文件名作为非生成文件；`manual.md`、`adaptations/plan.md` 等其他批次文件仍视为冲突。summary 或 adaptation 内容不一致仍失败，不提供强制覆盖或忽略未知文件选项。
 
 先验证全部证据、渲染两仓文件集合并检查所有目标冲突，再写入。重复执行同一输入只接受完全相同的文件集合和字节；旧报告、其他批次、手写内容和符号链接不被覆盖或删除。写入中途出现并发冲突会明确失败并保留已写事实，重试仍检查内容一致性；不伪装跨仓原子提交。生成器不执行任何暂存、提交、ref 更新、远端查询或发布。

@@ -32,7 +32,7 @@ def path_list(values) -> str:
     return "、".join(code(value) for value in values) if values else "无"
 
 
-def _identity(context, lane, nodes, rows):
+def _identity(context, lane, nodes, rows, directory):
     ordinary = [row for row in rows if row["kind"] == "replay"]
     first, last = nodes[0], nodes[-1]
     base, old_head = first["bases"][lane], last["heads"][lane]
@@ -50,9 +50,9 @@ def _identity(context, lane, nodes, rows):
                   "- 生成时已逐目标核对来源、映射顺序、普通文件不变及派生 gitlink；这不是产品重新验收。"]
     else:
         lines += ["- 本批次未提供历史改写映射，仅记录真实来源 → 目标，不虚构原目标列。"]
-    lines += [f"- 原需求与实施记录：[PRD](../../../{context.batch}/prd.md)、[plan](../../../{context.batch}/plan.md)。"
-              if (context.repos[lane] / context.batch / "plan.md").is_file()
-              and (context.repos[lane] / context.batch / "prd.md").is_file()
+    lines += ["- 原需求与实施记录：[PRD](prd.md)、[plan](plan.md)。"
+              if all((directory / name).is_file() and not (directory / name).is_symlink()
+                     for name in ("plan.md", "prd.md"))
               else f"- 原需求/方案资料：{context.external('')}（未声称已随仓携带）。",
               "- 外层历史资料仅用标识和相对定位列出，不是本仓链接；记录不包含完整日志、构建树或安装树。",
               "- R 的短 Refs 是 P/C 共同方案标识，不承诺 R 仓内存在方案副本。", ""]
@@ -219,7 +219,8 @@ def render_documents(context: RecordContext, nodes: list, rows: dict) -> dict:
     documents = {}
     for lane in ("parent", "child"):
         prefix = ("doc" if lane == "parent" else "docs") + f"/treeland-sync/{context.batch}"
-        lines = _identity(context, lane, nodes, rows[lane]) + _mapping(context, rows[lane])
+        lines = _identity(context, lane, nodes, rows[lane], context.repos[lane] / prefix)
+        lines += _mapping(context, rows[lane])
         lines += ["## 逐项归属、路径与依赖", ""]
         for index, row in enumerate(rows[lane], 1):
             lines += _row_summary(context, row, index)

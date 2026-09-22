@@ -409,4 +409,6 @@ closeout 按 R→C→P（R 不适用则 C→P）执行 expected-old CAS。部分
 
 需要把实际同步内容留在 P/C 仓库时，使用 [按仓记录生成](references/repo-records.md) 的 `generate_repo_records.py`，从统一 inventory、manifest、lane evidence、原验证结果及 Git 对象生成本仓总记录和 adapted 详情。不得手工从主题猜适配理由，或将 C/R 的源码适配写成 P 内容。独立初始化单列；普通输入不虚构旧目标，另行授权的历史整理输入须提供完整旧新映射。
 
+本仓方案副本保存于 P `doc/treeland-sync/<batch>/` 或 C `docs/treeland-sync/<batch>/`，与 summary 同目录。仅当本仓 `plan.md`、`prd.md` 两份普通文件齐全时生成同目录链接，否则说明外层历史资料；不从旧根目录回退查找。这两份副本是只读输入，不由生成器创建、覆盖、删除或计入输出文件数；未知批次文件和符号链接仍拒绝。
+
 此入口只生成固定批次下的 Markdown，重复生成保持相同内容，冲突明确失败；不 replay、不暂存/提交、不改 refs，也不将文档生成称为新产品验收。历史整理、文档提交和工具维护提交仍由各自已授权任务执行。

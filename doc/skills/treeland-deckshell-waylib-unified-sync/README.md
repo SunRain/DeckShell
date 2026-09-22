@@ -89,6 +89,8 @@ artifact_root: <持久且位于所有 worktree 外的目录>
 
 调用参数、节点输入、可选历史映射及输出保护见 [按仓记录生成](references/repo-records.md)，输入示例见 [repo-records.example.json](examples/repo-records.example.json)。普通同步省略 `--history-map`；经另行授权重写历史后才提供完整旧新对应。输出只进入 P `doc/treeland-sync/<batch>/` 和 C `docs/treeland-sync/<batch>/`；任何已有内容冲突明确失败，不覆盖旧文档。
 
+本仓 `plan.md`、`prd.md` 副本与 summary 同目录保存，两份齐全时使用同目录链接；不再查找仓库根部的 `<batch>/`。这两份普通文件是只读输入，生成器不创建、修改、删除或计数；未知批次文件、内容冲突及符号链接仍会被拒绝。
+
 ## 运行要求
 
 - Python 3.9+；仅使用标准库。

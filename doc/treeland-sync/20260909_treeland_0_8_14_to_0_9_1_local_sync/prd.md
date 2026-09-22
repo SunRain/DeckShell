@@ -6,7 +6,7 @@
 
 - **原同步事实**：N1—N7 的结果属于原报告记载的候选与环境。原文“不重写已同步历史”“只使用本地 URL”等约束保留为当时边界，不回改历史授权。
 - **本次限定例外**：2026-09-14 获准对 P 502、C 386、R 332 个历史对应提交整理顶层 `Refs` 及派生父子引用，普通文件不变，R0 的 7528 个原始对象不变；本副本与本仓记录、C 的 R URL 更新均在历史区间之后新增。
-- **记录与映射**：[本仓同步记录](../doc/treeland-sync/20260909_treeland_0_8_14_to_0_9_1_local_sync/summary.md) 区分 Treeland 来源、原目标与新目标。完整旧新映射位于外层 `.helloagents/plans/20260914_treeland_refs_portability/rewrite-map.json`；原三个旧头由各仓 `refs/backup/treeland-refs-portability-20260914/original` 保持可达。
+- **记录与映射**：[本仓同步记录](summary.md) 区分 Treeland 来源、原目标与新目标。完整旧新映射位于外层 `.helloagents/plans/20260914_treeland_refs_portability/rewrite-map.json`；原三个旧头由各仓 `refs/backup/treeland-refs-portability-20260914/original` 保持可达。
 - **工具交付**：仅在 P 末端独立交付来源 `3b1a8ab63c55091b43da2664014fa72636f57f0e` 的完整工具修订、Python 3.9+/CMake 3.27+ 要求及按仓记录生成器；不把新工具插入历史对应区间，不声称其当时用于全部节点。
 - **引用语义**：短 `Refs: 20260909_treeland_0_8_14_to_0_9_1_local_sync/plan.md` 供维护者在当前 P/C 交付树查找共同文档，不承诺每个历史提交都已含副本。R 不新增方案副本；R 的短 Refs 是 P/C 共同文档标识，不是 R 仓内相对路径承诺。
 - **证据边界**：`evidence/`、日志全集、worktrees、构建和安装树均未复制。标注“外层历史资料”的项只能在原外层方案包查询；“P 仓共享资料”按 P 仓内路径定位。仅有两份 Markdown 不代表独立克隆后可重放原验收。

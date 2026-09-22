@@ -73,6 +73,9 @@ def _preflight_output(context, documents):
         require(directory.is_dir(), f"输出目录冲突：{directory}")
         for path in directory.rglob("*"):
             require(not path.is_symlink(), f"批次目录内存在符号链接：{path}")
+            if path.parent == directory and path.name in ("plan.md", "prd.md"):
+                require(path.is_file(), f"方案副本必须为普通文件：{path}")
+                continue
             if path.is_file():
                 relative = path.relative_to(context.repos[lane]).as_posix()
                 require((lane, relative) in documents, f"批次目录存在手写或其他输入的文件：{path}")

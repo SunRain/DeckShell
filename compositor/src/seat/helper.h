@@ -96,7 +96,7 @@ class WSessionLockManager;
 class WSessionLock;
 WAYLIB_SERVER_END_NAMESPACE
 
-class SeatsManager;
+class SeatManager;
 class PointerConstraintsManager;
 
 WAYLIB_SERVER_USE_NAMESPACE
@@ -284,7 +284,7 @@ public:
     void updateIdleInhibitor();
 
     bool setXWindowPositionRelative(uint wid, WSurface *anchor, wl_fixed_t dx, wl_fixed_t dy) const;
-    SeatsManager *seatManager() const;
+    SeatManager *seatManager() const;
 
     WSeat *getSeatForEvent(QInputEvent *event) const;
     WSeat *findSeatForSurface(SurfaceWrapper *wrapper) const;
@@ -573,7 +573,7 @@ private:
 
     void onOutputCommitFinished(wlr_output_configuration_v1 *config, bool success);
 
-    SeatsManager *m_seatManager = nullptr;
+    SeatManager *m_seatManager = nullptr;
     InputManager *m_inputManager = nullptr;
     TreelandInputManagerInterfaceV1 *m_inputManagerInterfaceV1 = nullptr;
 };

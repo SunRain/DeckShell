@@ -4,7 +4,7 @@
 #include <wscopedvalue.h>
 #include "helper.h"
 #include "pointerconstraintsmanager.h"
-#include "seatsmanager.h"
+#include "seatmanager.h"
 
 #include <QFile>
 #include <QJsonArray>
@@ -2038,7 +2038,7 @@ void Helper::init(Treeland::Treeland *treeland)
     m_rootSurfaceContainer->init(m_server);
 
     m_backend = m_server->attach<WBackend>();
-    m_seatManager = new SeatsManager(m_server, this);
+    m_seatManager = new SeatManager(m_server, this);
 
 #ifndef DISABLE_DDM
     m_ddmInterfaceV1 = m_server->attach<DDMInterfaceV1>();
@@ -2119,7 +2119,7 @@ void Helper::init(Treeland::Treeland *treeland)
                     m_relativePointerManager->sendRelativeMotion(seat, ts, d, u);
                 });
     };
-    connect(m_seatManager, &SeatsManager::seatAdded, this, connectSeat);
+    connect(m_seatManager, &SeatManager::seatAdded, this, connectSeat);
 
     connect(m_shellHandler,
             &ShellHandler::surfaceWrapperAdded,
@@ -2252,7 +2252,7 @@ void Helper::init(Treeland::Treeland *treeland)
 
     // Connect device signals and handle device lifecycle
     m_seatManager->connectBackendSignals(m_backend);
-    connect(m_seatManager, &SeatsManager::deviceAdded, this, [this](WInputDevice *device) {
+    connect(m_seatManager, &SeatManager::deviceAdded, this, [this](WInputDevice *device) {
         m_seatManager->assignDevice(device,
                                     m_renderWindow,
                                     m_rootSurfaceContainer->outputLayout(),
@@ -2562,7 +2562,7 @@ void Helper::init(Treeland::Treeland *treeland)
     finishInitialOutputScanIfReady();
 }
 
-SeatsManager *Helper::seatManager() const
+SeatManager *Helper::seatManager() const
 {
     return m_seatManager;
 }

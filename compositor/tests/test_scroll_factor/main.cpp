@@ -1,7 +1,7 @@
 // Copyright (C) 2026 UnionTech Software Technology Co., Ltd.
 // SPDX-License-Identifier: Apache-2.0 OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
 
-#include "seat/seatsmanager.h"
+#include "seat/seatmanager.h"
 
 #include <wcursor.h>
 #include <winputdevice.h>
@@ -145,7 +145,7 @@ private:
     void destroyClient();
 
     std::unique_ptr<WAYLIB_SERVER_NAMESPACE::WServer> m_server;
-    std::unique_ptr<SeatsManager> m_seatsManager;
+    std::unique_ptr<SeatManager> m_seatsManager;
     std::unique_ptr<WAYLIB_SERVER_NAMESPACE::WInputDevice> m_inputDevice;
     WAYLIB_SERVER_NAMESPACE::WSeat *m_seat = nullptr;
     WAYLIB_SERVER_NAMESPACE::WCursor *m_cursor = nullptr;
@@ -197,7 +197,7 @@ void ScrollFactorTest::initTestCase()
     };
 
     m_server = std::make_unique<WAYLIB_SERVER_NAMESPACE::WServer>();
-    m_seatsManager = std::make_unique<SeatsManager>(m_server.get());
+    m_seatsManager = std::make_unique<SeatManager>(m_server.get());
     m_seat = m_seatsManager->createSeat(QStringLiteral("seat0"), true);
     m_server->attach(m_seat);
 

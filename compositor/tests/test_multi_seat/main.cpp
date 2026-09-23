@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0 OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
 
 #include "devicepathfixture.h"
-#include "seat/seatsmanager.h"
+#include "seat/seatmanager.h"
 #include "surfaceclient.h"
 
 #include <wbackend.h>
@@ -84,7 +84,7 @@ private:
     void detachDevices();
 
     std::unique_ptr<WServer> m_server;
-    std::unique_ptr<SeatsManager> m_manager;
+    std::unique_ptr<SeatManager> m_manager;
     WSeat *m_seat0 = nullptr;
     WSeat *m_seat1 = nullptr;
     wlr_pointer m_pointer0 = { };
@@ -131,7 +131,7 @@ void MultiSeatTest::init()
 {
     wlrootsErrors.clear();
     m_server = std::make_unique<WServer>();
-    m_manager = std::make_unique<SeatsManager>(m_server.get());
+    m_manager = std::make_unique<SeatManager>(m_server.get());
     m_seat0 = m_manager->createSeat(QStringLiteral("seat0"), true);
     m_seat1 = m_manager->createSeat(QStringLiteral("seat1"));
     m_server->attach(m_seat0);
@@ -249,7 +249,7 @@ void MultiSeatTest::assignsMigratesAndRemovesDevices()
     QCOMPARE(m_manager->getSeatForEvent(&event0), m_seat0);
     QCOMPARE(m_manager->getSeatForEvent(&event1), m_seat1);
 
-    QSignalSpy reassignedSpy(m_manager.get(), &SeatsManager::deviceReassigned);
+    QSignalSpy reassignedSpy(m_manager.get(), &SeatManager::deviceReassigned);
     m_manager->assignDeviceToSeat(m_pointerDevice1.get(), QStringLiteral("seat0"));
     QCOMPARE(m_pointerDevice1->seat(), m_seat0);
     QVERIFY(!m_seat1->deviceList().contains(m_pointerDevice1.get()));
@@ -261,8 +261,8 @@ void MultiSeatTest::assignsMigratesAndRemovesDevices()
 
     WBackend backend;
     m_manager->connectBackendSignals(&backend);
-    QSignalSpy addedSpy(m_manager.get(), &SeatsManager::deviceAdded);
-    QSignalSpy removedSpy(m_manager.get(), &SeatsManager::deviceRemoved);
+    QSignalSpy addedSpy(m_manager.get(), &SeatManager::deviceAdded);
+    QSignalSpy removedSpy(m_manager.get(), &SeatManager::deviceRemoved);
     Q_EMIT backend.inputAdded(m_pointerDevice1.get());
     QCOMPARE(addedSpy.count(), 1);
     Q_EMIT backend.inputRemoved(m_pointerDevice1.get());
@@ -277,7 +277,7 @@ void MultiSeatTest::removingSeatReassignsDevices()
     m_manager->assignDeviceToSeat(m_pointerDevice1.get(), QStringLiteral("seat1"));
     QCOMPARE(m_pointerDevice1->seat(), m_seat1);
 
-    QSignalSpy reassignedSpy(m_manager.get(), &SeatsManager::deviceReassigned);
+    QSignalSpy reassignedSpy(m_manager.get(), &SeatManager::deviceReassigned);
     WSeat *removedSeat = m_seat1;
     m_manager->removeSeat(QStringLiteral("seat1"));
     m_seat1 = nullptr;
@@ -354,12 +354,12 @@ void MultiSeatTest::usesWaylibDeviceIdentityAndPhysicalPathFallback()
     const auto expectedRule = QRegularExpression(
         QStringLiteral("^1:%1\\|%2$")
             .arg(QRegularExpression::escape(deviceName), QRegularExpression::escape(expectedPath)));
-    QVERIFY2(SeatsManager::matchesDevice(device.get(), { expectedRule }),
+    QVERIFY2(SeatManager::matchesDevice(device.get(), { expectedRule }),
              qPrintable(expectedRule.pattern()));
 
     const auto wrongPathRule = QRegularExpression(
         QStringLiteral("^1:%1\\|wrong-path$").arg(QRegularExpression::escape(deviceName)));
-    QVERIFY(!SeatsManager::matchesDevice(device.get(), { wrongPathRule }));
+    QVERIFY(!SeatManager::matchesDevice(device.get(), { wrongPathRule }));
 
     device.reset();
 }

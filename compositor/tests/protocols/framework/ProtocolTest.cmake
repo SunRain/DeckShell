@@ -122,6 +122,14 @@ function(treeland_add_protocol_test)
     if(NOT DISABLE_DDM)
         add_dependencies(${target} lockscreen)
     endif()
+
+    set_property(GLOBAL APPEND PROPERTY TREELAND_PROTOCOL_TEST_TARGETS ${target})
+    if(ARGS_XML)
+        set_property(GLOBAL APPEND PROPERTY TREELAND_PROTOCOL_TEST_XMLS "${ARGS_XML}")
+    endif()
+    foreach(extra_xml IN LISTS ARGS_EXTRA_XMLS)
+        set_property(GLOBAL APPEND PROPERTY TREELAND_PROTOCOL_TEST_XMLS "${extra_xml}")
+    endforeach()
     add_test(NAME ${target} COMMAND ${target})
     set_tests_properties(${target} PROPERTIES
         ENVIRONMENT "WLR_BACKENDS=headless;WLR_RENDERER=pixman;WLR_XWAYLAND=$<TARGET_FILE:treeland-xwayland>;DSG_DATA_DIRS=${TREELAND_PROTOCOL_TEST_DSG_DATA_DIRS};TREELAND_PROTOCOL_TEST_DSG_DIR=${TREELAND_PROTOCOL_TEST_DSG_DATA_DIR}"

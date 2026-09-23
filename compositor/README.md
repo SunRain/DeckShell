@@ -9,7 +9,7 @@ root; the complete dependency, installation, and test workflow is documented in
 
 Use Qt 6.8 or newer, the matching Qt Private development files, Dtk6, and the
 system dependencies checked by CMake/pkg-config. The installed WaylibShared
-**development and runtime packages must match**, including native wlroots;
+**development and runtime packages must match**, including native wlroots 0.20;
 a separate system wlroots or the retired qwlroots package is not a substitute.
 
 DeckShell owns its protocol XML in `protocols/compositor`. Waylib builds use the

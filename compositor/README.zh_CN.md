@@ -8,7 +8,7 @@ DeckCompositor 是 DeckShell 中基于 QtQuick、WaylibShared 及其配套 nativ
 
 使用 Qt 6.8 及以上版本、与之配套的 Qt Private 开发文件、Dtk6，以及 CMake/
 pkg-config 检查的系统依赖。WaylibShared 开发包与 runtime 必须配套，包含同一
-构建的 native wlroots；独立系统 wlroots 和已退役的 qwlroots 包不能替代它。
+构建的 native wlroots 0.20；独立系统 wlroots 和已退役的 qwlroots 包不能替代它。
 
 DeckShell 的协议 XML 由仓内 `protocols/compositor` 提供。Waylib 构建使用自身
 `waylib/protocols/` 中随配套实现提供的 remote-subsurface XML，不读取父源码，

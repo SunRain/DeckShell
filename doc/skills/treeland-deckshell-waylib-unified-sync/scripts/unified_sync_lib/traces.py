@@ -248,10 +248,21 @@ def build_waylib_traces(
         raise ValueError("unsupported file lane")
     base_sha, head_sha, targets, merges = _target_commits(repo, base, head)
     companion_errors = []
+    sequence_head = head_sha
+    fix = evidence.get("local_fix") if isinstance(evidence, dict) and lane == "child" else None
+    if fix is not None:
+        from .local_fixes import local_lane_errors
+        row = fix.get("child", {})
+        companion_errors.extend(local_lane_errors(repo, fix, "child", artifact_root))
+        if targets and targets[-1] == row.get("head") == head_sha:
+            targets = targets[:-1]
+            sequence_head = row.get("base")
+        else:
+            companion_errors.append("local child fix is not the final adjacent commit")
     update = evidence.get("protocol_update") if isinstance(evidence, dict) and lane == "child" else None
     if update is not None:
         row = update.get("child", {})
-        if row.get("head") != head_sha:
+        if row.get("head") != sequence_head:
             companion_errors.append("protocol child companion does not end at the requested head")
         companion_errors.extend(companion_lane_errors(repo, update, "child", artifact_root))
         if row.get("head") != row.get("base"):

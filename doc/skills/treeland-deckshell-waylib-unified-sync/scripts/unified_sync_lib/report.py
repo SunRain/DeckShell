@@ -312,7 +312,9 @@ def build_sync_report(
 ) -> Dict[str, Any]:
     """Build a report whose PASS state is derived only from supplied evidence."""
 
+    from .local_fixes import local_fix_errors
     blockers = _mapping_errors(inventory, manifest)
+    blockers.extend(local_fix_errors(manifest, artifact_root))
     blockers.extend(_gate_errors(gates, inventory, manifest))
     blockers.extend(pairing_report_errors(gates.get("protocol_pairing"), inventory, manifest, validations,
                                           artifact_root))

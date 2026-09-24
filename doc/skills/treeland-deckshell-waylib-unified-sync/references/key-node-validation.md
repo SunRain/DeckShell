@@ -29,6 +29,7 @@
 1. 按 SKILL.md 冻结本段来源及 P/C/R 基线，使用独立 run-id、证据目录和 linked worktree，执行本段 inventory、逐提交 replay 和结构化验证。
 2. 从本段 manifest 物化候选依赖，完成 C/R 必需基线与候选验证、P 候选构建、安装合同、固定 namespace 探针及消费测试。不得复用上一段 build/install 目录或借用它的 PASS。
 3. 必需 CMake 构建 ID 只接受 `cmake --build "$BUILD"` 的默认完整构建。允许并行数、配置、详细输出和 `--clean-first`；拒绝 `--target`/`-t`（包括 all/help）、原生 `-- ...` 参数、空跑和其他构建模式。诊断性局部构建可使用非必需 ID，但不满足验收。
+   本段 P 候选包含依赖 DConfig 的协议测试时，运行 CTest 前按 [隔离运行方案](protocol-test-runtime.md) 准备并记录本段运行依赖；不安装系统服务，不借用历史节点的测试结果，也不把依赖缺失转为跳过。
 4. 生成本段完整报告。缺证据或任一必需构建/测试/合同失败时停止；不能越过失败节点去下一个 tag，再用后续成功抵消。
 5. 完整报告通过且授权覆盖本段后，执行既有 R→C→P expected-old closeout。授权可以预先覆盖明确列出的整组分段和目标 refs；不要重复索取已覆盖的授权。未获收口授权时停在“本段验收完成、尚未收口”，不能声明整组同步完成。
 6. 后段以**前段已完成收口的** P/C/R 目标 SHA 为基线，R target ref 必须实际指向新的 R base。新建该段 worktree、journal、build/install 和报告；不修改上一段 manifest，不把最后一段报告用于从最初基线跨段收口。

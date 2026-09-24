@@ -234,12 +234,20 @@ def verify_gitlink_consistency(
     )
     update = manifest.get("protocol_update")
     if update is not None:
+        from .local_fixes import preceding_head
         for lane, repo, head in (("child", child_repo, final_child), ("parent", parent_repo, final_parent)):
-            if update.get(lane, {}).get("head") != head:
+            if update.get(lane, {}).get("head") != preceding_head(manifest, lane):
                 blockers.append(f"protocol {lane} companion differs from the final head")
             blockers.extend(companion_lane_errors(repo, update, lane))
         if update.get("child", {}).get("base") != current_child:
             blockers.append("protocol companion does not start at the ordinary child replay head")
+        current_child = final_child
+    if manifest.get("local_fix") is not None:
+        from .local_fixes import local_lane_errors
+        for lane, repo in (("child", child_repo), ("parent", parent_repo)):
+            blockers.extend(local_lane_errors(repo, manifest["local_fix"], lane))
+            if manifest["local_fix"].get(lane, {}).get("head") != manifest.get(f"final_{lane}_head"):
+                blockers.append(f"local {lane} fix differs from final head")
         current_child = final_child
     blockers.extend(
         _final_gitlink_errors(parent_repo, final_parent, current_child, GITLINK_PATH)

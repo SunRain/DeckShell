@@ -24,6 +24,7 @@ description: 将指定 Treeland ref 的显式左开右闭 commit 区间逐提交
 - 准备 replay 或 adapted/empty 决策时读取 [提交消息](references/commit-messages.md) 与 [证据格式](references/evidence-schema.md)。
 - 每轮读取 [协议配套检查](references/protocol-pairing.md)；inventory 触达协议目标时另读 [协议候选](references/protocol-tracking.md)。
 - 存在 child lane 时读取 [Waylib 合同](references/waylib-contract.md)。
+- parent candidate 的协议测试依赖 DConfig 时，在运行 CTest 前读取 [协议测试隔离运行方案](references/protocol-test-runtime.md)，准备可追溯的运行依赖；不要求安装或启用系统服务。
 - 不要把所有 reference 内容复制进上下文；仅在进入对应阶段时读取。
 
 ## 必需输入
@@ -79,7 +80,7 @@ protocol_ref: <用户手工输入并可解析的协议 ref 或完整 SHA>
 - [ ] 协议触发时冻结 protocol ref 后生成 advisory 候选；未触发时写 `not-triggered` 证据。
 - [ ] 物化 C 基线、C 候选及 P 候选的依赖；对 C base/candidate 分别 fresh build/install/CTest，运行已有 `test_project` consumer 和固定基线命名空间探针。
 - [ ] R 启用时取得 base/candidate 六条 Meson 记录；仅经 Git 证明的空 R 基线记 `not-applicable`，候选仍实际执行，核对 C/P 编译数据库、生成头和链接命令使用本次 R。
-- [ ] 对 parent candidate fresh configure/build/CTest；顶层 0 tests 原样记为 `NO_TESTS`，不能写成 PASS。
+- [ ] 对 parent candidate fresh configure/build/CTest；依赖 DConfig 的协议测试先按 [隔离运行方案](references/protocol-test-runtime.md) 准备运行环境，缺依赖不能记为 SKIP/PASS；顶层 0 tests 原样记为 `NO_TESTS`，不能写成 PASS。
 - [ ] 完成受影响客户端/真实交互验证和 `protocol-verify`；报告生成器接收 `--protocol-pairing` 且结果必须为 `pass`，不得手写补成 PASS。
 - [ ] 九项 gate 和本段完整报告通过且授权覆盖后，目标 refs 未被检出时执行 R→C→P closeout；新 SHA 成为下一段基线。
 - [ ] 逐段复核 refs、gitlink、journal 和节点报告；未验节点不得用最后一段 PASS 替代，保持 remote push 为未执行。
@@ -278,6 +279,13 @@ python3 "$SKILL_DIR/scripts/unified_sync.py" materialize-child \
 该命令只在缺失/空目录创建本地 detached linked worktree；已有 checkout 仅核验，不 reset、覆盖或 fetch。R 启用时同时物化 C 候选、P 内 C 候选下的 R；C 基线已有登记才物化 R0，旧基线不注入新布局。报告核对每层 SHA、对象库、linked-worktree、clean、路径与 manifest。
 
 ## 9. 构建、安装与 package consumer
+
+已获独立本地修复授权时，按 [本地修复和安装包取证](references/local-fixes.md)
+记录来源回放之后的相邻修复提交；原始映射和失败证据不变，不默认授权任何额外修复。
+P 默认安装包路线使用同一个验证 bundle 中本次 C configure/build/install 记录，
+核验安装 ELF、R 源头文件及生成头与 P 具体目标的实际链接和编译依赖；不能仅凭包路径放行。
+
+parent 协议测试需要 DConfig 时，按 [隔离运行方案](references/protocol-test-runtime.md) 提供 daemon，并仅为验证进程设置运行路径。记录器接收的命令仍以 `ctest` 开头，保留完整发现与结果核对；文档中的启动诊断要求不代表测试框架已经实现。
 
 按 [Waylib 合同](references/waylib-contract.md) 建立 child base 审计 worktree；使用 `validation_record.py` 无 shell 执行并记录以下固定 ID：
 

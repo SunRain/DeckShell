@@ -185,7 +185,7 @@ def _header_digests(commands, dependencies, build, child):
     return {str(path): sha256_file(path) for path in sorted(headers)}
 
 
-def record_wrapper_build(command, cwd: Path, manifest: Mapping[str, Any], root: Path, name: str):
+def record_wrapper_build(command, cwd: Path, manifest: Mapping[str, Any], root: Path, name: str, bundle=None):
     """构建完成后保存编译数据库、codemodel 与 Ninja 实际命令。"""
 
     from .validation_paths import _resolved_option
@@ -198,8 +198,15 @@ def record_wrapper_build(command, cwd: Path, manifest: Mapping[str, Any], root: 
     commands = json.loads((build / "compile_commands.json").read_text(encoding="utf-8"))
     links, raw_dependencies = _ninja_output(build, "commands"), _ninja_output(build, "deps")
     dependencies = _ninja_dependencies(raw_dependencies.decode("utf-8"), build)
+    installed = None
+    if name.startswith("deckshell-"):
+        cache = (build / "CMakeCache.txt").read_text(encoding="utf-8")
+        if "WITH_SUBMODULE_WAYLIB:BOOL=OFF" in cache.splitlines():
+            from .installed_wrapper import record_installed_wrapper
+            installed = record_installed_wrapper(bundle, manifest, root, name, model, commands,
+                                                  links.decode("utf-8"), dependencies, build)
     native = record_native_wrapper(model, links.decode("utf-8"), dependencies, child, build, root, name)
-    errors = native["blocked_reasons"] if native is not None else _wrapper_errors(
+    errors = [] if installed is not None else native["blocked_reasons"] if native is not None else _wrapper_errors(
         model, commands, links.decode("utf-8"), child, build, dependencies)
     records = {key: write_artifact(root, f"wrapper/{name}-{key}.json", (json.dumps(value, sort_keys=True) + "\n").encode())
                for key, value in (("codemodel", model), ("compile_commands", commands))}
@@ -210,6 +217,9 @@ def record_wrapper_build(command, cwd: Path, manifest: Mapping[str, Any], root: 
               "artifacts": records, "blocked_reasons": errors, "outcome": "blocked" if errors else "pass"}
     if native is not None:
         result["native_meson"] = native
+    if installed is not None:
+        result["installed_package"] = installed
+        result["generated_headers"] = installed["generated_headers"]
     return result
 
 
@@ -224,6 +234,8 @@ def wrapper_build_errors(entry: Mapping[str, Any], manifest: Mapping[str, Any], 
     build = _resolved_option(entry, "--build")
     child = Path(entry["cwd"]) / GITLINK_PATH if entry["id"].startswith("deckshell-") else Path(entry["cwd"])
     errors = []
+    if "installed_package" in record and entry.get("id") != "deckshell-build":
+        return ["installed-package evidence is only valid for the P build"]
     if record.get("manifest_sha256") != canonical_json_sha256(manifest) or record.get("child") != str(child) or record.get("build") != str(build):
         errors.append("wrapper build identity differs from the current candidate")
     values = {}
@@ -236,7 +248,13 @@ def wrapper_build_errors(entry: Mapping[str, Any], manifest: Mapping[str, Any], 
             values[key] = raw.decode("utf-8") if key in {"link_commands", "compiler_dependencies"} else json.loads(raw.decode("utf-8"))
     if len(values) == 4:
         dependencies = _ninja_dependencies(values["compiler_dependencies"], build)
-        if "native_meson" in record:
+        if "installed_package" in record:
+            from .installed_wrapper import installed_wrapper_errors
+            findings, headers = installed_wrapper_errors(
+                record["installed_package"], manifest, root, values["codemodel"],
+                values["compile_commands"], values["link_commands"], dependencies, build)
+            errors.extend(findings)
+        elif "native_meson" in record:
             findings, headers = native_wrapper_errors(record["native_meson"], values["codemodel"], values["link_commands"], dependencies, child, build, root)
             errors.extend(findings)
         else:

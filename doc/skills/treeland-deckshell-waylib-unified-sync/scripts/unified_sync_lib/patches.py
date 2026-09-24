@@ -135,6 +135,7 @@ def create_commit(
 
     args = [
         "commit",
+        "--cleanup=verbatim",
         "--file=-",
         f"--author={source['author']} <{source['email']}>",
         f"--date={source['date']}",

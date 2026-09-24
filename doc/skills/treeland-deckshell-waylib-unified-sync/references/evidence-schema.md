@@ -174,3 +174,7 @@ remote-subsurface 的独立来源范围、配套回放、审查和真实交互�
 [协议配套检查](protocol-pairing.md)。`protocol_pairing` 是每轮必需的第九项 gate；
 `protocol_tracking` 仍为 advisory，不替代配套结论。缺失或失败报告“尚未适配”，
 最终报告和 `closeout` 均拒绝接受。普通构建只使用库内 XML，不运行同步工具。
+
+## 已授权的受控协议 XML 迁移
+
+显式来源审批可精确登记 P `protocols/compositor/xml/` 下的 app-id-resolver v1→unstable-v2、prelaunch-splash v2→unstable-v2、screensaver v1→unstable-v2、wallpaper-shell、Wine 两项协议、window-management→show-desktop 和 foreign-toplevel v1→unstable-v2 文件，以及既有 remote-subsurface。旧文件删除与新文件创建分别留逐路径证明；未经审批仍拒绝，不能用此清单放行任意 XML、目录或通配路径。

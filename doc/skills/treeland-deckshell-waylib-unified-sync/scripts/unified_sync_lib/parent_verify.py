@@ -380,9 +380,14 @@ def verify_parent_sync(
     head_sha = resolve_commit(parent_repo, parent_head)
     blockers = inventory_errors(inventory)
     blockers.extend(parent_document_errors(inventory, manifest, evidence, head_sha))
+    from .local_fixes import local_fix_errors, preceding_head
+    if manifest.get("local_fix") != evidence.get("local_fix"):
+        blockers.append("parent local fix differs from manifest/evidence")
+    blockers.extend(local_fix_errors(manifest, artifact_root))
     update = manifest.get("protocol_update")
     if update is not None:
-        if update != evidence.get("protocol_update") or update.get("parent", {}).get("head") != head_sha:
+        if (update != evidence.get("protocol_update")
+                or update.get("parent", {}).get("head") != preceding_head(manifest, "parent")):
             blockers.append("parent protocol companion differs from manifest/evidence/head")
         blockers.extend(companion_lane_errors(parent_repo, update, "parent", artifact_root))
     mapping_errors, verified_entries = _mapping_verification_errors(

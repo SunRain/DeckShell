@@ -151,6 +151,7 @@ def _expectation_errors(review, inspection, validations):
 
 
 def _verify_candidate(result, inventory, manifest, review, validations, root):
+    from .local_fixes import local_fix_errors, preceding_head
     identity = manifest["identity"]
     update = manifest.get("protocol_update")
     if not isinstance(update, dict):
@@ -173,9 +174,9 @@ def _verify_candidate(result, inventory, manifest, review, validations, root):
         if fresh.get(key) != inspection.get(key) or fresh["outcome"] != "pass":
             raise ValueError("source inspection cannot be reproduced: " + "; ".join(fresh["blocked_reasons"] or [key]))
     result["failure_stage"] = "candidate-update"
-    errors = []
+    errors = local_fix_errors(manifest, root)
     for lane in ("child", "parent"):
-        if update.get(lane, {}).get("head") != manifest[f"final_{lane}_head"]:
+        if update.get(lane, {}).get("head") != preceding_head(manifest, lane):
             errors.append(f"protocol companion differs from final {lane} candidate")
         errors.extend(companion_lane_errors(Path(identity[f"{lane}_worktree"]), update, lane, root))
     if errors:

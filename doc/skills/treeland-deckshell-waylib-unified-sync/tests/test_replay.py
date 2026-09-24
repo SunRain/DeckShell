@@ -197,6 +197,40 @@ class ReplayIntegrationTests(unittest.TestCase):
         )
         self.assertEqual(verify["outcome"], "pass")
 
+    def test_preserves_blank_lines_in_original_message_trace(self) -> None:
+        source_sha = commit_files(
+            self.source,
+            {"src/blank.cpp": "blank\n"},
+            "fix(core): preserve message\n\nfirst paragraph\n\nsecond paragraph",
+        )
+        inventory = build_unified_inventory(
+            self.source,
+            self.source_base,
+            source_sha,
+            self.policy,
+            self.policy_path,
+            set(),
+        )
+        request = self.request(inventory, "blank-message")
+
+        manifest = run_replay(request)
+
+        self.assertEqual(manifest["outcome"], "pass")
+        parent_sha = manifest["entries"][0]["parent"]["commit"]
+        message = run(request.parent_worktree, "show", "-s", "--format=%B", parent_sha)
+        self.assertIn(
+            "Original treeland commit:\n"
+            "    fix(core): preserve message\n"
+            "    \n"
+            "    first paragraph\n"
+            "    \n"
+            "    second paragraph\n",
+            message,
+        )
+        parent, child = self.verify_lanes(request, manifest)
+        self.assertEqual(parent["outcome"], "pass")
+        self.assertEqual(child["outcome"], "pass")
+
     def test_resume_after_child_checkpoint_does_not_duplicate_child_commit(self) -> None:
         waylib_only, _dual, _parent_only, inventory = self.prepare_source()
         request = self.request(inventory, "resume")

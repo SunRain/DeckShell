@@ -180,4 +180,5 @@ def replay_head(manifest, lane):
     """Return the ordinary replay endpoint, before an optional protocol companion."""
 
     update = manifest.get("protocol_update", {})
-    return update.get(lane, {}).get("base", manifest.get(f"final_{lane}_head"))
+    from .local_fixes import preceding_head
+    return update.get(lane, {}).get("base", preceding_head(manifest, lane))

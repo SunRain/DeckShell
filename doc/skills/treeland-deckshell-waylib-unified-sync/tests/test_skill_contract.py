@@ -16,6 +16,7 @@ PUBLIC_SCRIPTS = (
     "generate_repo_records.py",
     "gitlink_verify.py",
     "protocol_tracker.py",
+    "record_local_fix.py",
     "unified_sync.py",
     "validation_record.py",
     "waylib_contract_audit.py",

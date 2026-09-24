@@ -20,6 +20,19 @@ PARENT_INTEGRATION_FILES = frozenset({
     "qtwaylandscanner/qtwaylandscanner.cpp",
     "protocols/compositor/CMakeLists.txt",
     "protocols/compositor/xml/treeland-remote-subsurface-unstable-v1.xml",
+    "protocols/compositor/xml/treeland-app-id-resolver-v1.xml",
+    "protocols/compositor/xml/treeland-app-id-resolver-unstable-v2.xml",
+    "protocols/compositor/xml/treeland-prelaunch-splash-v2.xml",
+    "protocols/compositor/xml/treeland-prelaunch-splash-unstable-v2.xml",
+    "protocols/compositor/xml/treeland-screensaver-v1.xml",
+    "protocols/compositor/xml/treeland-screensaver-unstable-v2.xml",
+    "protocols/compositor/xml/treeland-wallpaper-shell-unstable-v1.xml",
+    "protocols/compositor/xml/treeland-wine-window-management-unstable-v1.xml",
+    "protocols/compositor/xml/treeland-wine-window-state-unstable-v1.xml",
+    "protocols/compositor/xml/treeland-window-management-v1.xml",
+    "protocols/compositor/xml/treeland-show-desktop-unstable-v1.xml",
+    "protocols/compositor/xml/treeland-foreign-toplevel-manager-v1.xml",
+    "protocols/compositor/xml/treeland-foreign-toplevel-manager-unstable-v2.xml",
 })
 
 

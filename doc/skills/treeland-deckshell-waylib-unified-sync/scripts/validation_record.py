@@ -284,7 +284,8 @@ def _record_dependency_bindings(args, prepared, entry, completed):
         if r and args.id in build_ids and completed.returncode == 0:
             try:
                 entry["wrapper_build"] = record_wrapper_build(prepared["command"], prepared["cwd"], prepared["manifest"],
-                                                              args.artifact_root, f"{args.id}-attempt-{prepared['attempt']}")
+                                                              args.artifact_root, f"{args.id}-attempt-{prepared['attempt']}",
+                                                              prepared["bundle"])
                 if entry["wrapper_build"]["outcome"] != "pass":
                     entry["outcome"] = "fail"
             except (OSError, ValueError, RuntimeError, KeyError) as error:

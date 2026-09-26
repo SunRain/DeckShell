@@ -32,7 +32,38 @@
 
 namespace {
 constexpr char DockPreviewContextPropertyName[] = "treelandDockPreviewContextV1";
+
+void appendState(QByteArray &encoded, uint32_t state)
+{
+    encoded.append(reinterpret_cast<const char *>(&state), sizeof(state));
 }
+} // namespace
+
+namespace ForeignToplevelStateCodec {
+
+QByteArray encode(ForeignToplevelHandleV1::States states, uint32_t resourceVersion)
+{
+    QByteArray encoded;
+
+    if (states.testFlag(ForeignToplevelHandleV1::State::Maximized))
+        appendState(encoded, TREELAND_FOREIGN_TOPLEVEL_HANDLE_V1_STATE_MAXIMIZED);
+
+    if (states.testFlag(ForeignToplevelHandleV1::State::Minimized))
+        appendState(encoded, TREELAND_FOREIGN_TOPLEVEL_HANDLE_V1_STATE_MINIMIZED);
+
+    if (states.testFlag(ForeignToplevelHandleV1::State::Activated))
+        appendState(encoded, TREELAND_FOREIGN_TOPLEVEL_HANDLE_V1_STATE_ACTIVATED);
+
+    if (states.testFlag(ForeignToplevelHandleV1::State::Fullscreen))
+        appendState(encoded, TREELAND_FOREIGN_TOPLEVEL_HANDLE_V1_STATE_FULLSCREEN);
+
+    if (resourceVersion >= 2 && states.testFlag(ForeignToplevelHandleV1::State::Attention))
+        appendState(encoded, TREELAND_FOREIGN_TOPLEVEL_HANDLE_V1_STATE_ATTENTION);
+
+    return encoded;
+}
+
+} // namespace ForeignToplevelStateCodec
 
 class SurfaceEntry
 {

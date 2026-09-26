@@ -12,7 +12,6 @@ impl_deckcompositor(
         ${CMAKE_CURRENT_SOURCE_DIR}/foreigntoplevelmanagerv1.h
         ${CMAKE_CURRENT_SOURCE_DIR}/foreigntoplevelmanagerv1.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/foreigntoplevelstatecodec.h
-        ${CMAKE_CURRENT_SOURCE_DIR}/foreigntoplevelstatecodec.cpp
     INCLUDE
         $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>
 )

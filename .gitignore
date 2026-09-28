@@ -132,3 +132,5 @@ Testing/Temporary/
 
 # codegraph index
 .codegraph/
+
+.helloagents/

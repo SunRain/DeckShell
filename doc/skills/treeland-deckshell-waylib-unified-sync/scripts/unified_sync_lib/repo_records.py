@@ -11,6 +11,7 @@ from .record_git import check_history
 from .record_initialization import initialization_node
 from .record_render import render_documents
 from .record_replay import replay_metadata, replay_rows
+from .record_special import bridge_rows, special_rows
 
 
 def collect_records(context: RecordContext, inputs: dict) -> tuple:
@@ -29,12 +30,19 @@ def collect_records(context: RecordContext, inputs: dict) -> tuple:
                                        f"{node['source_base']}..{node['source_head']}")).split()
             require(source_order == node["inventory"]["range"]["ordered_source_commits"], "来源区间覆盖不完整")
             current = replay_rows(context, node)
+            extras = special_rows(context, node)
+            for lane in current:
+                current[lane].extend(extras[lane])
         elif kind == "initialization":
             node, current = initialization_node(context, descriptor)
         else:
             raise ValueError(f"未知节点类型：{kind}")
         if nodes:
             require(nodes[-1]["source_head"] == node["source_base"], "来源节点不连续")
+        bridges = bridge_rows(context, nodes[-1] if nodes else None, node, descriptor.get("bridges", []))
+        node["bridges"] = bridges
+        for lane in current:
+            current[lane] = bridges[lane] + current[lane]
         node["previous_runs"] = []
         for prior in descriptor.get("previous_runs", []):
             require(prior.get("kind") == "replay", "previous_runs 只接受原普通节点报告")
@@ -83,8 +91,17 @@ def _preflight_output(context, documents):
 
 def generate_records(context: RecordContext, nodes_file: Path) -> dict:
     """验证并实际生成 P/C 记录；不暂存、提交、更新 refs 或覆盖文件。"""
-    nodes, rows = collect_records(context, read_json(nodes_file))
+    return generate_from_inputs(context, read_json(nodes_file))
+
+
+def generate_from_inputs(context: RecordContext, inputs: dict) -> dict:
+    """共用独立生成器和正常完成入口的验证/预检/写入路径。"""
+    nodes, rows = collect_records(context, inputs)
     documents = render_documents(context, nodes, rows)
+    for lane in ("parent", "child"):
+        prefix = ("doc" if lane == "parent" else "docs") + f"/treeland-sync/{context.batch}"
+        for name, content in context.plan_documents.items():
+            documents[(lane, f"{prefix}/{name}")] = content
     _preflight_output(context, documents)
     for (lane, relative), content in sorted(documents.items()):
         path = _no_symlinks(context.repos[lane], relative)

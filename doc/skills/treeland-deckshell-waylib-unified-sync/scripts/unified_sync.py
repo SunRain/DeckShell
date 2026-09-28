@@ -16,6 +16,7 @@ from unified_sync_lib.policy import load_policy
 from unified_sync_lib.replay import ReplayBlocked, ReplayRequest, run_replay
 from unified_sync_lib.schema import load_inventory
 from unified_sync_lib.protocol_cli import add_protocol_parsers, run_protocol_command
+from unified_sync_lib.record_finish import add_finish_parser, run_finish
 
 
 def _inventory_parser(subparsers) -> None:
@@ -106,6 +107,7 @@ def build_parser() -> argparse.ArgumentParser:
     _materialize_parser(subparsers)
     _closeout_parser(subparsers)
     add_protocol_parsers(subparsers)
+    add_finish_parser(subparsers)
     return result
 
 
@@ -243,6 +245,8 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     """Dispatch a unified synchronization command."""
 
     args = build_parser().parse_args(argv)
+    if args.command == "finish":
+        return run_finish(args)
     if args.command == "inventory":
         return _inventory(args)
     if args.command == "replay":

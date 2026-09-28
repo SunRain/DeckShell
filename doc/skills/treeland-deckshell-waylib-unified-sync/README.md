@@ -60,7 +60,7 @@ child_repo: <DeckShell/3rdparty/waylib-shared>
 child_target_ref: refs/heads/<目标分支>
 artifact_root: <持久且位于所有 worktree 外的目录>
 
-要求：在 refs_doc 中冻结整体范围和全部关键节点，当前分段按来源逐节点 R→C→P；构建前递归 materialize-child，段末完成八项门禁、默认完整 build、安装/测试、package consumer 和报告。本段通过且授权覆盖后执行 expected-old closeout，再以新基线接续下一段。不 push、不改外层 gitlink；R 启用时补齐五个 wlroots 输入，不猜 SHA/URL。
+要求：在 refs_doc 中冻结整体范围和全部关键节点，当前分段按来源逐节点 R→C→P；构建前递归 materialize-child，段末完成九项门禁（含 protocol_pairing）、默认完整 build、安装/测试、package consumer 和报告。本段通过且授权覆盖后执行 expected-old closeout，再以新基线接续下一段。整批接受后以 finish --task sync 自动交付两仓记录；将接受结果归并到日常主分支时使用 finish --task consolidate。不自动提交、push 或改外层 gitlink；R 启用时补齐必要输入，不猜 SHA/URL。
 ```
 
 详细顺序和阻断条件见 [SKILL.md](SKILL.md)，输入清单见 [examples/unified-sync.example.yaml](examples/unified-sync.example.yaml)。
@@ -69,7 +69,7 @@ artifact_root: <持久且位于所有 worktree 外的目录>
 
 | 脚本 | 职责 |
 |---|---|
-| `unified_sync.py` | `inventory`、journaled `replay`、`materialize-child`、child-first `closeout` |
+| `unified_sync.py` | `inventory`、journaled `replay`、`materialize-child`、child-first `closeout`；整批 `finish` 自动准备方案副本、核对接受历史并生成两仓记录 |
 | `deckshell_verify.py` | parent 顺序、目标路径权威、消息和证据 |
 | `waylib_inventory.py` | 兼容的独立 inventory 入口 |
 | `waylib_traces.py` | child trailer、顺序、分类与路径边界 |
@@ -85,11 +85,11 @@ artifact_root: <持久且位于所有 worktree 外的目录>
 
 ## 同步记录留存
 
-同步内容提交固定后，可以独立生成面向仓库维护者的中文记录。P 仅展开 P 内容和依赖传播，C 展开 C 内容并单列独立 R 依赖；dual 通过同一 Treeland SHA 关联。N2 类独立初始化读取其专有报告和结构证明，不伪造普通 replay。原节点失败、未验证与 `NO_TESTS` 均保留，记录不能替代节点验收。
+同步整批完成、相关主分支归并和中断恢复的正常收尾均使用 [SKILL.md §12](SKILL.md#12-正常任务完成自动交付两仓记录) 的 `finish`，不需要用户另外要求生成记录。它自动从本批原 closeout 选择接受节点、拒绝缺段和歧义，再准备副本、核对并生成/复用两仓文档；失败以非零状态返回，不能宣布完整交付。P 仅展开 P 内容和依赖传播，C 展开 C 内容并单列独立 R 依赖；dual 通过同一 Treeland SHA 关联。原节点 FAIL/SKIP、限定授权、未验证与 `NO_TESTS` 均保留，记录不能替代节点验收。
 
 调用参数、节点输入、可选历史映射及输出保护见 [按仓记录生成](references/repo-records.md)，输入示例见 [repo-records.example.json](examples/repo-records.example.json)。普通同步省略 `--history-map`；经另行授权重写历史后才提供完整旧新对应。输出只进入 P `doc/treeland-sync/<batch>/` 和 C `docs/treeland-sync/<batch>/`；任何已有内容冲突明确失败，不覆盖旧文档。
 
-本仓 `plan.md`、`prd.md` 副本与 summary 同目录保存，两份齐全时使用同目录链接；不再查找仓库根部的 `<batch>/`。这两份普通文件是只读输入，生成器不创建、修改、删除或计数；未知批次文件、内容冲突及符号链接仍会被拒绝。
+本仓 `plan.md`、`prd.md` 副本与 summary 同目录保存。正常 `finish` 负责从原同步方案准备可携带副本并纳入同次预检/交付；已有副本必须字节相同，不能覆盖冲突。低层 `generate_repo_records.py` 仍把它们当只读输入，不创建、修改、删除或计数；该入口也继续支持专属初始化证明与历史映射。不查找旧根目录，不删除未知批次文件或符号链接解除冲突。
 
 ## 运行要求
 

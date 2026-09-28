@@ -1,6 +1,6 @@
 ---
 name: treeland-deckshell-waylib-unified-sync
-description: 将指定 Treeland ref 的显式左开右闭 commit 区间逐提交同步到 DeckShell、waylib-shared 和嵌套 wlroots 仓库，按所选关键节点分段验收；用于统一同步、恢复回放、核验两层 gitlink 与安装合同、追踪协议候选并完成每轮协议配套验证。不要求普通中间提交编译，不猜来源范围，不自动远程发布。
+description: 将指定 Treeland ref 的显式左开右闭 commit 区间逐提交同步到 DeckShell、waylib-shared 和嵌套 wlroots 仓库，按所选关键节点分段验收；同步整批完成或将已接受结果归并到日常主分支时，自动生成并核对 P/C 仓内记录。不要求普通中间提交编译，不猜来源范围，不自动远程发布或提交文档。
 ---
 
 # Treeland → DeckShell + waylib-shared + wlroots 统一同步
@@ -17,6 +17,7 @@ description: 将指定 Treeland ref 的显式左开右闭 commit 区间逐提交
 8. replay 只写显式、互不重叠的 linked worktree；artifact/build/install 位于源码工作树之外。正式证据不得只放 `/tmp`；临时 fixture 的例外不用于真实同步。
 9. 失败时保留 worktree 与 journal，不自动 reset、abort、清理、回滚或改写用户分支。`--resume` 只接受完全相同的冻结身份和与 journal 一致的 clean HEAD。
 10. 不改外层 `HA-DeckShell -> DeckShell` gitlink，不自动 fetch、push、tag。每段完整报告通过且授权覆盖该段后，显式执行 R→C→P expected-old CAS，再接续下一段；跨仓及跨分段不原子，不自动回滚。
+11. 节点 closeout 不是整批交付终点。正常同步或相关主分支归并必须执行下文 `finish`，自动准备原方案副本并生成/复用两仓完整记录；非零时只可报告产品已接受、文档未完成，不需用户再提醒补档。只读任务、无关 Git 操作不触发。
 
 ## 按需读取 references
 
@@ -25,6 +26,7 @@ description: 将指定 Treeland ref 的显式左开右闭 commit 区间逐提交
 - 每轮读取 [协议配套检查](references/protocol-pairing.md)；inventory 触达协议目标时另读 [协议候选](references/protocol-tracking.md)。
 - 存在 child lane 时读取 [Waylib 合同](references/waylib-contract.md)。
 - parent candidate 的协议测试依赖 DConfig 时，在运行 CTest 前读取 [协议测试隔离运行方案](references/protocol-test-runtime.md)，准备可追溯的运行依赖；不要求安装或启用系统服务。
+- 整批交付、恢复交付或主分支归并收尾时读取 [按仓记录](references/repo-records.md)，使用正常 `finish` 入口，不以独立生成命令替代任务完成检查。
 - 不要把所有 reference 内容复制进上下文；仅在进入对应阶段时读取。
 
 ## 必需输入
@@ -84,6 +86,7 @@ protocol_ref: <用户手工输入并可解析的协议 ref 或完整 SHA>
 - [ ] 完成受影响客户端/真实交互验证和 `protocol-verify`；报告生成器接收 `--protocol-pairing` 且结果必须为 `pass`，不得手写补成 PASS。
 - [ ] 九项 gate 和本段完整报告通过且授权覆盖后，目标 refs 未被检出时执行 R→C→P closeout；新 SHA 成为下一段基线。
 - [ ] 逐段复核 refs、gitlink、journal 和节点报告；未验节点不得用最后一段 PASS 替代，保持 remote push 为未执行。
+- [ ] 全部冻结节点接受后执行整批 `finish --task sync`；相关主分支归并使用 `finish --task consolidate`。两仓实物和完整来源/目标覆盖检查通过才结束任务，不在中间节点提前写最终批次目录。
 
 ## 1. 冻结输入
 
@@ -411,12 +414,28 @@ closeout 按 R→C→P（R 不适用则 C→P）执行 expected-old CAS。部分
 
 ## 完成定义
 
-每段须来源映射齐全、九类结构化门禁（P/C/R verify、两层 gitlink、protocol advisory、protocol pairing、Waylib contract、递归 materialization）通过、必需日志和本段完整报告有效，并完成获准的 closeout。全部冻结关键节点均满足这些条件才可声明整组本地同步完成；普通中间提交不作可构建承诺。R 不适用须由工具核验；隔离 fixture 不代表真实产品验证，远程发布另行授权。
+每段须来源映射齐全、九类结构化门禁（P/C/R verify、两层 gitlink、protocol advisory、protocol pairing、Waylib contract、递归 materialization）通过、必需日志和本段完整报告有效，并完成获准的 closeout。全部冻结关键节点均满足这些条件且下文 `finish` 成功，才可声明包含仓内记录的整批交付完成；普通中间提交不作可构建承诺。R 不适用须由工具核验；隔离 fixture 不代表真实产品验证，远程发布和文档提交另行授权。
 
-## 同步后的按仓记录
+## 12. 正常任务完成：自动交付两仓记录
 
-需要把实际同步内容留在 P/C 仓库时，使用 [按仓记录生成](references/repo-records.md) 的 `generate_repo_records.py`，从统一 inventory、manifest、lane evidence、原验证结果及 Git 对象生成本仓总记录和 adapted 详情。不得手工从主题猜适配理由，或将 C/R 的源码适配写成 P 内容。独立初始化单列；普通输入不虚构旧目标，另行授权的历史整理输入须提供完整旧新映射。
+执行者从当前方案取得原同步批次 ID、整批冻结来源范围、原 evidence 根和原 plan/prd 目录；不让用户重新选择 attempts。`PLAN_DIR` 可为已归档方案；`BATCH_EVIDENCE_ROOT` 仍使用未移动的原证据目录，不扫描其它批次。归并不使用归并方案名新建同步批次，也不 replay 已接受节点。
 
-本仓方案副本保存于 P `doc/treeland-sync/<batch>/` 或 C `docs/treeland-sync/<batch>/`，与 summary 同目录。仅当本仓 `plan.md`、`prd.md` 两份普通文件齐全时生成同目录链接，否则说明外层历史资料；不从旧根目录回退查找。这两份副本是只读输入，不由生成器创建、覆盖、删除或计入输出文件数；未知批次文件和符号链接仍拒绝。
+```bash
+RECORD_R_ARGS=()
+if test -n "${WLROOTS_REPO:-}"; then
+  RECORD_R_ARGS=(--wlroots-repo "$WLROOTS_REPO")
+fi
+# 同步整批完成 TASK=sync；相关主分支归并完成 TASK=consolidate。
+python3 "$SKILL_DIR/scripts/unified_sync.py" finish \
+  --task "$TASK" --source-repo "$SOURCE_REPO" \
+  --parent-repo "$PARENT_REPO" --child-repo "$CHILD_REPO" "${RECORD_R_ARGS[@]}" \
+  --batch "$BATCH" --source-base "$BATCH_BASE_SHA" --source-head "$BATCH_HEAD_SHA" \
+  --evidence-root "$BATCH_EVIDENCE_ROOT" --evidence-label ".helloagents/plans/$BATCH" \
+  --plan-dir "$PLAN_DIR"
+```
 
-此入口只生成固定批次下的 Markdown，重复生成保持相同内容，冲突明确失败；不 replay、不暂存/提交、不改 refs，也不将文档生成称为新产品验收。历史整理、文档提交和工具维护提交仍由各自已授权任务执行。
+`finish` 是正式任务的完成入口：自动发现原 closeout 绑定的接受报告，检查整批连续覆盖、目标包含关系、逐路径证据及限定授权，准备可携带方案副本后直接调用共用生成器；不用再调用 `generate_repo_records.py`。`sync` 检查原接受 refs，`consolidate` 检查所传 P/C/R 工作树当前 HEAD；前者不声称尚未归并的日常主分支已包含候选。有缺段、歧义或不支持的原接受布局时明确失败，不猜最新 attempt，也不将初始化 merge 当普通 replay。
+
+两仓同时预检，缺少文件自动补齐，相同文件逐字节复用；冲突不覆盖、不删除。方案副本准备与生成属于同一次完成操作，副本的原事实不改写。真实 I/O 失败保留已经写出的部分，下次相同输入可恢复；不得吞掉非零状态后宣称完整交付。
+
+仅生成固定批次 Markdown，不提交、改 refs、回滚产品或重新授予 SKIP 例外。原始报告的 FAIL/SKIP、NO_TESTS 和精确接受范围保留；此入口成功不是新的产品验收。历史初始化/已获准历史改写的专属输入及低层记录工具说明见 [按仓记录](references/repo-records.md)。

@@ -8,7 +8,8 @@ from collections import Counter
 from .record_context import LINKS, ROLES, RecordContext
 from .record_evidence import EVIDENCE
 from .record_git import path_comparison
-from .record_replay import GATES
+from .record_replay import GATES, PAIRING_GATE
+from .record_special_render import special_document, exception_lines
 
 
 def code(value) -> str:
@@ -34,6 +35,10 @@ def path_list(values) -> str:
 
 def _identity(context, lane, nodes, rows, directory):
     ordinary = [row for row in rows if row["kind"] == "replay"]
+    special = Counter(row["kind"] for row in rows if row["kind"] not in ("replay", "initialization"))
+    counts = (f"- 本仓普通目标：**{len(ordinary)}**；独立初始化：**{len(rows) - len(ordinary)}**；合计 **{len(rows)}**。"
+              if not special else f"- 本仓普通目标：**{len(ordinary)}**；独立初始化："
+              f"**{sum(row['kind'] == 'initialization' for row in rows)}**；特殊目标：**{sum(special.values())}**；合计 **{len(rows)}**。")
     first, last = nodes[0], nodes[-1]
     base, old_head = first["bases"][lane], last["heads"][lane]
     lines = [f"# {ROLES[lane]} 同步记录：{context.batch}", "",
@@ -42,8 +47,16 @@ def _identity(context, lane, nodes, rows, directory):
              f"- 来源范围（左开右闭）：{code(first['source_base'])} → {code(last['source_head'])}。",
              f"- 本仓内容基线：{code(context.target(lane, base))}。",
              f"- 本仓内容终点：{code(context.target(lane, old_head))}；不含后继文档、URL/gitlink 或工具维护提交。",
-             f"- 本仓普通目标：**{len(ordinary)}**；独立初始化：**{len(rows) - len(ordinary)}**；合计 **{len(rows)}**。",
+             counts,
              f"- 普通 action：{dict(Counter(row['action'] for row in ordinary))}。"]
+    if special:
+        lines += [f"- 特殊目标分类：{dict(special)}。"]
+    if context.plan_documents:
+        sources = sum(len(node["inventory"]["range"]["ordered_source_commits"])
+                      for node in nodes if node["kind"] == "replay")
+        lines += [f"- 整批普通 Treeland 来源：**{sources}**；本仓未归属的来源不制造目标提交。",
+                  "- 主分支归并承接上述已接受内容终点，不构成另一批同步；是否包含由正常完成入口核对。"
+                  "日常分支为 P `master` / C `waylibshared`，后继文档与工具提交不改变原候选验收身份。"]
     if context.history:
         lines += [f"- 原同步内容基线/终点：{code(base)} → {code(old_head)}。",
                   "- 三类身份严格区分：Treeland 来源不变；原目标由旧证据验收；整理后目标由旧新映射及 Git 对象对应。",
@@ -51,7 +64,7 @@ def _identity(context, lane, nodes, rows, directory):
     else:
         lines += ["- 本批次未提供历史改写映射，仅记录真实来源 → 目标，不虚构原目标列。"]
     lines += ["- 原需求与实施记录：[PRD](prd.md)、[plan](plan.md)。"
-              if all((directory / name).is_file() and not (directory / name).is_symlink()
+              if context.plan_documents or all((directory / name).is_file() and not (directory / name).is_symlink()
                      for name in ("plan.md", "prd.md"))
               else f"- 原需求/方案资料：{context.external('')}（未声称已随仓携带）。",
               "- 外层历史资料仅用标识和相对定位列出，不是本仓链接；记录不包含完整日志、构建树或安装树。",
@@ -65,9 +78,9 @@ def _mapping(context, rows):
              "|---|---|" + ("---|" if context.history else "") + "---|---|---|"]
     for index, row in enumerate(rows, 1):
         old = f"{code(row['old'])} | " if context.history else ""
-        destination = f"[适配详情](adaptations/{row['target']}.md)" if row["action"] == "adapted" else f"[条目](#entry-{index})"
+        destination = f"[适配详情](adaptations/{row['target']}.md)" if row["action"] == "adapted" or row["kind"] not in ("replay", "initialization") else f"[条目](#entry-{index})"
         action = row["action"] if row["lane"] == "parent" else f"{row['action']} / {row['content_action']}"
-        lines.append(f"| {index} / {row['node']} | {code(row['source'])} | {old}{code(row['target'])} {destination} | "
+        lines.append(f"| {index} / {row['node']} | {code(row['source']) if row['source'] else '无（独立提交）'} | {old}{code(row['target'])} {destination} | "
                      f"{action} | {row['classification']} |")
     return lines + [""]
 
@@ -88,6 +101,10 @@ def _dependency(context, row):
 
 
 def _row_summary(context, row, index):
+    if row["kind"] not in ("replay", "initialization"):
+        return [f'<a id="entry-{index}"></a>', f"### {index}. {row['node']} / {row['subject']}", "",
+                f"- 独立类型：{row['kind']}；不计为普通来源回放。",
+                f"- [逐路径增量及原依据](adaptations/{row['target']}.md)。", ""]
     lines = [f'<a id="entry-{index}"></a>', f"### {index}. {row['node']} / {code(row['subject'])}", "",
              f"- 本仓内容路径：{path_list(row['paths'])}。",
              f"- 实际改变：{path_list(row['actual_paths'])}。",
@@ -129,11 +146,12 @@ def _verification(context, node, previous=False):
              f"- 来源验收终点：{code(node['source_head'])}；普通中间提交不作构建承诺。"]
     for lane, sha in node["heads"].items():
         lines += [f"- 原候选 {ROLES[lane]}：{code(sha)}。"]
-    filename = "initialization-report.json" if node["kind"] == "initialization" else "sync-report.json"
+    filename = "initialization-report.json" if node["kind"] == "initialization" else node.get("report_path", "sync-report.json")
     lines += [f"- 原报告：{context.external(node['path'], filename)}。"]
+    lines += exception_lines(context, node)
     for name, gate in node["gates"].items():
         lines += [f"- {name}：{gate.get('outcome', 'unverified')} / {gate.get('status', '未另设状态')}；"
-                  f"{context.external(node['path'], GATES[name])}。"]
+                  f"{context.external(node['path'], {**GATES, **PAIRING_GATE}[name])}。"]
     lines += ["", "| 原验证项 | 结果 | 退出码 | 原测试计数 | 原始日志 |", "|---|---|---|---|---|"]
     for entry in node["validations"] + node["previous_attempts"]:
         state = entry["outcome"].upper().replace("-", "_")
@@ -175,7 +193,9 @@ def adaptation_document(context: RecordContext, row: dict, index: int) -> str:
               "## 比较口径", "",
               "比较来源唯一父提交 → 来源提交，与原目标唯一父提交 → 原目标提交的逐路径增量。",
               "零上下文补丁对照会呈现基线位置、既有命名和本次实现差异；它不是整棵来源树与目标树的长期差异，也不声称所有显示行都是本次新增适配。",
-              "改写后的普通文件与原目标相同；派生 gitlink 在总记录单列，不混进源码适配。原验收只适用于总记录列出的原节点候选。", "",
+              ("改写后的普通文件与原目标相同；派生 gitlink 在总记录单列，不混进源码适配。"
+               if context.history else "本批没有历史改写；依赖 gitlink 在总记录单列，不混进源码适配。")
+              + "原验收只适用于总记录列出的原节点候选。", "",
               "## 已审说明", "",
               "以下保留原证据文字；其中依赖 SHA 属于原运行，新依赖身份见下文与总记录。", ""]
     lines += [f"- {code(context.portable(note))}" for note in row["notes"] if note != "none"]
@@ -224,7 +244,9 @@ def render_documents(context: RecordContext, nodes: list, rows: dict) -> dict:
         lines += ["## 逐项归属、路径与依赖", ""]
         for index, row in enumerate(rows[lane], 1):
             lines += _row_summary(context, row, index)
-            if row["action"] == "adapted":
+            if row["kind"] not in ("replay", "initialization"):
+                documents[(lane, f"{prefix}/adaptations/{row['target']}.md")] = special_document(context, row, index)
+            elif row["action"] == "adapted":
                 documents[(lane, f"{prefix}/adaptations/{row['target']}.md")] = adaptation_document(context, row, index)
         if lane == "child":
             lines += _r_dependencies(context, rows.get("wlroots", []))

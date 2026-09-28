@@ -7,6 +7,7 @@ from .git_ops import canonical_json_sha256, read_json, run_git
 from .record_context import RecordContext, check_identity, require
 from .record_evidence import EVIDENCE, build_row, load_lane_evidence
 from .schema import load_inventory
+from .record_reports import accepted_report, check_closeout, check_accepted_results, exception_record, original_report
 
 GATES = {
     "deckshell_verify": "deckshell-verify.json", "waylib_verify": "waylib-verify.json",
@@ -14,6 +15,23 @@ GATES = {
     "nested_gitlink_verify": "nested-gitlink-verify.json", "protocol_tracking": "protocol-candidates.json",
     "contract_audit": "waylib-contract-audit.json", "child_materialization": "child-materialization.json",
 }
+
+
+PAIRING_GATE = {"protocol_pairing": "protocol-pairing.json"}
+
+
+def _gates(root, report, manifest):
+    expected = dict(GATES)
+    if (manifest.get("protocol_update") is not None or manifest["identity"].get("protocol_update") is not None
+            or report.get("protocol_pairing") is not None
+            or "protocol_pairing" in report.get("gate_sha256", {})):
+        expected.update(PAIRING_GATE)
+    require(set(report.get("gate_sha256", {})) == set(expected), "原报告缺少 gate 绑定")
+    gates = {}
+    for key, filename in expected.items():
+        gates[key] = read_json(root / filename)
+        require(report["gate_sha256"][key] == canonical_json_sha256(gates[key]), f"原 gate 失配：{key}")
+    return gates
 
 
 def validations(root, payload):
@@ -40,7 +58,8 @@ def replay_metadata(context: RecordContext, descriptor: dict) -> dict:
     """加载原报告的精确候选和状态，拒绝替换旧 SHA 后的假验收。"""
     root = context.node_root(descriptor["path"])
     inventory = load_inventory(root / "inventory.json")
-    manifest, report = read_json(root / "manifest.json"), read_json(root / "sync-report.json")
+    manifest = read_json(root / "manifest.json")
+    report, report_path, closeout = accepted_report(root, descriptor.get("report"))
     validation = read_json(root / "validations.json")
     require(manifest.get("kind") == "treeland-unified-sync-manifest" and manifest.get("schema_version") == 2,
             "manifest 类型错误")
@@ -54,11 +73,10 @@ def replay_metadata(context: RecordContext, descriptor: dict) -> dict:
         require(report.get(key + "_sha256") == canonical_json_sha256(value), f"原报告 {key} 绑定失配")
     require(report.get("build_scope") == {"kind": "range-head-only", "source_head": inventory["range"]["head"]},
             "原节点验收范围错配")
-    gates = {}
-    require(set(report.get("gate_sha256", {})) == set(GATES), "原报告缺少 gate 绑定")
-    for key, filename in GATES.items():
-        gates[key] = read_json(root / filename)
-        require(report["gate_sha256"][key] == canonical_json_sha256(gates[key]), f"原 gate 失配：{key}")
+    gates = _gates(root, report, manifest)
+    check_closeout(closeout, manifest)
+    exception = exception_record(context, descriptor, root, report, inventory, manifest, validation, closeout)
+    check_accepted_results(closeout, gates, validation, exception)
     heads = {lane: manifest.get(f"final_{lane}_head") for lane in context.repos}
     require(all(report.get(f"final_{lane}_head") == head for lane, head in heads.items()), "原报告终点失配")
     bases = {"parent": identity["parent_base"], "child": identity["child_base"],
@@ -67,7 +85,9 @@ def replay_metadata(context: RecordContext, descriptor: dict) -> dict:
             "source_base": inventory["range"]["base"], "source_head": inventory["range"]["head"],
             "bases": bases, "heads": heads, "inventory": inventory, "manifest": manifest, "report": report,
             "gates": gates, "validations": validations(root, validation),
-            "previous_attempts": validation.get("previous_attempts", []), "status": report.get("outcome", "unverified")}
+            "previous_attempts": validation.get("previous_attempts", []), "status": report.get("outcome", "unverified"),
+            "report_path": report_path, "closeout": closeout, "exception": exception,
+            "original_report": original_report(root, report_path, report)}
 
 
 def replay_rows(context: RecordContext, node: dict) -> dict:

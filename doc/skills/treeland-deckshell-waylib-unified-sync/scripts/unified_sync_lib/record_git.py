@@ -89,7 +89,10 @@ def check_history(context: RecordContext, nodes: list, rows: dict) -> None:
             continue
         base, head = active[0]["bases"][lane], active[-1]["heads"][lane]
         for previous, following in zip(active, active[1:]):
-            require(previous["heads"][lane] == following["bases"][lane], f"{lane} 节点不连续")
+            bridge = following.get("bridges", {}).get(lane, [])
+            require(previous["heads"][lane] == following["bases"][lane]
+                    or (len(bridge) == 1 and bridge[0]["base"] == previous["heads"][lane]
+                        and bridge[0]["target"] == following["bases"][lane]), f"{lane} 节点不连续")
         expected = str(run_git(repo, "rev-list", "--reverse", f"{base}..{head}")).split()
         require(expected == [row["old"] for row in rows[lane]], f"{lane} 本仓记录未完整覆盖历史")
         if lane in context.history:

@@ -42,6 +42,7 @@ class RecordContext:
     evidence_root: Path
     evidence_label: str
     history: Dict[str, Any] = field(default_factory=dict)
+    plan_documents: Dict[str, str] = field(default_factory=dict)
 
     def target(self, lane: str, old: Optional[str]) -> Optional[str]:
         """映射历史目标，区间外基线和无改写输入保持原身份。"""

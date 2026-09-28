@@ -69,7 +69,7 @@ class SkillContractTests(unittest.TestCase):
             self.assertEqual(result.returncode, 0, msg=f"{name}: {result.stdout}")
             self.assertIn("usage:", result.stdout.lower(), msg=name)
 
-        for command in ("inventory", "replay", "materialize-child", "closeout"):
+        for command in ("inventory", "replay", "materialize-child", "closeout", "finish"):
             result = subprocess.run(
                 [
                     sys.executable,

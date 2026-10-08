@@ -2,8 +2,15 @@
 treeland_add_protocol_test(
     NAME wayland_text_input_unstable_v1
     XML "${WAYLAND_PROTOCOLS_DATADIR}/unstable/text-input/text-input-unstable-v1.xml"
+    EXTRA_XMLS
+        "${PROJECT_SOURCE_DIR}/../3rdparty/waylib-shared/3rdparty/wlroots/protocol/input-method-unstable-v2.xml"
     SETUP "${CMAKE_CURRENT_SOURCE_DIR}/setup.cpp"
     CLIENT "${CMAKE_CURRENT_SOURCE_DIR}/wayland-text-input-unstable-v1.c"
+)
+
+# Private test declarations come from the matching pinned Waylib checkout.
+target_include_directories(test_wayland_text_input_unstable_v1 PRIVATE
+    "${CMAKE_SOURCE_DIR}/3rdparty/waylib-shared/waylib/src/server/protocols/private"
 )
 
 # Private test declarations come from the matching pinned Waylib checkout.

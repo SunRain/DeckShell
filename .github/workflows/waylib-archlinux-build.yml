@@ -1,11 +1,6 @@
 name: Build waylib on Arch Linux (independent)
 
 on:
-  push:
-    paths:
-      - '3rdparty/waylib-shared'
-      - '.github/workflows/waylib-archlinux-build.yml'
-
   pull_request:
     paths:
       - '3rdparty/waylib-shared'

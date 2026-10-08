@@ -1,11 +1,6 @@
 name: Build waylib on Debian unstable (independent)
 
 on:
-  push:
-    paths:
-      - '3rdparty/waylib-shared'
-      - '.github/workflows/waylib-debian-build.yml'
-
   pull_request:
     paths:
       - '3rdparty/waylib-shared'

@@ -8,11 +8,12 @@ endif()
 file(READ "${SESSION_SOURCE}" session_source)
 
 set(expected_active
-    "ptr->m_socket->setEnabled(newEnabled, globalSession()->socket());")
+    "ptr->m_socket->setEnabled(newEnabled, global ? global->socket() : nullptr);")
 set(expected_previous
-    "previous->m_socket->setEnabled(false, globalSession()->socket());")
+    "previous->m_socket->setEnabled(false, global ? global->socket() : nullptr);")
+set(expected_global "const auto global = globalSession();")
 
-foreach(expected_call IN ITEMS expected_active expected_previous)
+foreach(expected_call IN ITEMS expected_active expected_previous expected_global)
     string(FIND "${session_source}" "${${expected_call}}" call_offset)
     if(call_offset EQUAL -1)
         message(FATAL_ERROR

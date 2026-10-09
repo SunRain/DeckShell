@@ -2376,8 +2376,8 @@ void Helper::init(Treeland::Treeland *treeland)
             this,
             updateXWaylandOutputScale);
     updateXWaylandOutputScale();
-    // User dde does not has a real Logind session, so just pass 0 as id
-    m_sessionManager->updateActiveUserSession(QStringLiteral("dde"), 0);
+    // User dde does not has a real Logind session, so just pass "0" as id
+    m_sessionManager->updateActiveUserSession(QStringLiteral("dde"), QStringLiteral("0"));
 #ifndef DISABLE_DDM
     connect(m_userModel, &UserModel::userLoggedIn, m_sessionManager, &SessionManager::updateActiveUserSession);
 #endif
@@ -3997,7 +3997,7 @@ DDMInterfaceV1 *Helper::ddmInterfaceV1() const {
 #endif
 }
 
-bool Helper::activateUserSession(const QString &username, int sessionId)
+bool Helper::activateUserSession(const QString &username, const QString &sessionId)
 {
 #ifdef DISABLE_DDM
     Q_UNUSED(username)

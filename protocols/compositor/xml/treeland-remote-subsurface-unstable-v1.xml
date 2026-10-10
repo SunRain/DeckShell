@@ -9,14 +9,11 @@
         This protocol provides sub-surface relationships between
         wl_surface objects using token-based identifiers exchanged
         out-of-band, instead of the direct wl_surface references
-        required by wl_subcompositor.  This allows parent-child
-        relationships both across different client connections and
-        within the same client.
-
-        In wl_subcompositor both the parent surface and sibling
-        surfaces must be local wl_surface objects from the same
-        client.  This protocol removes that restriction by using
-        token-based identifiers exchanged out-of-band:
+        required by wl_subcompositor.  In wl_subcompositor the
+        parent and sibling surfaces must be local wl_surface objects
+        from the same client; this protocol removes that
+        restriction, allowing parent-child relationships both across
+        different client connections and within the same client:
 
         1. A client exports a wl_surface and receives a surface_token.
 
@@ -31,13 +28,30 @@
         synchronized mode is not supported.
 
         This protocol is not interoperable with wl_subsurface: a
-        treeland_remote_subsurface_v1 cannot be stacked relative to
-        wl_subsurface siblings, and a wl_subsurface cannot reference
-        a surface that carries a treeland_remote_subsurface_v1 role.
+        wl_subsurface cannot reference a surface that carries a
+        treeland_remote_subsurface_v1 role, and the two kinds of
+        sub-surface cannot be ordered relative to each other.  When
+        a parent surface has both, wl_subsurface is always kept
+        closest to the parent surface content on each side: a
+        wl_subsurface placed above the parent content sits below the
+        treeland_remote_subsurface_v1 children that are above the
+        parent, and one placed below sits above the
+        treeland_remote_subsurface_v1 children that are below the
+        parent.  The relative z-order between the two kinds cannot
+        be controlled precisely, since place_above and place_below
+        order treeland_remote_subsurface_v1 children among
+        themselves and relative to the parent surface content, but
+        cannot position them relative to wl_subsurface children,
+        and the wl_subcompositor requests cannot position a
+        wl_subsurface relative to treeland_remote_subsurface_v1
+        children.
 
-        Clients should prefer this protocol over wl_subsurface for
-        all sub-surface use, to avoid having two separate sub-surface
-        trees that cannot interact with each other.
+        Clients that need fine-grained z-order control across all
+        sub-surfaces of a parent should replace wl_subsurface with
+        treeland_remote_subsurface_v1, which is designed for
+        cross-process relationships but may equally be used within a
+        single client, avoiding two separate sub-surface trees that
+        cannot interact with each other.
 
         The compositor must restrict binding to trusted clients.
         A client that obtains a surface_token must only share it
@@ -277,13 +291,17 @@
         <request name="place_below">
             <description summary="restack the sub-surface">
                 Places this sub-surface just below the reference
-                identified by sibling_token.  The same values are
-                accepted as in place_above, except that the empty
-                string sentinel is not valid and triggers an
-                invalid_sibling event.
+                identified by sibling_token.  The same sibling_token
+                values are accepted as in place_above, except that an
+                empty string is a sentinel meaning "place at the very
+                bottom of the sibling stack".
+
+                If the sibling_token does not identify a valid
+                target, the request is ignored and an
+                invalid_sibling event is emitted.
             </description>
             <arg name="sibling_token" type="string"
-                 summary="a surface_token; empty string is not valid for place_below"/>
+                 summary="a surface_token or empty string for bottom"/>
         </request>
 
         <event name="invalid_sibling">

@@ -53,7 +53,6 @@ QmlEngine::QmlEngine(QObject *parent)
     , minimizeAnimationComponent(this, "DeckShell.Compositor", "MinimizeAnimation")
     , showDesktopAnimatioComponentn(this, "DeckShell.Compositor", "ShowDesktopAnimation")
     , captureSelectorComponent(this, "DeckShell.Compositor", "CaptureSelectorLayer")
-    , windowPickerComponent(this, "DeckShell.Compositor", "WindowPickerLayer")
     , edgeTilePreviewComponent(this, "DeckShell.Compositor", "EdgeTilePreview")
     , launchpadAnimationComponent(this, "DeckShell.Compositor", "LaunchpadAnimation")
     , launchpadCoverComponent(this, "DeckShell.Compositor", "LaunchpadCover")
@@ -257,11 +256,6 @@ QQuickItem *QmlEngine::createCaptureSelector(QQuickItem *parent, CaptureManagerV
         parent,
         { { "captureManager", QVariant::fromValue(captureManager) },
           { "z", QVariant::fromValue(RootSurfaceContainer::CaptureLayerZOrder) } });
-}
-
-QQuickItem *QmlEngine::createWindowPicker(QQuickItem *parent)
-{
-    return createComponent(windowPickerComponent, parent);
 }
 
 QQuickItem *QmlEngine::createEdgeTilePreview(QQuickItem *parent)

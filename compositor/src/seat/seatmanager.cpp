@@ -732,13 +732,6 @@ void SeatManager::assignDevice(WInputDevice *device,
     const QString deviceName = device->name();
     WInputDevice::Type deviceType = device->type();
 
-    // Filter out system buttons
-    if (deviceType == WInputDevice::Type::Keyboard
-        && (deviceName.contains("Power Button") || deviceName.contains("Sleep Button")
-            || deviceName.contains("Lid Switch"))) {
-        return;
-    }
-
     // Auto-assign device to appropriate seat
     WSeat *assignedSeat = autoAssignDevice(device);
     if (!assignedSeat && fallbackSeat && fallbackSeat->handle()) {

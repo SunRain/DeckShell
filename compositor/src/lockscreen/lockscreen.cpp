@@ -5,7 +5,7 @@
 
 #include "interfaces/lockscreeninterface.h"
 #include "output/output.h"
-#include "seat/helper.h"
+#include "core/waylandserver.h"
 #include "utils/cmdline.h"
 #include "common/treelandlogging.h"
 #ifndef DISABLE_DDM
@@ -15,8 +15,8 @@
 #include <woutputitem.h>
 
 #ifdef EXT_SESSION_LOCK_V1
-#include "rootsurfacecontainer.h"
-#include "surfacewrapper.h"
+#include "core/rootsurfacecontainer.h"
+#include "surface/surfacewrapper.h"
 
 #include <wsessionlock.h>
 #include <wsessionlocksurface.h>
@@ -190,8 +190,12 @@ void LockScreen::onAnimationPlayFinished()
 
 void LockScreen::onHideAnimationFinished()
 {
-    if (isVisible() && !m_greeterProxy->isLocked() && !m_greeterProxy->showShutdownView())
+#ifndef DISABLE_DDM
+    if (m_greeterProxy && isVisible() && !m_greeterProxy->isLocked()
+        && !m_greeterProxy->showShutdownView()) {
         setVisible(false);
+    }
+#endif
 }
 
 bool LockScreen::available() const
@@ -305,7 +309,7 @@ void LockScreen::onLockSurfaceAdded(WSessionLockSurface *surface)
     if (!m_sessionLock) {
         return;
     }
-    auto output = Helper::instance()->getOutput(surface->output());
+    auto output = WaylandServer::instance()->getOutput(surface->output());
 
     if (!output) {
         qCWarning(lcTlShell) << "Lock surface added with no output!";
@@ -325,7 +329,7 @@ void LockScreen::onLockSurfaceAdded(WSessionLockSurface *surface)
     surface->configureSize(outputItem->size().toSize());
 
     auto wrapper = new SurfaceWrapper(
-        Helper::instance()->qmlEngine(), surface, SurfaceWrapper::Type::LockScreen);
+        WaylandServer::instance()->qmlEngine(), surface, SurfaceWrapper::Type::LockScreen);
 
     wrapper->setNoDecoration(true);
     wrapper->setSkipMutiTaskView(true);
@@ -338,7 +342,7 @@ void LockScreen::onLockSurfaceAdded(WSessionLockSurface *surface)
     wrapper->setHasInitializeContainer(true);
 
     connect(wrapper, &SurfaceWrapper::activationRequested, this, [wrapper] {
-        Helper::instance()->activateSurface(wrapper);
+        WaylandServer::instance()->activateSurface(wrapper);
     });
 }
 
@@ -347,7 +351,7 @@ void LockScreen::onLockSurfaceRemoved(WSessionLockSurface *surface)
     if (!m_sessionLock) {
         return;
     }
-    auto output = Helper::instance()->getOutput(surface->output());
+    auto output = WaylandServer::instance()->getOutput(surface->output());
     if (!output) {
         qCWarning(lcTlShell) << "removing lock surface with no output!";
         return;
@@ -460,7 +464,7 @@ void LockScreen::createFallbackItem(WOutputItem *outputItem)
         return;
     }
 
-    auto *engine = Helper::instance()->qmlEngine();
+    auto *engine = WaylandServer::instance()->qmlEngine();
     Q_ASSERT(engine);
 
     auto *fallbackItem = engine->createLockScreenFallback(this, {

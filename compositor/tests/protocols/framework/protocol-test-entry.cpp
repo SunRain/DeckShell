@@ -1,13 +1,13 @@
 // Copyright (C) 2026 UnionTech Software Technology Co., Ltd.
 // SPDX-License-Identifier: Apache-2.0 OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
-#include "core/dconfigmanager.h"
+#include "dconfig/dconfigmanager.h"
 #include "core/treeland.h"
 #include "core/treelandinit.h"
 #include "core/rootsurfacecontainer.h"
 #include "test-accounts-service.h"
 #include "server-bridge-api.h"
 #include "test-dconfig-service.h"
-#include "seat/helper.h"
+#include "core/waylandserver.h"
 #include "session/session.h"
 #include "treelandconfig.hpp"
 #include "treelanduserconfig.hpp"
@@ -33,9 +33,9 @@
 #include <cstdlib>
 #include <pthread.h>
 
-void protocol_test_setup(Helper *helper);
+void protocol_test_setup(WaylandServer *server);
 extern "C" int protocol_test_run(const char *socketName);
-extern "C" bool protocol_test_ready(Helper *helper) __attribute__((weak));
+extern "C" bool protocol_test_ready(WaylandServer *server) __attribute__((weak));
 extern "C" bool protocol_test_preflight() __attribute__((weak));
 extern "C" bool protocol_test_skip() __attribute__((weak));
 
@@ -71,8 +71,8 @@ class ProtocolTest final : public QObject
     Q_OBJECT
 
 public:
-    ProtocolTest(Helper *helper, const QByteArray &socketName)
-        : m_helper(helper)
+    ProtocolTest(WaylandServer *server, const QByteArray &socketName)
+        : m_server(server)
         , m_socketName(socketName)
         , m_context { .socketName = m_socketName.constData(), .test = this }
     {
@@ -89,7 +89,7 @@ private slots:
                 return;
 
             if (!output->renderer()) {
-                auto *window = m_helper->window();
+                auto *window = m_server->window();
                 if (window->renderer() && window->allocator()) {
                     wlr_output_init_render(output->handle(),
                                            window->allocator(),
@@ -100,19 +100,19 @@ private slots:
             if (!output->isEnabled())
                 return;
 
-            auto *layout = m_helper->rootSurfaceContainer()->outputLayout();
+            auto *layout = m_server->rootSurfaceContainer()->outputLayout();
             if (output->renderer() && layout
                 && !layout->outputs().contains(output)) {
                 layout->autoAdd(output);
             }
         };
-        connect(m_helper->window(),
+        connect(m_server->window(),
                 &WOutputRenderWindow::outputViewportInitialized,
                 this,
                 [ensureOutputInLayout](WOutputViewport *viewport) {
                     ensureOutputInLayout(viewport->output());
                 });
-        connect(m_helper->backend(),
+        connect(m_server->backend(),
                 &WBackend::outputAdded,
                 this,
                 [this, ensureOutputInLayout](WOutput *output) {
@@ -122,7 +122,7 @@ private slots:
                             [ensureOutputInLayout, output] { ensureOutputInLayout(output); });
                     ensureOutputInLayout(output);
                 });
-        protocol_test_setup(m_helper);
+        protocol_test_setup(m_server);
         if (protocol_test_skip && protocol_test_skip())
             QSKIP("protocol fixture requested skip");
     }
@@ -160,8 +160,8 @@ private:
 
     bool fixtureReady() const
     {
-        return !m_helper->rootSurfaceContainer()->outputs().isEmpty()
-            && (!protocol_test_ready || protocol_test_ready(m_helper));
+        return !m_server->rootSurfaceContainer()->outputs().isEmpty()
+            && (!protocol_test_ready || protocol_test_ready(m_server));
     }
 
     bool waitForFixture()
@@ -169,7 +169,7 @@ private:
         return QTest::qWaitFor([this] { return fixtureReady(); }, 5000);
     }
 
-    Helper *m_helper = nullptr;
+    WaylandServer *m_server = nullptr;
     QByteArray m_socketName;
     ClientThreadContext m_context;
     pthread_t m_thread {};
@@ -217,35 +217,35 @@ int main(int argc, char *argv[])
     DConfigManager dConfigManager(application.get());
     Treeland::Treeland treeland;
 
-    // Treeland::Treeland completes initialization asynchronously: Helper is
+    // Treeland::Treeland completes initialization asynchronously: WaylandServer is
     // only created once the initial user DConfig objects have finished
     // initializing. Spin the event loop until then.
-    Helper *helper = Helper::instance();
-    if (!helper) {
+    WaylandServer *server = WaylandServer::instance();
+    if (!server) {
         QEventLoop loop;
         QTimer poller;
-        QObject::connect(&poller, &QTimer::timeout, &loop, [&loop, &helper] {
-            helper = Helper::instance();
-            if (helper)
+        QObject::connect(&poller, &QTimer::timeout, &loop, [&loop, &server] {
+            server = WaylandServer::instance();
+            if (server)
                 loop.quit();
         });
         poller.start(50);
         QTimer::singleShot(15000, &loop, &QEventLoop::quit);
         loop.exec();
     }
-    if (!helper) {
+    if (!server) {
         std::fflush(nullptr);
         std::_Exit(1);
     }
 
-    const auto session = helper->sessionManager()->globalSession();
+    const auto session = server->sessionManager()->globalSession();
     if (!session || !session->socket() || !session->socket()->isValid())
         return 1;
 
     const QByteArray socketName = session->socket()->fullServerName().toUtf8();
     ProtocolTestRunner runner;
     g_runner = &runner;
-    ProtocolTest test(helper, socketName);
+    ProtocolTest test(server, socketName);
     int result = QTest::qExec(&test, argc, argv);
     if (g_clientSkipped && result == 0)
         result = 77;
@@ -253,7 +253,7 @@ int main(int argc, char *argv[])
 
     // Treeland owns process-lifetime QML singletons whose shutdown ordering is
     // only exercised by a compositor process exit.  Letting the stack object
-    // destruct here tears down Helper after its seat event filter and currently
+    // destruct here tears down WaylandServer after its seat event filter and currently
     // reaches an invalid SeatManager during that production-only shutdown.
     // The protocol client has already completed and been joined, so terminate
     // without running the unrelated compositor shutdown sequence.

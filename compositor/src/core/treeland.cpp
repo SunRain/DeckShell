@@ -4,7 +4,7 @@
 #include "treeland.h"
 
 #include "core/qmlengine.h"
-#include "core/dconfigmanager.h"
+#include "dconfig/dconfigmanager.h"
 #include <qcontainerfwd.h>
 #include <qloggingcategory.h>
 #ifndef DISABLE_DDM
@@ -12,8 +12,9 @@
 #endif
 #include "interfaces/multitaskviewinterface.h"
 #include "interfaces/plugininterface.h"
-#include "seat/helper.h"
+#include "core/waylandserver.h"
 #include "seatuserconfig.hpp"
+#include "seat/seatmanager.h"
 #include "session/session.h"
 #include "treelanduserconfig.hpp"
 #include "utils/cmdline.h"
@@ -104,16 +105,16 @@ void init(std::function<void()> onInitialized)
         const QString initialUserName = QStringLiteral("dde");
 #endif
         auto initializeTreeland = [this, q, onInitialized = std::move(onInitialized)] {
-            helper = qmlEngine->singletonInstance<Helper *>("DeckShell.Compositor", "Helper");
-            connect(helper, &Helper::requestQuit, q, &Treeland::quit, Qt::QueuedConnection);
+            server = qmlEngine->singletonInstance<WaylandServer *>("DeckShell.Compositor", "WaylandServer");
+            connect(server, &WaylandServer::requestQuit, q, &Treeland::quit, Qt::QueuedConnection);
 
             if (qEnvironmentVariableIsEmpty("WLR_XWAYLAND"))
                 qputenv("WLR_XWAYLAND", QByteArray(LIBEXEC_DIR) + "/treeland-xwayland");
-            helper->init(q);
+            server->init(q);
 
 #ifndef DISABLE_DDM
-            connect(helper,
-                    &Helper::configChanged,
+            connect(server,
+                    &WaylandServer::configChanged,
                     this,
                     &TreelandPrivate::onCurrentUserChanged);
             onCurrentUserChanged();
@@ -132,7 +133,7 @@ void init(std::function<void()> onInitialized)
                            << initialUserName;
 
         auto *userConfig = configManager->initialUserConfig();
-        auto *seatConfig = configManager->userSeatConfig(initialUserName, QStringLiteral("seat0"));
+        auto *seatConfig = configManager->userSeatConfig(initialUserName, QStringLiteral(DEFAULT_SEAT_NAME));
         auto initialized = std::make_shared<bool>(false);
         auto initializeWhenReady = [initializeTreeland,
                                     userConfig,
@@ -206,10 +207,10 @@ void init(std::function<void()> onInitialized)
         pluginTs.erase(it++);
     }
 #ifndef DISABLE_DDM
-    // UserModel must be deleted before Helper, to remove client surfaces before rendering ends.
+    // UserModel must be deleted before WaylandServer, to remove client surfaces before rendering ends.
     delete qmlEngine->singletonInstance<UserModel *>("DeckShell.Compositor", "UserModel");
 #endif
-    // Helper must be deleted before QmlEngine, for surfaces to be cleanly removed.
+    // WaylandServer must be deleted before QmlEngine, for surfaces to be cleanly removed.
     qmlEngine->clearSingletons();
 }
 
@@ -225,7 +226,7 @@ void init(std::function<void()> onInitialized)
     void onCurrentChanged(uid_t uid)
     {
         auto userModel =
-            helper->qmlEngine()->singletonInstance<UserModel *>("DeckShell.Compositor", "UserModel");
+            server->qmlEngine()->singletonInstance<UserModel *>("DeckShell.Compositor", "UserModel");
         auto user = userModel->getUser(uid);
         if (!user) {
             qCWarning(lcTlDBus) << "user " << uid << " has been added but couldn't find it.";
@@ -256,7 +257,7 @@ void init(std::function<void()> onInitialized)
     void updatePluginTs(PluginInterface *plugin, const QString &scope)
     {
         auto userModel =
-            helper->qmlEngine()->singletonInstance<UserModel *>("DeckShell.Compositor", "UserModel");
+            server->qmlEngine()->singletonInstance<UserModel *>("DeckShell.Compositor", "UserModel");
         auto user = userModel->currentUser();
         if (!user) {
             return;
@@ -325,7 +326,7 @@ void init(std::function<void()> onInitialized)
             qCDebug(lcTlPlugin) << "Plugin translate scope:" << scope;
 
 #ifndef DISABLE_DDM
-            connect(helper->qmlEngine()->singletonInstance<UserModel *>("DeckShell.Compositor", "UserModel"),
+            connect(server->qmlEngine()->singletonInstance<UserModel *>("DeckShell.Compositor", "UserModel"),
                     &UserModel::currentUserNameChanged,
                     pluginInstance,
                     [this, plugin, scope] {
@@ -338,18 +339,18 @@ void init(std::function<void()> onInitialized)
             if (auto *multitaskview = qobject_cast<IMultitaskView *>(pluginInstance)) {
                 qCDebug(lcTlPlugin) << "Get MultitaskView Instance.";
                 connect(pluginInstance, &QObject::destroyed, this, [this] {
-                    helper->setMultitaskViewImpl(nullptr);
+                    server->setMultitaskViewImpl(nullptr);
                 });
-                helper->setMultitaskViewImpl(multitaskview);
+                server->setMultitaskViewImpl(multitaskview);
             }
 
 #if !defined(DISABLE_DDM) || defined(EXT_SESSION_LOCK_V1)
             if (auto *lockscreen = qobject_cast<ILockScreen *>(pluginInstance)) {
                 qCDebug(lcTlPlugin) << "Get LockScreen Instance.";
                 connect(pluginInstance, &QObject::destroyed, this, [this] {
-                    helper->setLockScreenImpl(nullptr);
+                    server->setLockScreenImpl(nullptr);
                 });
-                helper->setLockScreenImpl(lockscreen);
+                server->setLockScreenImpl(lockscreen);
             }
 #endif
         }
@@ -365,7 +366,7 @@ private:
     QmlEngine *qmlEngine{ nullptr };
     std::vector<PluginInterface *> plugins;
     QLocalSocket *helperSocket{ nullptr };
-    Helper *helper{ nullptr };
+    WaylandServer *server{ nullptr };
     QMap<QString, std::shared_ptr<QDBusUnixFileDescriptor>> userDisplayFds;
     ScriptRunner *m_scriptRunner{ nullptr };
     std::vector<QAction *> shortcuts;
@@ -433,7 +434,7 @@ void Treeland::initialize()
 {
     Q_D(Treeland);
 
-    auto globalSession = d->helper->sessionManager()->globalSession();
+    auto globalSession = d->server->sessionManager()->globalSession();
     Q_ASSERT(globalSession);
 
     if (CmdLine::ref().run().has_value()) {
@@ -445,7 +446,7 @@ void Treeland::initialize()
                 auto envs = QProcessEnvironment::systemEnvironment();
                 envs.insert("WAYLAND_DISPLAY",
                             globalSession->socket()->fullServerName());
-                if (auto currentUserSession = d->helper->sessionManager()->sessionForUid(getuid())) {
+                if (auto currentUserSession = d->server->sessionManager()->sessionForUid(getuid())) {
                     if (auto *xwayland = currentUserSession->xwayland())
                         envs.insert("DISPLAY", xwayland->displayName());
                 } else if (auto *current = globalSession->xwayland()) {
@@ -464,7 +465,7 @@ void Treeland::initialize()
             }
         };
         auto con =
-            connect(d->helper->sessionManager(), &SessionManager::socketFileChanged, this, exec, Qt::SingleShotConnection);
+            connect(d->server->sessionManager(), &SessionManager::socketFileChanged, this, exec, Qt::SingleShotConnection);
 
         WSocket *defaultSocket = globalSession->socket();
         if (defaultSocket && defaultSocket->isValid()) {
@@ -483,7 +484,7 @@ void Treeland::initialize()
     QDBusConnection::sessionBus().registerObject("/org/deepin/Compositor1", this);
     // Disable rendering before running prestart scripts
     qCInfo(lcTlHooks) << "Disabling rendering before prestart scripts";
-    d->helper->disableRender();
+    d->server->disableRender();
 
 #ifdef COMPOSITOR_PLUGINS_ADD_BUILD_PATH
     QDir dir(QStringLiteral(TREELAND_PLUGINS_OUTPUT_PATH));
@@ -508,8 +509,8 @@ void Treeland::initialize()
     connect(runner, &ScriptRunner::blockingFinished, d, [d, runner]() {
         qCInfo(lcTlHooks) << "Blocking scripts finished, re-enabling rendering";
         runner->startNonBlocking();
-        d->helper->enableRender();
-        d->helper->window()->update();
+        d->server->enableRender();
+        d->server->window()->update();
     });
     runner->start();
 }
@@ -539,14 +540,14 @@ Workspace *Treeland::workspace() const
 {
     Q_D(const Treeland);
 
-    return d->helper->workspace();
+    return d->server->workspace();
 }
 
 RootSurfaceContainer *Treeland::rootSurfaceContainer() const
 {
     Q_D(const Treeland);
 
-    return d->helper->rootSurfaceContainer();
+    return d->server->rootSurfaceContainer();
 }
 
 bool Treeland::ActivateWayland(QDBusUnixFileDescriptor _fd)
@@ -561,7 +562,7 @@ bool Treeland::ActivateWayland(QDBusUnixFileDescriptor _fd)
     fd->swap(_fd);
 
     auto uid = connection().interface()->serviceUid(message().service());
-    auto session = d->helper->sessionManager()->sessionForUid(uid);
+    auto session = d->server->sessionManager()->sessionForUid(uid);
 
     WSocket *sessionSocket = session ? session->socket() : nullptr;
     if (!sessionSocket)
@@ -574,15 +575,16 @@ bool Treeland::ActivateWayland(QDBusUnixFileDescriptor _fd)
 
 #ifndef DISABLE_DDM
     auto userModel =
-        d->helper->qmlEngine()->singletonInstance<UserModel *>("DeckShell.Compositor", "UserModel");
+        d->server->qmlEngine()->singletonInstance<UserModel *>("DeckShell.Compositor", "UserModel");
     if (auto u = userModel->getUser(user)) {
         u->setWaylandSocket(socket);
     }
 
-    socket->setEnabled(userModel->currentUserName() == user);
+    socket->setEnabled(userModel->currentUserName() == user,
+                       WaylandServer::instance()->sessionManager()->globalSession()->socket());
 #endif
 
-    d->helper->addSocket(socket.get());
+    d->server->addSocket(socket.get());
 
     d->userDisplayFds[user] = fd;
 
@@ -609,7 +611,7 @@ void Treeland::XWaylandName()
     auto conn = connection();
 
     auto uid = connection().interface()->serviceUid(message().service());
-    auto session = d->helper->sessionManager()->sessionForUid(uid);
+    auto session = d->server->sessionManager()->sessionForUid(uid);
     auto *xwayland = session ? session->xwayland() : nullptr;
     if (!xwayland) {
         auto reply = m.createErrorReply(QDBusError::InternalError,

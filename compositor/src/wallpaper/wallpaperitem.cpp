@@ -4,7 +4,7 @@
 #include "wallpaperitem.h"
 
 #include "core/qmlengine.h"
-#include "seat/helper.h"
+#include "core/waylandserver.h"
 #include "workspace/workspacemodel.h"
 #include "wallpapershellinterfacev1.h"
 #include "wallpaper/wallpapermanager.h"
@@ -34,7 +34,7 @@ WallpaperItem::WallpaperItem(QQuickItem *parent, bool autoUpdate)
 {
 #ifndef DISABLE_DDM
     m_model =
-        Helper::instance()->qmlEngine()->singletonInstance<UserModel *>("DeckShell.Compositor", "UserModel");
+        WaylandServer::instance()->qmlEngine()->singletonInstance<UserModel *>("DeckShell.Compositor", "UserModel");
 #endif
     if (autoUpdate) {
 #ifndef DISABLE_DDM
@@ -43,15 +43,15 @@ WallpaperItem::WallpaperItem(QQuickItem *parent, bool autoUpdate)
                 this,
                 &WallpaperItem::handleCurrentuserChanged);
 #endif
-        connect(Helper::instance()->shellHandler()->wallpaperShell(),
+        connect(WaylandServer::instance()->shellHandler()->wallpaperShell(),
                 &TreelandWallpaperShellInterfaceV1::wallpaperSurfaceAdded,
                 this,
                 &WallpaperItem::handleWallpaperSurfaceAdded);
-        connect(Helper::instance()->m_wallpaperManager,
+        connect(WaylandServer::instance()->m_wallpaperManager,
                 &WallpaperManager::updateWallpaper,
                 this,
                 &WallpaperItem::updateSurface);
-        connect(Helper::instance()->workspace(),
+        connect(WaylandServer::instance()->workspace(),
                 &Workspace::workspaceAdded,
                 this,
                 &WallpaperItem::handleWorkspaceAdded);
@@ -175,7 +175,7 @@ void WallpaperItem::updateSurface()
     }
 
     WallpaperOutputConfig config =
-        Helper::instance()->m_wallpaperManager->getOutputConfig(output()->handle());
+        WaylandServer::instance()->m_wallpaperManager->getOutputConfig(output()->handle());
     if (wallpaperRole() == Lockscreen) {
         if (config.lockscreenWallpaper != m_source) {
                 TreelandWallpaperSurfaceInterfaceV1 *interface =
@@ -208,7 +208,7 @@ void WallpaperItem::updateSurface()
                 interface->wSurface()->enterOutput(output());
                 update();
 #ifndef DISABLE_DDM
-                if (!Helper::instance()->m_greeterProxy->isLocked())
+                if (!WaylandServer::instance()->m_greeterProxy->isLocked())
                     setPlay(false);
 #else
                 setPlay(false);
@@ -231,7 +231,7 @@ void WallpaperItem::handleWorkspaceAdded()
         return;
     }
 
-    Helper::instance()->m_wallpaperManager->syncAddWorkspace();
+    WaylandServer::instance()->m_wallpaperManager->syncAddWorkspace();
     updateSurface();
 }
 

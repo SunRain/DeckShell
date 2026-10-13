@@ -13,12 +13,12 @@ DDMInterfaceV1 *g_ddm = nullptr;
 }
 #endif
 
-void protocol_test_setup(Helper *helper)
+void protocol_test_setup(WaylandServer *server)
 {
 #ifndef DISABLE_DDM
-    g_ddm = find_server_interface<DDMInterfaceV1>(helper);
+    g_ddm = find_server_interface<DDMInterfaceV1>(server);
 #else
-    (void)helper;
+    (void)server;
 #endif
 }
 

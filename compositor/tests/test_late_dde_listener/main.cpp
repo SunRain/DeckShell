@@ -1,14 +1,14 @@
 // Copyright (C) 2026 UnionTech Software Technology Co., Ltd.
 // SPDX-License-Identifier: Apache-2.0 OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
 
-#include "core/dconfigmanager.h"
+#include "dconfig/dconfigmanager.h"
 #include "core/rootsurfacecontainer.h"
 #include "core/treeland.h"
 #include "lateclient.h"
 #include "test-accounts-service.h"
 #include "test-dconfig-service.h"
 #include "modules/dde-shell/ddeshellmanagerinterfacev1.h"
-#include "seat/helper.h"
+#include "core/waylandserver.h"
 #include "session/session.h"
 #include "surface/surfacewrapper.h"
 
@@ -68,7 +68,7 @@ QString LateDdeListenerTest::diagnostics()
 
 bool LateDdeListenerTest::dispatchServer()
 {
-    auto *helper = Helper::instance();
+    auto *helper = WaylandServer::instance();
     auto *ddeShell = helper ? helper->ddeShellV1() : nullptr;
     auto *server = ddeShell ? WServer::from(ddeShell) : nullptr;
     if (!server || !server->handle())
@@ -111,8 +111,8 @@ void LateDdeListenerTest::initTestCase()
     WRenderHelper::setupRendererBackend();
     m_treeland = std::make_unique<Treeland::Treeland>();
 
-    QTRY_VERIFY_WITH_TIMEOUT(Helper::instance(), 5000);
-    auto *helper = Helper::instance();
+    QTRY_VERIFY_WITH_TIMEOUT(WaylandServer::instance(), 5000);
+    auto *helper = WaylandServer::instance();
     const auto session = helper->sessionManager()->globalSession();
     QVERIFY(session);
     QVERIFY(session->socket());
@@ -176,7 +176,7 @@ void LateDdeListenerTest::realShellHandlerTracksIndependentLateSurfacesAndDestro
     QCOMPARE(wrapperForAppId(QStringLiteral("org.deepin.test.late-dde-2")), nullptr);
 
     QPointer<DDEShellSurfaceInterface> orphanDdeSurface;
-    const auto connection = connect(Helper::instance()->ddeShellV1(),
+    const auto connection = connect(WaylandServer::instance()->ddeShellV1(),
                                     &DDEShellManagerInterfaceV1::surfaceCreated,
                                     this,
                                     [&orphanDdeSurface](DDEShellSurfaceInterface *surface) {

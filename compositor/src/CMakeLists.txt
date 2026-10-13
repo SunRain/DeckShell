@@ -131,11 +131,15 @@ qt_add_qml_module(libdeckcompositor
         ${OUTPUT_CONFIG}
         ${APP_CONFIG}
         ${SEAT_USER_CONFIG}
+        capture/capturemanager.cpp
+        capture/capturemanager.h
         common/treelandlogging.cpp
         common/treelandlogging.h
         common/shellaction.cpp
         common/shellaction.h
         common/windowdecorations.h
+        dconfig/dconfigmanager.cpp
+        dconfig/dconfigmanager.h
         core/layersurfacecontainer.cpp
         core/layersurfacecontainer.h
         core/qmlengine.cpp
@@ -147,14 +151,20 @@ qt_add_qml_module(libdeckcompositor
         core/shellhandler.cpp
         core/shellhandler.h
         core/treelandinit.cpp
-        core/dconfigmanager.cpp
-        core/dconfigmanager.h
+        core/waylandserver.cpp
+        core/waylandserver.h
+        core/focuscontroller.cpp
+        core/focuscontroller.h
+        lockscreen/lockscreenmanager.cpp
+        lockscreen/lockscreenmanager.h
+        core/surfaceprotocolcontroller.cpp
+        core/surfaceprotocolcontroller.h
         core/treeland.cpp
         core/treeland.h
         core/windowconfigstore.cpp
         core/windowconfigstore.h
-        $<$<OR:$<NOT:$<BOOL:${DISABLE_DDM}>>,$<BOOL:${EXT_SESSION_LOCK_V1}>>:core/lockscreen.h>
-        $<$<OR:$<NOT:$<BOOL:${DISABLE_DDM}>>,$<BOOL:${EXT_SESSION_LOCK_V1}>>:core/lockscreen.cpp>
+        $<$<OR:$<NOT:$<BOOL:${DISABLE_DDM}>>,$<BOOL:${EXT_SESSION_LOCK_V1}>>:lockscreen/lockscreen.h>
+        $<$<OR:$<NOT:$<BOOL:${DISABLE_DDM}>>,$<BOOL:${EXT_SESSION_LOCK_V1}>>:lockscreen/lockscreen.cpp>
         $<$<NOT:$<BOOL:${DISABLE_DDM}>>:greeter/greeterproxy.cpp>
         $<$<NOT:$<BOOL:${DISABLE_DDM}>>:greeter/greeterproxy.h>
         $<$<NOT:$<BOOL:${DISABLE_DDM}>>:greeter/sessionmodel.cpp>
@@ -163,12 +173,16 @@ qt_add_qml_module(libdeckcompositor
         $<$<NOT:$<BOOL:${DISABLE_DDM}>>:greeter/user.h>
         $<$<NOT:$<BOOL:${DISABLE_DDM}>>:greeter/usermodel.cpp>
         $<$<NOT:$<BOOL:${DISABLE_DDM}>>:greeter/usermodel.h>
+        idle/idlemanager.cpp
+        idle/idlemanager.h
         input/gestures.cpp
         input/gestures.h
         input/inputdevice.cpp
         input/inputdevice.h
         input/togglablegesture.cpp
         input/togglablegesture.h
+        input/compositorinputfilter.cpp
+        input/compositorinputfilter.h
         input/inputmanager.cpp
         input/inputmanager.h
         interfaces/baseplugininterface.h
@@ -186,12 +200,14 @@ qt_add_qml_module(libdeckcompositor
         output/backlight.cpp
         output/outputmanager.cpp
         output/outputmanager.h
-        seat/helper.cpp
-        seat/helper.h
+        seat/dragcontroller.cpp
+        seat/dragcontroller.h
         seat/pointerconstraintsmanager.cpp
         seat/pointerconstraintsmanager.h
         seat/seatmanager.cpp
         seat/seatmanager.h
+        showdesktop/showdesktop.cpp
+        showdesktop/showdesktop.h
         session/session.cpp
         session/session.h
         surface/surfacecontainer.cpp
@@ -401,6 +417,7 @@ target_include_directories(libdeckcompositor
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/greeter>
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/input>
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/interfaces>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/lockscreen>
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/output>
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/seat>
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/session>

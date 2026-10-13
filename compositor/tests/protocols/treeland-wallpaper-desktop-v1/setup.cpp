@@ -5,37 +5,37 @@
 #include "core/rootsurfacecontainer.h"
 #include "output/output.h"
 #include "server-bridge.h"
-#include "seat/helper.h"
+#include "core/waylandserver.h"
 #include "treelanduserconfig.hpp"
 #include "treeland-wallpaper-desktop-v1.h"
 namespace {
 constexpr auto kWallpaperSource = "/tmp/treeland-protocol-wallpaper-red";
 }
 
-void protocol_test_setup([[maybe_unused]] Helper *helper)
+void protocol_test_setup([[maybe_unused]] WaylandServer *server)
 {
     // The desktop fixture already owns one headless output.  Keeping that
     // single output makes the client's wl_output and the active QML output
     // unambiguous for this manager + shell integration path.
 }
 
-extern "C" bool protocol_test_ready(Helper *helper)
+extern "C" bool protocol_test_ready(WaylandServer *server)
 {
-    auto *config = helper->config();
+    auto *config = server->config();
 #if TREELANDUSERCONFIG_DCONFIG_FILE_VERSION_MINOR > 0
     const bool configReady = config && config->isInitializeSucceeded();
 #else
     const bool configReady = config && config->isInitializeSucceed();
 #endif
-    const auto &outputs = helper->rootSurfaceContainer()->outputs();
+    const auto &outputs = server->rootSurfaceContainer()->outputs();
     return configReady && !outputs.isEmpty()
-        && !helper->currentWorkspaceWallpaper(outputs.constFirst()->output()).isEmpty();
+        && !server->currentWorkspaceWallpaper(outputs.constFirst()->output()).isEmpty();
 }
 
 extern "C" void wallpaper_desktop_read_state(void *data)
 {
     wallpaper_desktop_state state {};
-    auto *helper = Helper::instance();
+    auto *server = WaylandServer::instance();
     auto *shellSurface = TreelandWallpaperSurfaceInterfaceV1::get(
         QString::fromLatin1(kWallpaperSource));
     state.shell_surface_registered = shellSurface ? 1 : 0;
@@ -52,7 +52,7 @@ extern "C" void wallpaper_desktop_read_state(void *data)
     auto *output = managerWallpaper ? managerWallpaper->wOutput() : nullptr;
     state.output_matched = output ? 1 : 0;
     state.manager_configured = output
-            && helper->currentWorkspaceWallpaper(output) == QString::fromLatin1(kWallpaperSource)
+            && server->currentWorkspaceWallpaper(output) == QString::fromLatin1(kWallpaperSource)
         ? 1
         : 0;
 

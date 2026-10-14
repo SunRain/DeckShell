@@ -321,8 +321,9 @@ qt_add_shaders(libdeckcompositor "deckcompositor_liquidglass_shaders"
         ${PROJECT_RESOURCES_DIR}/shaders/liquidglass.frag
 )
 
-# Wallpaper OKLCH highlight shoulder-compression shader (used with ShaderEffect in the lock screen).
-qt_add_shaders(libdeckcompositor "treeland_wallpaper_oklch_shoulder_shaders"
+# Lock screen wallpaper dimming shader (used with ShaderEffect in the greeter).
+# BT.709 luma-adaptive dimming blended in by u_strength.
+qt_add_shaders(libdeckcompositor "treeland_wallpaper_luma_dim_shaders"
     BATCHABLE
     PRECOMPILE
     PREFIX
@@ -330,7 +331,7 @@ qt_add_shaders(libdeckcompositor "treeland_wallpaper_oklch_shoulder_shaders"
     BASE
         ${PROJECT_RESOURCES_DIR}/shaders
     FILES
-        ${PROJECT_RESOURCES_DIR}/shaders/wallpaper_oklch_shoulder.frag
+        ${PROJECT_RESOURCES_DIR}/shaders/wallpaper_luma_dim.frag
 )
 
 set_source_files_properties(core/qml/overridable/InWindowBlur.qml

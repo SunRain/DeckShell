@@ -134,6 +134,8 @@ void LockScreen::addOutput(Output *output)
     }
     item->setZ(GreeterZOrder);
 
+    connect(item, SIGNAL(hideAnimationFinished()), this, SLOT(onHideAnimationFinished()));
+
     m_components.insert(
         { output, std::unique_ptr<QQuickItem, void (*)(QQuickItem *)>(item, [](QQuickItem *item) {
               item->deleteLater();
@@ -184,6 +186,12 @@ void LockScreen::onAnimationPlayFinished()
     Q_ASSERT(item);
 
     setVisible(false);
+}
+
+void LockScreen::onHideAnimationFinished()
+{
+    if (isVisible() && !m_greeterProxy->isLocked() && !m_greeterProxy->showShutdownView())
+        setVisible(false);
 }
 
 bool LockScreen::available() const

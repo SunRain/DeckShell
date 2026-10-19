@@ -1092,6 +1092,11 @@ OutputConfig *Output::config() const
     return m_config;
 }
 
+QString Output::uuid() const
+{
+    return m_config->uuid();
+}
+
 void Output::applyOutputColorConfig()
 {
     auto *outputConfig = config();

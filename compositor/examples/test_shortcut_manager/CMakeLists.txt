@@ -1,4 +1,4 @@
-find_package(Qt6 REQUIRED COMPONENTS WaylandClient)
+find_package(Qt6 REQUIRED COMPONENTS Gui WaylandClient Widgets)
 
 set(BIN_NAME test-shortcut-manager)
 
@@ -8,12 +8,13 @@ qt_add_executable(${BIN_NAME}
 
 qt_generate_wayland_protocol_client_sources(${BIN_NAME}
     FILES
-        ${DECKCOMPOSITOR_PROTOCOLS_DATA_DIR}/treeland-shortcut-manager-v2.xml
+        ${DECKCOMPOSITOR_PROTOCOLS_DATA_DIR}/treeland-shortcut-manager-unstable-v3.xml
 )
 
 target_link_libraries(${BIN_NAME}
     PRIVATE
         Qt6::Gui
+        Qt6::Widgets
         Qt6::WaylandClient
 )
 

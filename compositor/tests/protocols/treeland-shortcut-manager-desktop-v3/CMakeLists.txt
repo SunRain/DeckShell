@@ -4,10 +4,10 @@ if(NOT EXISTS "${virtual_keyboard_xml}")
 endif()
 
 treeland_add_protocol_test(
-    NAME treeland_shortcut_manager_desktop_v2
-    XML "${DECKCOMPOSITOR_PROTOCOLS_DATA_DIR}/treeland-shortcut-manager-v2.xml"
+    NAME treeland_shortcut_manager_desktop_v3
+    XML "${DECKCOMPOSITOR_PROTOCOLS_DATA_DIR}/treeland-shortcut-manager-unstable-v3.xml"
     EXTRA_XMLS "${virtual_keyboard_xml}"
     EXTRA_LIBRARIES PkgConfig::XKBCOMMON
     SETUP "${CMAKE_CURRENT_SOURCE_DIR}/setup.cpp"
-    CLIENT "${CMAKE_CURRENT_SOURCE_DIR}/treeland-shortcut-manager-desktop-v2.c"
+    CLIENT "${CMAKE_CURRENT_SOURCE_DIR}/treeland-shortcut-manager-desktop-v3.c"
 )

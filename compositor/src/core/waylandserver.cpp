@@ -717,7 +717,7 @@ void WaylandServer::setCurrentMode(CurrentMode mode)
     if (m_currentMode == mode)
         return;
 
-    setBlockActivateSurface(mode != CurrentMode::Normal);
+    setBlockActivateSurface(mode != CurrentMode::Normal && mode != CurrentMode::Multitaskview);
 
     m_currentMode = mode;
 

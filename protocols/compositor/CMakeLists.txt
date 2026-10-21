@@ -16,6 +16,7 @@ set(DECKCOMPOSITOR_PROTOCOLS_INSTALL_CMAKEDIR
 add_subdirectory(cmake)
 
 set(XML
+    xml/treeland-output-manager-unstable-v2.xml
     xml/treeland-output-uuid-head-unstable-v1.xml
     xml/treeland-output-uuid-unstable-v1.xml
     xml/treeland-shortcut-manager-unstable-v3.xml

@@ -180,6 +180,8 @@ qt_add_qml_module(libdeckcompositor
         $<$<NOT:$<BOOL:${DISABLE_DDM}>>:greeter/usermodel.h>
         idle/idlemanager.cpp
         idle/idlemanager.h
+        input/gesturemanager.cpp
+        input/gesturemanager.h
         input/gestures.cpp
         input/gestures.h
         input/inputdevice.cpp

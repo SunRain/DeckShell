@@ -3,7 +3,7 @@
 
 #include "modules/dde-shell/ddeshellmanagerinterfacev1.h"
 #include "modules/personalization/personalizationmanagerinterfacev1.h"
-#include "modules/virtual-output/virtualoutputmanagerinterfacev1.h"
+#include "modules/output-group/outputgroupmanagerinterfacev1.h"
 
 #include <wserver.h>
 
@@ -58,20 +58,39 @@ constexpr wl_interface PersonalizationManagerInterface = {
     .events = nullptr,
 };
 
-constexpr wl_message VirtualOutputManagerRequests[] = {
-    { "create_virtual_output", "nsa", nullptr },
-    { "get_virtual_output_list", "", nullptr },
-    { "get_virtual_output", "sn", nullptr },
-    { "destroy", "2", nullptr },
+constexpr wl_message OutputGroupManagerRequests[] = {
+    { "destroy", "", nullptr },
+    { "create_group", "ns", nullptr },
+    { "get_group", "ns", nullptr },
 };
 
-constexpr wl_interface VirtualOutputManagerInterface = {
-    .name = "treeland_virtual_output_manager_v1",
-    .version = 2,
-    .method_count = 4,
-    .methods = VirtualOutputManagerRequests,
-    .event_count = 0,
-    .events = nullptr,
+constexpr wl_message OutputGroupManagerEvents[] = {
+    { "group_added", "s", nullptr },
+    { "groups_done", "", nullptr },
+    { "group_removed", "s", nullptr },
+};
+
+constexpr wl_interface OutputGroupManagerInterface = {
+    .name = "treeland_output_group_manager_v1",
+    .version = 1,
+    .method_count = 3,
+    .methods = OutputGroupManagerRequests,
+    .event_count = 3,
+    .events = OutputGroupManagerEvents,
+};
+
+void groupChanged(void *, wl_proxy *, const char *) { }
+void groupsDone(void *, wl_proxy *) { }
+
+struct OutputGroupManagerListener
+{
+    void (*groupAdded)(void *, wl_proxy *, const char *);
+    void (*groupsDone)(void *, wl_proxy *);
+    void (*groupRemoved)(void *, wl_proxy *, const char *);
+};
+
+constexpr OutputGroupManagerListener OutputGroupListener = {
+    &groupChanged, &groupsDone, &groupChanged,
 };
 
 struct ClientState
@@ -80,10 +99,10 @@ struct ClientState
     wl_registry *registry = nullptr;
     uint32_t ddeName = 0;
     uint32_t personalizationName = 0;
-    uint32_t virtualOutputName = 0;
+    uint32_t outputGroupName = 0;
     uint32_t ddeVersion = 0;
     uint32_t personalizationVersion = 0;
-    uint32_t virtualOutputVersion = 0;
+    uint32_t outputGroupVersion = 0;
 };
 
 void registryGlobal(void *data,
@@ -99,9 +118,9 @@ void registryGlobal(void *data,
     } else if (std::strcmp(interface, PersonalizationManagerInterface.name) == 0) {
         state->personalizationName = name;
         state->personalizationVersion = version;
-    } else if (std::strcmp(interface, VirtualOutputManagerInterface.name) == 0) {
-        state->virtualOutputName = name;
-        state->virtualOutputVersion = version;
+    } else if (std::strcmp(interface, OutputGroupManagerInterface.name) == 0) {
+        state->outputGroupName = name;
+        state->outputGroupVersion = version;
     }
 }
 
@@ -222,7 +241,7 @@ void ManagerResourceLifecycleTest::managerResourcesAreDestroyed()
     auto server = std::make_unique<WAYLIB_SERVER_NAMESPACE::WServer>();
     QVERIFY(server->attach<DDEShellManagerInterfaceV1>() != nullptr);
     QVERIFY(server->attach<PersonalizationManagerInterfaceV1>() != nullptr);
-    QVERIFY(server->attach<VirtualOutputManagerInterfaceV1>() != nullptr);
+    QVERIFY(server->attach<OutputGroupManagerInterfaceV1>() != nullptr);
     server->start();
     QCoreApplication::processEvents();
 
@@ -240,38 +259,43 @@ void ManagerResourceLifecycleTest::managerResourcesAreDestroyed()
 
     QCOMPARE(client.ddeVersion, 2U);
     QCOMPARE(client.personalizationVersion, 2U);
-    QCOMPARE(client.virtualOutputVersion, 2U);
+    QCOMPARE(client.outputGroupVersion, 1U);
 
     auto *dde = wl_registry_bind(client.registry, client.ddeName, &DdeManagerInterface, 2);
     auto *personalization = wl_registry_bind(client.registry,
                                              client.personalizationName,
                                              &PersonalizationManagerInterface,
                                              2);
-    auto *virtualOutput = wl_registry_bind(client.registry,
-                                           client.virtualOutputName,
-                                           &VirtualOutputManagerInterface,
-                                           2);
+    auto *outputGroup = wl_registry_bind(client.registry,
+                                         client.outputGroupName,
+                                         &OutputGroupManagerInterface,
+                                         1);
     QVERIFY(dde != nullptr);
     QVERIFY(personalization != nullptr);
-    QVERIFY(virtualOutput != nullptr);
+    QVERIFY(outputGroup != nullptr);
+    QCOMPARE(wl_proxy_add_listener(static_cast<wl_proxy *>(outputGroup),
+                                   reinterpret_cast<void (**)(void)>(
+                                       const_cast<OutputGroupManagerListener *>(&OutputGroupListener)),
+                                   nullptr),
+             0);
     QVERIFY(dispatchServer(server.get(), client.display));
 
     QCOMPARE(resourceCount(serverClient, DdeManagerInterface.name), 1);
     QCOMPARE(resourceCount(serverClient, PersonalizationManagerInterface.name), 1);
-    QCOMPARE(resourceCount(serverClient, VirtualOutputManagerInterface.name), 1);
+    QCOMPARE(resourceCount(serverClient, OutputGroupManagerInterface.name), 1);
 
     int ddeDestroyed = 0;
     int personalizationDestroyed = 0;
-    int virtualOutputDestroyed = 0;
+    int outputGroupDestroyed = 0;
     ResourceSearch ddeSearch{ .interfaceName = DdeManagerInterface.name };
     ResourceSearch personalizationSearch{ .interfaceName = PersonalizationManagerInterface.name };
-    ResourceSearch virtualOutputSearch{ .interfaceName = VirtualOutputManagerInterface.name };
+    ResourceSearch outputGroupSearch{ .interfaceName = OutputGroupManagerInterface.name };
     wl_client_for_each_resource(serverClient, &findResource, &ddeSearch);
     wl_client_for_each_resource(serverClient, &findResource, &personalizationSearch);
-    wl_client_for_each_resource(serverClient, &findResource, &virtualOutputSearch);
+    wl_client_for_each_resource(serverClient, &findResource, &outputGroupSearch);
     watchResource(ddeSearch.resource, &ddeDestroyed);
     watchResource(personalizationSearch.resource, &personalizationDestroyed);
-    watchResource(virtualOutputSearch.resource, &virtualOutputDestroyed);
+    watchResource(outputGroupSearch.resource, &outputGroupDestroyed);
 
     if (trigger == QStringLiteral("explicit")) {
         wl_proxy_marshal_flags(static_cast<wl_proxy *>(dde),
@@ -284,18 +308,18 @@ void ManagerResourceLifecycleTest::managerResourcesAreDestroyed()
                                nullptr,
                                2,
                                WL_MARSHAL_FLAG_DESTROY);
-        wl_proxy_marshal_flags(static_cast<wl_proxy *>(virtualOutput),
-                               3,
+        wl_proxy_marshal_flags(static_cast<wl_proxy *>(outputGroup),
+                               0,
                                nullptr,
-                               2,
+                               1,
                                WL_MARSHAL_FLAG_DESTROY);
         dde = nullptr;
         personalization = nullptr;
-        virtualOutput = nullptr;
+        outputGroup = nullptr;
         QVERIFY(dispatchServer(server.get(), client.display));
         QCOMPARE(resourceCount(serverClient, DdeManagerInterface.name), 0);
         QCOMPARE(resourceCount(serverClient, PersonalizationManagerInterface.name), 0);
-        QCOMPARE(resourceCount(serverClient, VirtualOutputManagerInterface.name), 0);
+        QCOMPARE(resourceCount(serverClient, OutputGroupManagerInterface.name), 0);
     } else if (trigger == QStringLiteral("disconnect")) {
         wl_display_disconnect(client.display);
         client.display = nullptr;
@@ -309,7 +333,7 @@ void ManagerResourceLifecycleTest::managerResourcesAreDestroyed()
 
     QCOMPARE(ddeDestroyed, 1);
     QCOMPARE(personalizationDestroyed, 1);
-    QCOMPARE(virtualOutputDestroyed, 1);
+    QCOMPARE(outputGroupDestroyed, 1);
 
     if (client.display) {
         wl_registry_destroy(client.registry);

@@ -52,8 +52,8 @@ endfunction()
 set(dde_xml "${DECKSHELL_SOURCE_DIR}/protocols/compositor/xml/treeland-dde-shell-v1.xml")
 set(personalization_xml
     "${DECKSHELL_SOURCE_DIR}/protocols/compositor/xml/treeland-personalization-manager-v1.xml")
-set(virtual_output_xml
-    "${DECKSHELL_SOURCE_DIR}/protocols/compositor/xml/treeland-virtual-output-manager-v1.xml")
+set(output_group_xml
+    "${DECKSHELL_SOURCE_DIR}/protocols/compositor/xml/treeland-output-group-manager-unstable-v1.xml")
 
 set(dde_header
     "${DECKSHELL_SOURCE_DIR}/compositor/src/modules/dde-shell/ddeshellmanagerinterfacev1.h")
@@ -63,21 +63,22 @@ set(dde_client_cmake
     "${DECKSHELL_SOURCE_DIR}/treeland-dde-shell-client/src/CMakeLists.txt")
 set(personalization_header
     "${DECKSHELL_SOURCE_DIR}/compositor/src/modules/personalization/personalizationmanagerinterfacev1.h")
-set(virtual_output_header
-    "${DECKSHELL_SOURCE_DIR}/compositor/src/modules/virtual-output/virtualoutputmanagerinterfacev1.h")
+set(output_group_header
+    "${DECKSHELL_SOURCE_DIR}/compositor/src/modules/output-group/outputgroupmanagerinterfacev1.h")
 
-foreach(protocol_xml IN ITEMS "${dde_xml}" "${personalization_xml}" "${virtual_output_xml}")
+foreach(protocol_xml IN ITEMS "${dde_xml}" "${personalization_xml}")
     require_regex("${protocol_xml}"
         "<interface name=\"treeland_[a-z_]+_manager_v1\" version=\"2\">"
         "a version 2 manager interface")
 endforeach()
 
-foreach(manager_header IN ITEMS
-        "${dde_header}"
-        "${personalization_header}"
-        "${virtual_output_header}")
+foreach(manager_header IN ITEMS "${dde_header}" "${personalization_header}")
     require_text("${manager_header}" "static constexpr int InterfaceVersion = 2;")
 endforeach()
+
+require_text("${output_group_xml}"
+    [=[<interface name="treeland_output_group_manager_v1" version="1">]=])
+require_text("${output_group_header}" "static constexpr int InterfaceVersion = 1;")
 
 require_regex("${dde_source}"
     "void set_xwindow_position_relative\\([^;]*\\) override;"
@@ -89,8 +90,8 @@ set(dde_generated
     "${generated_module_dir}/dde-shell/wayland-treeland-dde-shell-v1-server-protocol.c")
 set(personalization_generated
     "${generated_module_dir}/personalization/wayland-treeland-personalization-manager-v1-server-protocol.c")
-set(virtual_output_generated
-    "${generated_module_dir}/virtual-output/wayland-treeland-virtual-output-manager-v1-server-protocol.c")
+set(output_group_generated
+    "${generated_module_dir}/output-group/wayland-treeland-output-group-manager-unstable-v1-server-protocol.c")
 
 require_ordered_text("${dde_generated}"
     [=[{ "get_window_overlap_checker",]=]
@@ -119,10 +120,9 @@ require_ordered_text("${personalization_generated}"
 require_text("${personalization_generated}"
     [=["treeland_personalization_manager_v1", 2,]=])
 
-require_ordered_text("${virtual_output_generated}"
-    [=[{ "create_virtual_output",]=]
-    [=[{ "get_virtual_output_list",]=]
-    [=[{ "get_virtual_output",]=]
-    [=[{ "destroy", "2",]=])
-require_text("${virtual_output_generated}"
-    [=["treeland_virtual_output_manager_v1", 2,]=])
+require_ordered_text("${output_group_generated}"
+    [=[{ "destroy", "",]=]
+    [=[{ "create_group",]=]
+    [=[{ "get_group",]=])
+require_text("${output_group_generated}"
+    [=["treeland_output_group_manager_v1", 1,]=])

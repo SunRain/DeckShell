@@ -696,7 +696,7 @@ void OutputManager::outputRemoved(WOutput *output)
         if (removedConfiguredSingleOutput) {
             // Keep the unavailable output as the configured single-output target.
             // The remaining outputs are enabled only as a temporary fallback.
-            restoreExtensionModeFromConfig(true);
+            restoreExtensionModeFromConfig();
         }
     }
 
@@ -1128,12 +1128,14 @@ bool OutputManager::restoreConfiguredCopyMode()
     return true;
 }
 
-void OutputManager::restoreExtensionModeFromConfig(bool preserveSingleOutputConfig)
+void OutputManager::restoreExtensionModeFromConfig()
 {
     if (m_outputs.isEmpty()) {
         return;
     }
 
+    // Restore the available outputs without changing the saved single-output selection.
+    // The connected outputs may only represent a temporary topology.
     m_mode = Mode::Extension;
     Q_EMIT modeChanged();
 
@@ -1205,10 +1207,6 @@ void OutputManager::restoreExtensionModeFromConfig(bool preserveSingleOutputConf
         }
     }
 
-    if (!preserveSingleOutputConfig) {
-        storeSingleOutputConfig();
-    }
-
     Output *primaryOutput = findOutputById(m_config->primaryOutputId());
     if (!primaryOutput) {
         primaryOutput = m_outputs.constFirst();
@@ -1241,7 +1239,7 @@ void OutputManager::restoreInitialOutputConfiguration()
 
         const QStringList copyOutputs = copyOutputIds();
         if (copyOutputs.size() == 1 && findOutputById(copyOutputs.constFirst())) {
-            restoreExtensionModeFromConfig(true);
+            restoreExtensionModeFromConfig();
             return;
         }
 

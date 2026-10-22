@@ -118,6 +118,11 @@ set_target_properties(libdeckcompositor PROPERTIES
     SOVERSION ${PROJECT_VERSION_MAJOR}
 )
 
+# PopoverStyle is a singleton
+set_source_files_properties(core/qml/PopoverStyle.qml
+    PROPERTIES QT_QML_SINGLETON_TYPE TRUE
+)
+
 qt_add_qml_module(libdeckcompositor
     URI DeckShell.Compositor
     VERSION "2.0"
@@ -290,6 +295,7 @@ qt_add_qml_module(libdeckcompositor
         core/qml/TaskWindowPreview.qml
         core/qml/SwitchViewDelegate.qml
         core/qml/SwitchViewHighlightDelegate.qml
+        core/qml/PopoverStyle.qml
         core/qml/DockPreview.qml
         core/qml/FadeBehavior.qml
         core/qml/CaptureSelectorLayer.qml

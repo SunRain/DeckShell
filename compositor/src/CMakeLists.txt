@@ -190,8 +190,8 @@ qt_add_qml_module(libdeckcompositor
         input/holdgesture.h
         input/gesturerecognizer.cpp
         input/gesturerecognizer.h
-        input/inputdevice.cpp
-        input/inputdevice.h
+        input/libinputconfig.cpp
+        input/libinputconfig.h
         input/togglablegesture.cpp
         input/togglablegesture.h
         input/compositorinputfilter.cpp

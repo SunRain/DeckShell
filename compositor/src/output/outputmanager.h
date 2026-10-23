@@ -83,6 +83,11 @@ public:
     // OutputGroupHost
     bool isOutputAvailable(const QString &uuid) const override;
     bool canReconfigureOutputs() const override;
+    QList<OutputGroupMemberInfo> outputGroupMembers() const override;
+    void writeOutputGroupMembership(const QString &uuid,
+                                    const QString &groupName,
+                                    qlonglong joinTime,
+                                    qlonglong lastSetSourceTime) override;
     void applyOutputGroups() override;
 
     // Reverse lookup for uuid-addressed protocols (output-manager-v2,
@@ -167,6 +172,7 @@ private:
     bool m_groupsDirty = false;
     int m_inFlightOutputCommits = 0;
     QMap<QString, bool> m_primaryRestoreIntents;
+    QMap<QString, OutputGroupMemberInfo> m_outputGroupMemberships;
     QList<Output *> m_outputs;
     QMap<WAYLIB_SERVER_NAMESPACE::WOutput *, OutputConfig *> m_pendingOutputs;
     QSet<wlr_output *> m_powerOffOutputs;

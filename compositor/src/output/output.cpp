@@ -560,6 +560,11 @@ WOutputItem *Output::outputItem() const
     return m_item;
 }
 
+Output *Output::proxyOutput() const
+{
+    return m_proxy;
+}
+
 void Output::setExclusiveZone(Qt::Edge edge, QObject *object, int value)
 {
     Q_ASSERT(value > 0);
@@ -1094,7 +1099,7 @@ OutputConfig *Output::config() const
 
 QString Output::uuid() const
 {
-    return m_config->uuid();
+    return m_config ? m_config->uuid() : QString();
 }
 
 void Output::applyOutputColorConfig()

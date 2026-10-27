@@ -135,9 +135,6 @@ GreeterProxy::GreeterProxy(QObject *parent)
         }
     });
     m_undecided = CmdLine::ref().useLockScreen();
-    if (m_undecided) {
-        m_undecidedTimer->start();
-    }
 
     conn.connect(Logind::serviceName(),
                  Logind::managerPath(),
@@ -455,6 +452,28 @@ bool GreeterProxy::isConnected() const
 void GreeterProxy::connected()
 {
     qCInfo(lcTlGreeter) << "Connected to the ddm";
+
+    sendConnect();
+}
+
+void GreeterProxy::enableHandshake()
+{
+    if (m_handshakeEnabled) {
+        return;
+    }
+
+    m_handshakeEnabled = true;
+    if (m_undecided) {
+        m_undecidedTimer->start();
+    }
+    sendConnect();
+}
+
+void GreeterProxy::sendConnect()
+{
+    if (!m_handshakeEnabled || !isConnected()) {
+        return;
+    }
 
     const QString waylandSocketName = m_waylandSocketName.isEmpty()
         ? WaylandServer::instance()->sessionManager()->globalSession()->socket()->fullServerName()

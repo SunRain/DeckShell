@@ -66,7 +66,7 @@ void LockScreen::shutdown()
     // ext_session_lock_v1 does not support shutdown
     if (!m_impl) {
         qCWarning(lcTlShell) << "Attempt to shutdown with no compatible lockscreen implementation!";
-        emit unlock();
+        Q_EMIT unlock();
         return;
     }
 
@@ -88,7 +88,7 @@ void LockScreen::switchUser()
     // ext_session_lock_v1 does not support user switching
     if (!m_impl) {
         qCWarning(lcTlShell) << "Attempt to switch user with no compatible lockscreen implementation!";
-        emit unlock();
+        Q_EMIT unlock();
         return;
     }
 
@@ -425,7 +425,7 @@ void LockScreen::onExternalUnlock() {
     m_fallbackItems.clear();
     m_sessionLock = nullptr;
     m_externalLockActive = false;
-    emit unlock();
+    Q_EMIT unlock();
 }
 
 void LockScreen::onExternalLockAbandoned() {

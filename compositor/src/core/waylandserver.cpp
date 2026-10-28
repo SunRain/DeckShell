@@ -804,7 +804,7 @@ void WaylandServer::setNoAnimation(bool noAnimation) {
     if (m_noAnimation == noAnimation)
         return;
     m_noAnimation = noAnimation;
-    emit noAnimationChanged();
+    Q_EMIT noAnimationChanged();
 }
 
 void WaylandServer::toggleFpsDisplay()

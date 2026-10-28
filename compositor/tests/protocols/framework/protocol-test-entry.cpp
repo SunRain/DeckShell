@@ -78,10 +78,10 @@ public:
     {
     }
 
-public slots:
+public Q_SLOTS:
     void notifyClientFinished() { Q_EMIT clientFinished(); }
 
-private slots:
+private Q_SLOTS:
     void initTestCase()
     {
         auto ensureOutputInLayout = [this](WOutput *output) {
@@ -144,7 +144,7 @@ private slots:
         QCOMPARE(m_context.result, 0);
     }
 
-signals:
+Q_SIGNALS:
     void clientFinished();
 
 private:

@@ -545,6 +545,8 @@ void Treeland::continueStartup()
 #ifndef DISABLE_DDM
     auto *greeter = d->qmlEngine->singletonInstance<GreeterProxy *>("DeckShell.Compositor", "GreeterProxy");
     greeter->enableHandshake();
+#else
+    d->server->initializeWallpaper();
 #endif
 }
 

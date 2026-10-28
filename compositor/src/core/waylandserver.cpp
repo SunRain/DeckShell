@@ -374,6 +374,25 @@ void WaylandServer::deleteTaskSwitch()
     }
 }
 
+void WaylandServer::initializeWallpaper()
+{
+    if (m_wallpaperInitialized) {
+        return;
+    }
+
+    m_wallpaperInitialized = true;
+#ifndef DISABLE_DDM
+    const QString userName = m_userModel->currentUserName();
+    if (!userName.isEmpty()
+        && DConfigManager::instance()->userConfig(userName) != m_config) {
+        // LastLogin selected another user whose configuration is still loading.
+        // applyCurrentUserConfig() will update the wallpaper once it is ready.
+        return;
+    }
+#endif
+    m_wallpaperManager->loadWallpaperConfig();
+}
+
 void WaylandServer::applyCurrentUserConfig(const QString &userName,
                                     TreelandUserConfig *config,
                                     SeatUserDConfig *seatConfig)
@@ -412,6 +431,9 @@ void WaylandServer::applyCurrentUserConfig(const QString &userName,
 
     auto user = m_userModel->currentUser();
     m_surfaceProtocols->setUserId(user ? user->UID() : getuid());
+    if (m_wallpaperInitialized) {
+        m_wallpaperManager->loadWallpaperConfig();
+    }
     if (userName == "dde") {
         return;
     }
@@ -421,7 +443,6 @@ void WaylandServer::applyCurrentUserConfig(const QString &userName,
     }
     m_sessionManager->syncActiveSessionCursorSettings();
     syncPaletteTypeWithWindowColorScheme(m_config->windowColorScheme());
-    m_wallpaperManager->updateWallpaperConfig();
     tryInitRemoteSource();
     // TODO(YaoBing Xiao): Isolate workspaces for different users to prevent them from sharing the same one.
     m_shellHandler->workspace()->reloadFromConfig();
@@ -523,6 +544,8 @@ void WaylandServer::init(Treeland::Treeland *treeland)
     auto engine = qmlEngine();
 #ifndef DISABLE_DDM
     m_greeterProxy = engine->singletonInstance<GreeterProxy *>("DeckShell.Compositor", "GreeterProxy");
+    connect(m_greeterProxy, &GreeterProxy::initialUserSelected,
+            this, &WaylandServer::initializeWallpaper);
     m_lockScreenManager->setGreeterProxy(m_greeterProxy);
     m_userModel = engine->singletonInstance<UserModel *>("DeckShell.Compositor", "UserModel");
     m_sessionModel = engine->singletonInstance<SessionModel *>("DeckShell.Compositor", "SessionModel");
@@ -1084,10 +1107,10 @@ WXdgOutputManager *WaylandServer::installDesktopProtocols(QmlEngine *engine)
     DConfigManager::instance()->initializeActiveUserConfig(this);
 #else
     if (m_config->isInitializeSucceeded()) {
-        m_wallpaperManager->updateWallpaperConfig();
+        initializeWallpaper();
     } else {
         connect(m_config, &TreelandUserConfig::configInitializeSucceed,
-                m_wallpaperManager, &WallpaperManager::updateWallpaperConfig);
+                this, &WaylandServer::initializeWallpaper);
     }
 #endif
     m_showDesktop->connectProtocol();

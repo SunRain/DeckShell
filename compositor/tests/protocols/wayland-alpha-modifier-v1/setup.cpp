@@ -8,12 +8,14 @@
 
 #include <wbackend.h>
 #include <wsurface.h>
+#include <wsurfaceitem.h>
+#include <QPointer>
 #include <wlr/types/wlr_compositor.h>
 #include <wlr/types/wlr_alpha_modifier_v1.h>
 
 namespace {
 // The real mapped XdgToplevel SurfaceWrapper created by the client.
-SurfaceWrapper *g_wrapper = nullptr;
+QPointer<SurfaceWrapper> g_wrapper;
 }
 
 void protocol_test_setup(WaylandServer *server)
@@ -38,6 +40,9 @@ void alpha_modifier_read_server_state(void *data)
     state->valid = 0;
     state->has_modifier = 0;
     state->multiplier = 0.0;
+    state->content_ready = 0;
+    state->content_multiplier = -1.0;
+    state->qml_opacity = -1.0;
 
     if (!g_wrapper)
         return;
@@ -47,6 +52,15 @@ void alpha_modifier_read_server_state(void *data)
         return;
 
     state->valid = 1;
+
+    auto *item = g_wrapper->surfaceItem();
+    auto *content = item ? item->findItemContent() : nullptr;
+    if (content && content->surface() == wsurface && content->parentItem()
+        && content->parentItem()->property("hasClipShape").isValid()) {
+        state->content_ready = 1;
+        state->content_multiplier = content->alphaModifier();
+        state->qml_opacity = content->parentItem()->opacity();
+    }
 
     auto *wlr_surf = wsurface->handle();
     if (!wlr_surf)

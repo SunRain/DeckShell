@@ -17,6 +17,7 @@
 | 设置不透明度 | `set_multiplier(UINT32_MAX)` + `commit` | 无协议错误 | P |
 | 真实乘数 0 | 回读真实 `wlr_alpha_modifier_surface_v1_state::multiplier` | == 0.0 | E |
 | 真实乘数 1 | 回读真实 `wlr_alpha_modifier_surface_v1_state::multiplier` | == 1.0 | E |
+| QML 内容链路 | 两次提交后读取同一 surface 的生产 `SurfaceContent` | 必须存在；`WSurfaceItemContent::alphaModifier` 与 QML 根 `opacity` 分别为 0.0、1.0 | E |
 
 ## 生产结果
 
@@ -27,6 +28,11 @@
 状态，在 `wl_surface.commit` 后由 wlroots 将 uint32 因子转换为 double（÷UINT32_MAX）
 并写入 `wlr_alpha_modifier_surface_v1_state`，因此此断言验证请求确实到达了真实合成器
 surface 管线。
+
+两次提交还必须到达同一 surface 的真实 QML 内容：通过生产 `WSurfaceItem` 找到
+`SurfaceContent.qml` 创建的 `WSurfaceItemContent`，读取其 `alphaModifier` 和父项
+`opacity`，分别断言为 0.0、1.0。该检查在正常与 `DISABLE_XWAYLAND=ON` 配置均运行，
+会拒绝 QML 创建失败后退回的默认内容项；原生状态正常不能代替 QML 绑定成功。
 
 ## 已知边界 / 下一项结果
 

@@ -23,6 +23,9 @@ struct alpha_modifier_server_state {
 	int valid; /* a mapped SurfaceWrapper was captured */
 	int has_modifier; /* alpha modifier state found on the surface */
 	double multiplier; /* wlr_alpha_modifier_surface_v1_state::multiplier */
+	int content_ready; /* production SurfaceContent exists for the mapped surface */
+	double content_multiplier; /* WSurfaceItemContent::alphaModifier */
+	double qml_opacity; /* SurfaceContent.qml root opacity */
 };
 
 /* Defined in setup.cpp; runs on the compositor thread via

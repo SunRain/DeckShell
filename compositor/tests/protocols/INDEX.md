@@ -77,7 +77,7 @@ xdg-shell 由共享 xdg-toplevel 夹具覆盖（多个 toplevel 测试复用）�
 
 | 协议 | 覆盖等级 | 主要生产结果 |
 | --- | --- | --- |
-| [wayland-alpha-modifier-v1](wayland-alpha-modifier-v1/README.md) | E | 映射 toplevel + `set_multiplier`，回读真实 `wlr_alpha_modifier_surface_v1_state::multiplier` 与请求值一致 |
+| [wayland-alpha-modifier-v1](wayland-alpha-modifier-v1/README.md) | E | 映射 toplevel + `set_multiplier`，原生乘数、同一 surface 的生产 QML 内容乘数及根 opacity 均按请求在 0/1 间变化；正常/关闭 XWayland 均要求实际创建 SurfaceContent |
 | [ext-background-effect-v1](ext-background-effect-v1/README.md) | E / P | bind 下发 blur 能力位；`set_blur_region` 双缓冲流转（set/保持/NULL/重启用/destroy）回读真实 `SurfaceWrapper::blur()`（非空区域启用整面 blur）；重复关联触发 `background_effect_exists` |
 | [wayland-cursor-shape-v1](wayland-cursor-shape-v1/README.md) | E | 真实 `wl_pointer` 上 `set_shape`，回读真实 `wlr_cursor_shape_manager_v1::events.request_set_shape` 捕获的 shape 值与请求一致 |
 | [wayland-ext-data-control-v1](wayland-ext-data-control-v1/README.md) | E | 创建 offer 并 `set_selection` 后回读真实 `wlr_seat::selection_source` 非空 |

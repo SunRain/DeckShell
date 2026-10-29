@@ -76,8 +76,10 @@ int protocol_test_run(const char *socket_name) {
 	} else if (!srv.valid || !srv.has_modifier) {
 		TEST_ERROR("alpha-modifier: no alpha modifier state on surface\n");
 		failed = 1;
-	} else if (srv.multiplier != 0.0) {
-		TEST_ERROR("alpha-modifier: expected multiplier 0.0, got %f\n", srv.multiplier);
+	} else if (!srv.content_ready || srv.multiplier != 0.0
+		   || srv.content_multiplier != 0.0 || srv.qml_opacity != 0.0) {
+		TEST_ERROR("alpha-modifier: expected transparent production content, ready=%d native=%f content=%f opacity=%f\n",
+			   srv.content_ready, srv.multiplier, srv.content_multiplier, srv.qml_opacity);
 		failed = 1;
 	}
 
@@ -89,8 +91,10 @@ int protocol_test_run(const char *socket_name) {
 
 		if (read_server(&srv)) {
 			failed = 1;
-		} else if (srv.multiplier != 1.0) {
-			TEST_ERROR("alpha-modifier: expected multiplier 1.0, got %f\n", srv.multiplier);
+		} else if (!srv.valid || !srv.has_modifier || !srv.content_ready
+			   || srv.multiplier != 1.0 || srv.content_multiplier != 1.0 || srv.qml_opacity != 1.0) {
+			TEST_ERROR("alpha-modifier: expected opaque production content, ready=%d native=%f content=%f opacity=%f\n",
+				   srv.content_ready, srv.multiplier, srv.content_multiplier, srv.qml_opacity);
 			failed = 1;
 		}
 	}

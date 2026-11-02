@@ -203,6 +203,7 @@ qt_add_qml_module(libdeckcompositor
         input/togglablegesture.h
         input/compositorinputfilter.cpp
         input/compositorinputfilter.h
+        input/inputcontext.h
         input/inputmanager.cpp
         input/inputmanager.h
         interfaces/baseplugininterface.h

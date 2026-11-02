@@ -233,6 +233,8 @@ qt_add_qml_module(libdeckcompositor
         session/session.cpp
         session/session.h
         session/sessionmanager.h
+        session/sessioncomponent.cpp
+        session/sessioncomponent.h
         surface/surfacecontainer.cpp
         surface/surfacecontainer.h
         surface/seatsurfacemanager.cpp

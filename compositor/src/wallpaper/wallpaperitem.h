@@ -9,7 +9,6 @@
 Q_MOC_INCLUDE("workspace/workspace.h")
 
 class TreelandWallpaperSurfaceInterfaceV1;
-class UserModel;
 
 WAYLIB_SERVER_BEGIN_NAMESPACE
 class WOutput;
@@ -92,6 +91,5 @@ private:
     enum WallpaperRole m_wallpaperRole = Desktop;
     enum WallpaperState m_state = Normal;
     QString m_source;
-    UserModel *m_model = nullptr;
     bool m_play = true;
 };

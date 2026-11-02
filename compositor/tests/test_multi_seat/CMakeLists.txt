@@ -33,4 +33,7 @@ target_link_libraries(test_multi_seat
 )
 
 add_test(NAME test_multi_seat COMMAND test_multi_seat)
-set_tests_properties(test_multi_seat PROPERTIES TIMEOUT 15)
+set_tests_properties(test_multi_seat PROPERTIES
+    TIMEOUT 15
+    ENVIRONMENT "WLR_BACKENDS=headless"
+)

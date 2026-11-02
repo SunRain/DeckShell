@@ -28,6 +28,7 @@
 #include <vector>
 
 extern "C" {
+#include <wlr/backend.h>
 #include <wlr/interfaces/wlr_keyboard.h>
 #include <wlr/interfaces/wlr_pointer.h>
 #include <wlr/util/log.h>
@@ -274,8 +275,21 @@ void MultiSeatTest::assignsMigratesAndRemovesDevices()
 
 void MultiSeatTest::removingSeatReassignsDevices()
 {
-    m_manager->assignDeviceToSeat(m_pointerDevice1.get(), QStringLiteral("seat1"));
-    QCOMPARE(m_pointerDevice1->seat(), m_seat1);
+    auto *backend = m_server->attach<WBackend>();
+    QVERIFY(backend && backend->handle());
+    m_manager->connectBackendSignals(backend);
+
+    // Session-owned virtual devices are not hardware to reassign. Publish this
+    // pointer through the real backend so its wrapper is in the hardware list.
+    wlr_pointer pointer = {};
+    static const wlr_pointer_impl PointerImpl = { .name = "seat-removal-pointer" };
+    wlr_pointer_init(&pointer, &PointerImpl, "seat1-removal-pointer");
+    const auto pointerGuard = qScopeGuard([&pointer] { wlr_pointer_finish(&pointer); });
+    wl_signal_emit_mutable(&backend->handle()->events.new_input, &pointer.base);
+    QCOMPARE(backend->inputDeviceList().size(), 1);
+    auto *device = backend->inputDeviceList().first();
+    m_manager->assignDeviceToSeat(device, QStringLiteral("seat1"));
+    QCOMPARE(device->seat(), m_seat1);
 
     QSignalSpy reassignedSpy(m_manager.get(), &SeatManager::deviceReassigned);
     WSeat *removedSeat = m_seat1;
@@ -284,8 +298,9 @@ void MultiSeatTest::removingSeatReassignsDevices()
 
     QCOMPARE(m_manager->getSeat(QStringLiteral("seat1")), nullptr);
     QCOMPARE(m_manager->fallbackSeat(), m_seat0);
-    QCOMPARE(m_pointerDevice1->seat(), m_seat0);
+    QCOMPARE(device->seat(), m_seat0);
     QCOMPARE(reassignedSpy.count(), 1);
+    QCOMPARE(qvariant_cast<WInputDevice *>(reassignedSpy.at(0).at(0)), device);
     QCOMPARE(qvariant_cast<WSeat *>(reassignedSpy.at(0).at(1)), removedSeat);
     QCOMPARE(qvariant_cast<WSeat *>(reassignedSpy.at(0).at(2)), m_seat0);
 }

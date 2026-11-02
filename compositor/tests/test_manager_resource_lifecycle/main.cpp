@@ -4,12 +4,24 @@
 #include "modules/dde-shell/ddeshellmanagerinterfacev1.h"
 #include "modules/personalization/personalizationmanagerinterfacev1.h"
 #include "modules/output-group/outputgroupmanagerinterfacev1.h"
+#include "core/treeland.h"
+#include "core/treelandinit.h"
+#include "core/waylandserver.h"
+#include "dconfig/dconfigmanager.h"
+#include "session/session.h"
+#include "session/sessionmanager.h"
+#include "test-accounts-service.h"
+#include "test-dconfig-service.h"
 
 #include <wserver.h>
+#include <wsocket.h>
 
+#include <QTemporaryDir>
 #include <QTest>
 
 #include <cerrno>
+#include <cstdio>
+#include <cstdlib>
 #include <cstring>
 #include <memory>
 #include <sys/socket.h>
@@ -222,9 +234,25 @@ class ManagerResourceLifecycleTest : public QObject
     Q_OBJECT
 
 private Q_SLOTS:
+    void initTestCase();
     void managerResourcesAreDestroyed_data();
     void managerResourcesAreDestroyed();
+    void cleanupTestCase();
+
+private:
+    std::unique_ptr<Treeland::Treeland> m_treeland;
+    std::shared_ptr<Session> m_session;
 };
+
+void ManagerResourceLifecycleTest::initTestCase()
+{
+    QVERIFY(DConfigManager::instance());
+    QTRY_VERIFY_WITH_TIMEOUT(DConfigManager::instance()->isInitializeSucceeded(), 5000);
+    m_treeland = std::make_unique<Treeland::Treeland>();
+    QTRY_VERIFY_WITH_TIMEOUT(WaylandServer::instance(), 5000);
+    m_session = WaylandServer::instance()->sessionManager()->globalSession();
+    QVERIFY(m_session && m_session->socket());
+}
 
 void ManagerResourceLifecycleTest::managerResourcesAreDestroyed_data()
 {
@@ -240,7 +268,9 @@ void ManagerResourceLifecycleTest::managerResourcesAreDestroyed()
 
     auto server = std::make_unique<WAYLIB_SERVER_NAMESPACE::WServer>();
     QVERIFY(server->attach<DDEShellManagerInterfaceV1>() != nullptr);
-    QVERIFY(server->attach<PersonalizationManagerInterfaceV1>() != nullptr);
+    auto *personalizationProtocol = server->attach<PersonalizationManagerInterfaceV1>(m_session.get());
+    QVERIFY(personalizationProtocol);
+    personalizationProtocol->setOwnsSocket(m_session->socket());
     QVERIFY(server->attach<OutputGroupManagerInterfaceV1>() != nullptr);
     server->start();
     QCoreApplication::processEvents();
@@ -249,6 +279,7 @@ void ManagerResourceLifecycleTest::managerResourcesAreDestroyed()
     QCOMPARE(::socketpair(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, 0, sockets), 0);
     auto *serverClient = wl_client_create(server->handle(), sockets[0]);
     QVERIFY2(serverClient != nullptr, std::strerror(errno));
+    QVERIFY(m_session->socket()->addClient(serverClient));
 
     ClientState client;
     client.display = wl_display_connect_to_fd(sockets[1]);
@@ -350,5 +381,40 @@ void ManagerResourceLifecycleTest::managerResourcesAreDestroyed()
         server->stop();
 }
 
-QTEST_GUILESS_MAIN(ManagerResourceLifecycleTest)
+void ManagerResourceLifecycleTest::cleanupTestCase()
+{
+    m_session.reset();
+    // Keep production singletons alive until this fixture process exits.
+    m_treeland.release();
+}
+
+int main(int argc, char *argv[])
+{
+    qputenv("QML_DISABLE_DISK_CACHE", "1");
+    qputenv("TREELAND_DISABLE_WALLPAPER", "1");
+    QTemporaryDir runtimeDir;
+    if (!runtimeDir.isValid())
+        return 1;
+    qputenv("XDG_RUNTIME_DIR", runtimeDir.path().toLocal8Bit());
+    qputenv("QT_NO_XDG_DESKTOP_PORTAL", "1");
+    TestDConfigService dconfigService;
+    if (!dconfigService.start()) {
+        dconfigService.stop();
+        return 1;
+    }
+    auto application = Treeland::preInit(argc, argv);
+    Treeland::postInit();
+    TestAccountsService accountsService;
+    if (!dconfigService.waitForService() || !accountsService.registerObjects()) {
+        dconfigService.stop();
+        return 1;
+    }
+    DConfigManager dconfigManager(application.get());
+    ManagerResourceLifecycleTest test;
+    const int result = QTest::qExec(&test, argc, argv);
+    dconfigService.stop();
+    std::fflush(nullptr);
+    std::_Exit(result);
+}
+
 #include "main.moc"

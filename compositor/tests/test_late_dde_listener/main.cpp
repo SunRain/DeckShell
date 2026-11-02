@@ -10,6 +10,7 @@
 #include "modules/dde-shell/ddeshellmanagerinterfacev1.h"
 #include "core/waylandserver.h"
 #include "session/session.h"
+#include "session/sessionmanager.h"
 #include "surface/surfacewrapper.h"
 
 #include <wrenderhelper.h>

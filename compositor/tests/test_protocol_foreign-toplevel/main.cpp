@@ -2,15 +2,27 @@
 // SPDX-License-Identifier: Apache-2.0 OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
 
 #include "modules/foreign-toplevel/foreigntoplevelmanagerv3.h"
+#include "core/treeland.h"
+#include "core/treelandinit.h"
+#include "core/waylandserver.h"
+#include "dconfig/dconfigmanager.h"
+#include "session/session.h"
+#include "session/sessionmanager.h"
+#include "test-accounts-service.h"
+#include "test-dconfig-service.h"
 
 #include <wserver.h>
+#include <wsocket.h>
 
-#include <QCoreApplication>
+#include <QGuiApplication>
+#include <QTemporaryDir>
 #include <QFile>
 #include <QTest>
 #include <QXmlStreamReader>
 
 #include <cerrno>
+#include <cstdio>
+#include <cstdlib>
 #include <cstring>
 #include <memory>
 #include <sys/socket.h>
@@ -146,7 +158,8 @@ private:
     void dispatchClientEvents();
     void syncClient();
 
-    std::unique_ptr<WAYLIB_SERVER_NAMESPACE::WServer> m_server;
+    std::unique_ptr<Treeland::Treeland> m_treeland;
+    WAYLIB_SERVER_NAMESPACE::WServer *m_server = nullptr;
     ForeignToplevelManagerInterfaceV3 *m_protocol = nullptr;
     wl_client *m_serverClient = nullptr;
     ClientState m_client;
@@ -176,15 +189,22 @@ void ForeignToplevelProtocolTest::syncClient()
 
 void ForeignToplevelProtocolTest::initTestCase()
 {
-    m_server = std::make_unique<WAYLIB_SERVER_NAMESPACE::WServer>();
-    m_protocol = m_server->attach<ForeignToplevelManagerInterfaceV3>();
-    QVERIFY(m_protocol != nullptr);
-    m_server->start();
+    QVERIFY(DConfigManager::instance());
+    QTRY_VERIFY_WITH_TIMEOUT(DConfigManager::instance()->isInitializeSucceeded(), 5000);
+    m_treeland = std::make_unique<Treeland::Treeland>();
+    QTRY_VERIFY_WITH_TIMEOUT(WaylandServer::instance(), 5000);
+    auto *runtime = WaylandServer::instance();
+    const auto session = runtime->sessionManager()->globalSession();
+    QVERIFY(session);
+    m_server = runtime->server();
+    m_protocol = session->windowManagement();
+    QVERIFY(m_server && m_protocol && session->socket());
 
     int sockets[2] = { -1, -1 };
     QCOMPARE(::socketpair(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, 0, sockets), 0);
     m_serverClient = wl_client_create(m_server->handle(), sockets[0]);
     QVERIFY2(m_serverClient != nullptr, std::strerror(errno));
+    QVERIFY(session->socket()->addClient(m_serverClient));
     m_client.display = wl_display_connect_to_fd(sockets[1]);
     QVERIFY(m_client.display != nullptr);
     m_client.registry = wl_display_get_registry(m_client.display);
@@ -239,9 +259,37 @@ void ForeignToplevelProtocolTest::cleanupTestCase()
 
     m_serverClient = nullptr;
     m_protocol = nullptr;
-    m_server->stop();
-    m_server.reset();
+    m_server = nullptr;
+    // Match the production-fixture process lifetime used by the C protocol suite.
+    m_treeland.release();
 }
 
-QTEST_GUILESS_MAIN(ForeignToplevelProtocolTest)
+int main(int argc, char *argv[])
+{
+    qputenv("QML_DISABLE_DISK_CACHE", "1");
+    qputenv("TREELAND_DISABLE_WALLPAPER", "1");
+    QTemporaryDir runtimeDir;
+    if (!runtimeDir.isValid())
+        return 1;
+    qputenv("XDG_RUNTIME_DIR", runtimeDir.path().toLocal8Bit());
+    qputenv("QT_NO_XDG_DESKTOP_PORTAL", "1");
+    TestDConfigService dconfigService;
+    if (!dconfigService.start()) {
+        dconfigService.stop();
+        return 1;
+    }
+    auto application = Treeland::preInit(argc, argv);
+    Treeland::postInit();
+    TestAccountsService accountsService;
+    if (!dconfigService.waitForService() || !accountsService.registerObjects()) {
+        dconfigService.stop();
+        return 1;
+    }
+    DConfigManager dconfigManager(application.get());
+    ForeignToplevelProtocolTest test;
+    const int result = QTest::qExec(&test, argc, argv);
+    dconfigService.stop();
+    std::fflush(nullptr);
+    std::_Exit(result);
+}
 #include "main.moc"

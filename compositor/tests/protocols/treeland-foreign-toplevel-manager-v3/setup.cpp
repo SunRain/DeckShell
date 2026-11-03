@@ -2,37 +2,31 @@
 // SPDX-License-Identifier: Apache-2.0 OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
 #include "core/shellhandler.h"
 #include "core/rootsurfacecontainer.h"
-#include "modules/foreign-toplevel/foreigntoplevelmanagerv2.h"
+#include "modules/foreign-toplevel/foreigntoplevelmanagerv3.h"
 #include "server-bridge.h"
 #include "core/waylandserver.h"
 #include "surface/surfacewrapper.h"
-#include "treeland-foreign-toplevel-manager-v2.h"
+#include "treeland-foreign-toplevel-manager-v3.h"
 #include "workspace/workspace.h"
 
 #include <wbackend.h>
 #include <woutputrenderwindow.h>
 
-#include <QEventLoop>
-#include <QQuickItem>
 
 #include <cstring>
 
 namespace {
-ForeignToplevelManagerInterfaceV2 *g_manager = nullptr;
+ForeignToplevelManagerInterfaceV3 *g_manager = nullptr;
 SurfaceWrapper *g_wrapper = nullptr;
 struct ftm_server_state g_state {};
 }
 
 void protocol_test_setup(WaylandServer *server)
 {
-    // Zero duration races GeometryAnimation::finished with the frame snapshot
-    // that emits ready(). A short real animation preserves the production
-    // lifecycle while the test waits for its finished signal below.
-    server->setAnimationSpeed(0.1f);
     add_headless_output(server->backend(), false);
     g_manager = server->shellHandler()->foreignToplevel();
     QObject::connect(g_manager,
-                     &ForeignToplevelManagerInterfaceV2::requestDockPreview,
+                     &ForeignToplevelManagerInterfaceV3::requestDockPreview,
                      server,
                      [](auto surfaces, WSurface *, QPoint abs, auto direction) {
                          g_state.preview_fired = 1;
@@ -42,19 +36,23 @@ void protocol_test_setup(WaylandServer *server)
                          g_state.preview_surface_count = static_cast<int>(surfaces.size());
                      });
     QObject::connect(g_manager,
-                     &ForeignToplevelManagerInterfaceV2::requestDockPreviewTooltip,
+                     &ForeignToplevelManagerInterfaceV3::requestDockPreviewTooltip,
                      server,
-                     [](QString tooltip, WSurface *, QPoint abs, auto direction) {
+                     [](WSurface *surface, WSurface *, QPoint abs, auto direction) {
                          g_state.tooltip_fired = 1;
-                         const QByteArray utf8 = tooltip.toUtf8();
-                         std::strncpy(g_state.tooltip, utf8.constData(), sizeof(g_state.tooltip) - 1);
-                         g_state.tooltip[sizeof(g_state.tooltip) - 1] = '\0';
+                         g_state.tooltip_count++;
+                         g_state.tooltip_surface_present = surface ? 1 : 0;
+                         if (surface) {
+                             const QSize size = surface->size();
+                             g_state.tooltip_width = size.width();
+                             g_state.tooltip_height = size.height();
+                         }
                          g_state.tooltip_x = abs.x();
                          g_state.tooltip_y = abs.y();
                          g_state.tooltip_direction = static_cast<uint32_t>(direction);
                      });
     QObject::connect(g_manager,
-                     &ForeignToplevelManagerInterfaceV2::requestDockClose,
+                     &ForeignToplevelManagerInterfaceV3::requestDockClose,
                      server,
                      [] { g_state.close_fired = 1; });
     QObject::connect(server->shellHandler(),
@@ -82,6 +80,7 @@ extern "C" void ftm_read_server_state(void *data)
     g_state.wrapper_maximized = g_wrapper && g_wrapper->isMaximized() ? 1 : 0;
     g_state.wrapper_fullscreen = g_wrapper
         && g_wrapper->surfaceState() == SurfaceWrapper::State::Fullscreen ? 1 : 0;
+    g_state.wrapper_animation_running = g_wrapper && g_wrapper->isAnimationRunning() ? 1 : 0;
     g_state.wrapper_activated = g_wrapper && g_wrapper->isActivated() ? 1 : 0;
     auto *seatContainer = WaylandServer::instance()->rootSurfaceContainer()->getSeatContainerOrDefault();
     g_state.wrapper_focused = seatContainer && seatContainer->keyboardFocusSurface() == g_wrapper ? 1 : 0;
@@ -107,35 +106,10 @@ extern "C" void ftm_set_attention(void *data)
 // Establish the inactive precondition; activation is still sent by the client.
 extern "C" void ftm_clear_activation(void *)
 {
-    Helper::instance()->activateSurface(nullptr, Qt::OtherFocusReason);
+    WaylandServer::instance()->activateSurface(nullptr, Qt::OtherFocusReason);
 }
 
 extern "C" void ftm_render_and_settle(void *)
 {
-    if (!g_wrapper)
-        return;
-
-    auto *server = WaylandServer::instance();
-    // The protocol request can be queued until the next scene-graph frame.
-    // Render first, then inspect the wrapper so we do not miss an animation
-    // created while processing that frame.
-    server->window()->render();
-    if (!g_wrapper->isAnimationRunning())
-        return;
-
-    QQuickItem *geometryAnimation = nullptr;
-    for (auto *item : g_wrapper->container()->childItems()) {
-        if (item->property("surface").value<SurfaceWrapper *>() == g_wrapper) {
-            geometryAnimation = item;
-            break;
-        }
-    }
-    if (!geometryAnimation)
-        return;
-
-    // Keep the QML animation alive until it has completed. This is an event
-    // handshake, not a time-based wait.
-    QEventLoop eventLoop;
-    QObject::connect(geometryAnimation, SIGNAL(finished()), &eventLoop, SLOT(quit()));
-    eventLoop.exec();
+    WaylandServer::instance()->window()->render();
 }

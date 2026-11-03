@@ -1,7 +1,7 @@
 // Copyright (C) 2026 UnionTech Software Technology Co., Ltd.
 // SPDX-License-Identifier: Apache-2.0 OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
 
-#include "modules/foreign-toplevel/foreigntoplevelmanagerv2.h"
+#include "modules/foreign-toplevel/foreigntoplevelmanagerv3.h"
 
 #include <wserver.h>
 
@@ -23,7 +23,7 @@ extern "C" {
 namespace {
 
 constexpr wl_interface ForeignToplevelManagerInterface = {
-    .name = "treeland_foreign_toplevel_manager_v2",
+    .name = "treeland_foreign_toplevel_manager_v3",
     .version = 1,
     .method_count = 0,
     .methods = nullptr,
@@ -98,11 +98,11 @@ ProtocolContract readProtocolContract()
             if (xml.name() == QStringView(u"interface")) {
                 currentInterface = xml.attributes().value(QStringView(u"name")).toString();
                 const int version = xml.attributes().value(QStringView(u"version")).toInt();
-                if (currentInterface == QStringLiteral("treeland_foreign_toplevel_manager_v2"))
+                if (currentInterface == QStringLiteral("treeland_foreign_toplevel_manager_v3"))
                     contract.managerVersion = version;
-                if (currentInterface == QStringLiteral("treeland_foreign_toplevel_handle_v2"))
+                if (currentInterface == QStringLiteral("treeland_foreign_toplevel_handle_v3"))
                     contract.handleVersion = version;
-            } else if (currentInterface == QStringLiteral("treeland_foreign_toplevel_handle_v2")
+            } else if (currentInterface == QStringLiteral("treeland_foreign_toplevel_handle_v3")
                        && xml.name() == QStringView(u"enum")
                        && xml.attributes().value(QStringView(u"name")) == QStringView(u"state")) {
                 inStateEnum = true;
@@ -136,9 +136,9 @@ class ForeignToplevelProtocolTest : public QObject
 
 private Q_SLOTS:
     void initTestCase();
-    void advertisesV2InterfaceAtVersionOne();
-    void clientsCanBindV2Interface();
-    void protocolDefinesV2StateValues();
+    void advertisesV3InterfaceAtVersionOne();
+    void clientsCanBindV3Interface();
+    void protocolDefinesV3StateValues();
     void cleanupTestCase();
 
 private:
@@ -147,7 +147,7 @@ private:
     void syncClient();
 
     std::unique_ptr<WAYLIB_SERVER_NAMESPACE::WServer> m_server;
-    ForeignToplevelManagerInterfaceV2 *m_protocol = nullptr;
+    ForeignToplevelManagerInterfaceV3 *m_protocol = nullptr;
     wl_client *m_serverClient = nullptr;
     ClientState m_client;
 };
@@ -177,7 +177,7 @@ void ForeignToplevelProtocolTest::syncClient()
 void ForeignToplevelProtocolTest::initTestCase()
 {
     m_server = std::make_unique<WAYLIB_SERVER_NAMESPACE::WServer>();
-    m_protocol = m_server->attach<ForeignToplevelManagerInterfaceV2>();
+    m_protocol = m_server->attach<ForeignToplevelManagerInterfaceV3>();
     QVERIFY(m_protocol != nullptr);
     m_server->start();
 
@@ -192,13 +192,13 @@ void ForeignToplevelProtocolTest::initTestCase()
     syncClient();
 }
 
-void ForeignToplevelProtocolTest::advertisesV2InterfaceAtVersionOne()
+void ForeignToplevelProtocolTest::advertisesV3InterfaceAtVersionOne()
 {
     QVERIFY(m_client.foreignToplevelName != 0);
     QCOMPARE(m_client.foreignToplevelVersion, 1U);
 }
 
-void ForeignToplevelProtocolTest::clientsCanBindV2Interface()
+void ForeignToplevelProtocolTest::clientsCanBindV3Interface()
 {
     QVERIFY(m_client.foreignToplevelName != 0);
 
@@ -214,7 +214,7 @@ void ForeignToplevelProtocolTest::clientsCanBindV2Interface()
     wl_proxy_destroy(static_cast<wl_proxy *>(manager));
 }
 
-void ForeignToplevelProtocolTest::protocolDefinesV2StateValues()
+void ForeignToplevelProtocolTest::protocolDefinesV3StateValues()
 {
     const ProtocolContract contract = readProtocolContract();
     QCOMPARE(contract.managerVersion, 1);

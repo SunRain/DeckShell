@@ -1,8 +1,8 @@
-# `treeland-foreign-toplevel-manager-v2` 测试规范
+# `treeland-foreign-toplevel-manager-v3` 测试规范
 
 ## 范围
 
-- 测试源码：`tests/protocols/treeland-foreign-toplevel-manager-v2/`
+- 测试源码：`tests/protocols/treeland-foreign-toplevel-manager-v3/`
 - Fixture：带 headless output 和已 configure、mapped xdg-toplevel 的 desktop fixture。
 - 覆盖等级：**E**。
 
@@ -11,7 +11,7 @@
 | 场景 | 客户端动作 | 必须观察到的结果 |
 | --- | --- | --- |
 | toplevel 发现 | map xdg-toplevel | `ShellHandler` 创建 workspace `SurfaceWrapper`，manager 恰好发送一个带 identifier 的 foreign handle |
-| Dock preview | 对该 identifier 发 `show(10,20,BOTTOM)`、未知 identifier、tooltip、context close | 生产 preview/tooltip/close 回调收到预期参数；未知 identifier 产生空 surface 列表而非协议错误 |
+| Dock preview | 对该 identifier 发 `show(10,20,BOTTOM)`、未知 identifier、`show_tooltip_surface`（无内容、换 surface、同 surface 换位置）、context close | 生产 preview/tooltip/close 回调收到预期参数；未知 identifier 产生空 surface 列表而非协议错误；tooltip 回调收到客户端 surface 及其已提交的尺寸；无内容的 show 不产生回调 |
 | 最小化与关闭 | 对 handle 发 `set_minimized`、`unset_minimized`、`close` | 真实 wrapper 的 minimized 状态变化；xdg client 收到 close |
 | 最大化 | 对 handle 发 `set_maximized`、`unset_maximized` | 同一真实 `SurfaceWrapper` 进入、退出 `Maximized` 状态 |
 | 全屏 | 对 handle 发 `set_fullscreen(NULL)`、`unset_fullscreen` | 同一真实 `SurfaceWrapper` 进入、退出 `Fullscreen` 状态 |
@@ -24,19 +24,18 @@
 
 客户端 map xdg-toplevel 后，测试等待 configure，并同时断言：`ShellHandler` 创建的
 wrapper 已 mapped、已加入 `Workspace`，且 manager 的 `toplevel` 事件只给出一个
-真实 `treeland_foreign_toplevel_handle_v2` 和 identifier。该 identifier 被放入
+真实 `treeland_foreign_toplevel_handle_v3` 和 identifier。该 identifier 被放入
 `show` 的 `wl_array`，客户端发送 `show(identifiers, 10, 20, BOTTOM)`；服务端生产
 manager 发出 `requestDockPreview`，fixture 读取到绝对坐标 `(10,20)`、`BOTTOM` 和
 一个真实 `WSurface`。
 
-状态转换保留生产 `SurfaceWrapper` 的默认动画速度。每个状态请求只发送一次，随后客户端
-在最多 5 秒内驱动真实帧、接收 configure、发送 ack/commit，并读取同一 wrapper 的状态；
-只有目标状态成立且几何动画已经结束才进入下一项请求。超时报告实际状态、动画标记和
-configure/ack serial，并使测试失败。不能仅凭 `finished()` 判断状态已提交，也不能在
-服务端线程等待时阻塞客户端继续确认 configure；不使用固定 sleep、关闭动画或重发请求。
+状态转换保留生产默认动画速度。每个请求只发送一次，客户端在最多 5 秒内驱动真实帧、接收 configure 并发送 ack/commit，读取同一 wrapper 的目标状态和动画标记。超时记录期望状态、实际状态和动画标记并失败；服务端线程不阻塞等待客户端必须处理的 configure。
 
-同一 context 的 `show_tooltip("dock-tooltip", 5, 6, TOP)` 到达
-`requestDockPreviewTooltip`；`context.close` 到达 `requestDockClose`。此外，foreign
+同一 context 的 `show_tooltip_surface(surface, 1, 2, LEFT)` 在 surface 还没有提交内容时
+属于客户端违约，服务端不得发出 `requestDockPreviewTooltip`；该 surface 提交内容后再次 show
+(5, 6, TOP)，回调才拿到这块 `wl_surface`，其逻辑尺寸（29x19）取自已提交的 buffer；换一块
+51x17 的 surface 再 show，回调换成新的尺寸与坐标；对已显示的同一个 surface 再 show 到新位置
+(11, 12, LEFT) 不需要新的提交，回调直接带新坐标。`context.close` 到达 `requestDockClose`。此外，foreign
 handle 的 `set_minimized`/`unset_minimized` 分别使该 wrapper 的 shell surface 进入/退出
 minimized；`set_maximized`/`unset_maximized` 分别改变 wrapper 的 `Maximized` 状态；
 `set_fullscreen(NULL)`/`unset_fullscreen` 分别改变其 `Fullscreen` 状态。这里读取的是
@@ -68,7 +67,7 @@ mapped wrapper。`set_icon_geometry` 则
 
 已覆盖 handle 的 `set/unset_minimized`、`set/unset_maximized`、
 `set/unset_fullscreen`、`activate`、`set_icon_geometry`、`close`，以及 manager/context 的
-`stop`、`get_dock_preview_context`、`show`、`show_tooltip`、`close`、`destroy`；
+`stop`、`get_dock_preview_context`、`show`、`show_tooltip_surface`、`close`、`destroy`；
 并覆盖布局状态请求在几何动画进行中的重定向与取消。
 
 布局与最小化的组合已覆盖 `Maximized`、`Fullscreen` 两种布局；`Tiling` 没有对应的 foreign
@@ -86,4 +85,4 @@ parent 和 foreign handle 对 state event 的线上内容也尚未逐项断言�
 `context_already_exists`（独立 expected 字面量 `1`），不能替换旧 context。
 该负向场景使用单独的真实客户端连接，避免协议错误使其它正向断言失效；
 正常连接另覆盖显式销毁 context 后再次创建。接口公告仍为 version 1，
-不把接口名中的 `v2` 当成协议公告版本。
+不把接口名中的 `v3` 当成协议公告版本。

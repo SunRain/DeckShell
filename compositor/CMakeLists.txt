@@ -77,6 +77,14 @@ if(ADDRESS_SANITIZER)
     add_link_options(-fsanitize=address)
 endif()
 
+option(DISABLE_XWAYLAND "Disable the xwayland support" OFF)
+if (DISABLE_XWAYLAND)
+    add_compile_definitions("DISABLE_XWAYLAND")
+    add_feature_info(xwayland_support OFF "XWayland support")
+else()
+    add_feature_info(xwayland_support ON "XWayland support")
+endif()
+
 # Alternative lock mechanism: Wayland ext-session-lock
 option(EXT_SESSION_LOCK_V1 "Enable Wayland ext-session-lock support (alternative to DDM)" ON)
 add_feature_info(ext_session_lock_v1 EXT_SESSION_LOCK_V1 "Enable ext-session-lock-v1 protocol support in Treeland")
@@ -133,6 +141,29 @@ if(NOT COMMAND waylib_generate_qtwayland_server_protocol)
 endif()
 if(NOT IS_ABSOLUTE "${WaylibShared_QML_IMPORT_DIR}")
     message(FATAL_ERROR "WaylibShared must provide its absolute QML import directory")
+endif()
+
+
+if(NOT DISABLE_XWAYLAND)
+    include(CMakePushCheckState)
+    include(CheckCXXSourceCompiles)
+    cmake_push_check_state(RESET)
+    set(CMAKE_REQUIRED_LIBRARIES WaylibShared::SharedServer)
+    unset(TREELAND_SYSTEM_WAYLIB_HAS_XWAYLAND CACHE)
+    check_cxx_source_compiles("
+#include <wglobal.h>
+#ifdef DISABLE_XWAYLAND
+#error Installed Waylib has no Xwayland support
+#endif
+int main() { return 0; }
+" TREELAND_SYSTEM_WAYLIB_HAS_XWAYLAND)
+    cmake_pop_check_state()
+    if(NOT TREELAND_SYSTEM_WAYLIB_HAS_XWAYLAND)
+        message(FATAL_ERROR
+            "WaylibShared does not support Xwayland. Configure with "
+            "-DDISABLE_XWAYLAND=ON or use an Xwayland-enabled package. "
+            "See the configure log for the probe error.")
+    endif()
 endif()
 
 set(LOCAL_QML_IMPORT_PATH "${QML_IMPORT_PATH}")

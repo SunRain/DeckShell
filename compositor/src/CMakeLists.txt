@@ -27,8 +27,10 @@ pkg_search_module(PIXMAN REQUIRED IMPORTED_TARGET pixman-1)
 pkg_search_module(WAYLAND REQUIRED IMPORTED_TARGET wayland-server)
 pkg_search_module(LIBINPUT REQUIRED IMPORTED_TARGET libinput)
 pkg_search_module(XCB REQUIRED IMPORTED_TARGET xcb)
-pkg_search_module(XCB_RANDR REQUIRED IMPORTED_TARGET xcb-randr)
-if (NOT DISABLE_DDM)
+if(NOT DISABLE_XWAYLAND)
+    pkg_search_module(XCB_RANDR REQUIRED IMPORTED_TARGET xcb-randr)
+endif()
+if(NOT DISABLE_DDM)
     pkg_check_modules(PAM REQUIRED IMPORTED_TARGET pam)
 endif()
 pkg_check_modules(Systemd REQUIRED IMPORTED_TARGET libsystemd)
@@ -111,6 +113,9 @@ dtk_add_config_to_cpp(
 )
 
 qt_add_library(libdeckcompositor SHARED)
+target_compile_definitions(libdeckcompositor PUBLIC
+    $<$<BOOL:${DISABLE_XWAYLAND}>:DISABLE_XWAYLAND>
+)
 
 set_target_properties(libdeckcompositor PROPERTIES
     OUTPUT_NAME "deckcompositor"
@@ -269,14 +274,14 @@ qt_add_qml_module(libdeckcompositor
         workspace/workspaceanimationcontroller.h
         workspace/workspacemodel.cpp
         workspace/workspacemodel.h
-        xsettings/abstractsettings.h
-        xsettings/abstractsettings.cpp
-        xsettings/xsettings.h
-        xsettings/xsettings.cpp
-        xsettings/xresource.h
-        xsettings/xresource.cpp
-        xsettings/settingmanager.h
-        xsettings/settingmanager.cpp
+        $<$<NOT:$<BOOL:${DISABLE_XWAYLAND}>>:xsettings/abstractsettings.h>
+        $<$<NOT:$<BOOL:${DISABLE_XWAYLAND}>>:xsettings/abstractsettings.cpp>
+        $<$<NOT:$<BOOL:${DISABLE_XWAYLAND}>>:xsettings/xsettings.h>
+        $<$<NOT:$<BOOL:${DISABLE_XWAYLAND}>>:xsettings/xsettings.cpp>
+        $<$<NOT:$<BOOL:${DISABLE_XWAYLAND}>>:xsettings/xresource.h>
+        $<$<NOT:$<BOOL:${DISABLE_XWAYLAND}>>:xsettings/xresource.cpp>
+        $<$<NOT:$<BOOL:${DISABLE_XWAYLAND}>>:xsettings/settingmanager.h>
+        $<$<NOT:$<BOOL:${DISABLE_XWAYLAND}>>:xsettings/settingmanager.cpp>
 
     QML_FILES
         core/qml/SourceOutput.qml
@@ -470,7 +475,7 @@ target_link_libraries(libdeckcompositor
         PkgConfig::WAYLAND
         PkgConfig::LIBINPUT
         PkgConfig::XCB
-        PkgConfig::XCB_RANDR
+        $<$<NOT:$<BOOL:${DISABLE_XWAYLAND}>>:PkgConfig::XCB_RANDR>
         $<$<NOT:$<BOOL:${DISABLE_DDM}>>:DDM::Common>
         $<$<NOT:$<BOOL:${DISABLE_DDM}>>:PkgConfig::PAM>
         $<$<NOT:$<BOOL:${DISABLE_DDM}>>:PkgConfig::Systemd>
@@ -521,16 +526,18 @@ install(TARGETS treeland-sd RUNTIME DESTINATION "${CMAKE_INSTALL_LIBEXECDIR}")
 
 ## XWayland wrapper
 
-pkg_check_modules(LIBXAU REQUIRED IMPORTED_TARGET "xau")
+if (NOT DISABLE_XWAYLAND)
+    pkg_check_modules(LIBXAU REQUIRED IMPORTED_TARGET "xau")
 
-qt_add_executable(treeland-xwayland
-    xwayland.cpp
-)
+    qt_add_executable(treeland-xwayland
+        xwayland.cpp
+    )
 
-target_link_libraries(treeland-xwayland
-    PRIVATE
-        Qt6::Core
-        PkgConfig::LIBXAU
-)
+    target_link_libraries(treeland-xwayland
+        PRIVATE
+            Qt6::Core
+            PkgConfig::LIBXAU
+    )
 
-install(TARGETS treeland-xwayland RUNTIME DESTINATION "${CMAKE_INSTALL_LIBEXECDIR}")
+    install(TARGETS treeland-xwayland RUNTIME DESTINATION "${CMAKE_INSTALL_LIBEXECDIR}")
+endif()

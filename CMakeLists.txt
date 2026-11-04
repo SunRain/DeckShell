@@ -63,6 +63,7 @@ endif()
 # set(QT_QML_GENERATE_QMLLS_INI ON)
 
 option(TREELAND_INSTALL_DEV "Install development files (headers, CMake config, pkg-config, .so symlinks)" OFF)
+option(DISABLE_XWAYLAND "Disable the xwayland support" OFF)
 option(WITH_SUBMODULE_WAYLIB "Build Waylib from the git submodule for development" OFF)
 add_feature_info(submodule_waylib WITH_SUBMODULE_WAYLIB
     "Build Waylib from the git submodule instead of its installed package")

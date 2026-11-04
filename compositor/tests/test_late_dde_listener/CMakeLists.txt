@@ -86,5 +86,9 @@ target_link_libraries(test_late_dde_listener
 add_test(NAME test_late_dde_listener COMMAND test_late_dde_listener)
 set_tests_properties(test_late_dde_listener PROPERTIES
     TIMEOUT 60
-    ENVIRONMENT "DSG_DATA_DIRS=${CMAKE_BINARY_DIR}/compositor/tests/protocols/dsg:/usr/share/dsg;TREELAND_PROTOCOL_TEST_DSG_DIR=${CMAKE_BINARY_DIR}/compositor/tests/protocols/dsg;WLR_XWAYLAND=$<TARGET_FILE:treeland-xwayland>"
+    ENVIRONMENT "DSG_DATA_DIRS=${CMAKE_BINARY_DIR}/compositor/tests/protocols/dsg:/usr/share/dsg;TREELAND_PROTOCOL_TEST_DSG_DIR=${CMAKE_BINARY_DIR}/compositor/tests/protocols/dsg"
 )
+if(NOT DISABLE_XWAYLAND)
+    set_property(TEST test_late_dde_listener APPEND PROPERTY ENVIRONMENT
+        "WLR_XWAYLAND=$<TARGET_FILE:treeland-xwayland>")
+endif()

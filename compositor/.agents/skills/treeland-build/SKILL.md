@@ -53,8 +53,13 @@ cmake --preset default -DCMAKE_BUILD_TYPE=Debug
 | `BUILD_TREELAND_EXAMPLES` | `OFF` | 示例客户端 |
 | `TREELAND_INSTALL_DEV` | `OFF` | 装开发文件（头文件、CMake config、`.so` 链接） |
 | `DISABLE_DDM` | `OFF` | 关掉 DDM 与 greeter |
+| `DISABLE_XWAYLAND` | `OFF` | 关闭 Treeland/waylib 的 Xwayland 路径，并覆盖 wlroots 的有效 `WLROOTS_XWAYLAND` 为 `OFF`；不构建 Xwayland helper、xwindow-control 模块及其测试 |
 | `EXT_SESSION_LOCK_V1` | `ON` | 用 ext-session-lock 作为 DDM 之外的锁屏方案 |
 | `USE_BUILD_TREE_WALLPAPER_FACTORY` | `OFF` | 直接用构建树里的 wallpaper factory |
+
+使用系统 Waylib（`WITH_SUBMODULE_WAYLIB=OFF`）时，若其没有 Xwayland 支持，必须同时设置 `DISABLE_XWAYLAND=ON`；配置阶段会编译探测系统头文件，提前拒绝特性不匹配的组合。探测失败的其他原因见 CMake configure 日志。
+
+直接覆盖安装时，从启用 Xwayland 切换到禁用会清理本项目先前安装的 Xwayland user units、wants 链接和 drop-in；清理遵守 `DESTDIR`，不会删除 `/etc` 中的用户覆盖配置。安装后需重新加载对应的 systemd user manager（`systemctl --user daemon-reload`）；当前已启动的 helper 会在会话重启后退出。
 
 DeckShell 的 WaylibShared 和其中的 wlroots 都是真实 Git 子模块；依赖准备、顶层目标名和安装布局以 `../README.md` 为准。两种模式均使用 `WaylibShared::SharedServer`、`WaylibShared::waylib-wlroots` 和 QML URI `WaylibShared.QuickSharedServer 1.0`。
 
@@ -102,6 +107,6 @@ sudo systemctl daemon-reload
 ## 常见问题
 1. 私有协议 package 缺失：使用 DeckShell 顶层构建，或提供本地 `DeckCompositorProtocols` package；XML 来自 `../protocols/compositor/`，不改用系统 `TreelandProtocols`。
 2. 装完发现二进制在 `/usr/local/bin` 而 unit 在 `/usr/lib/systemd/system`：前缀给晚了。systemd 目录是 pkg-config 的绝对路径，跟前缀无关，重来一次 configure（见铁律）。
-3. 新增目录或改了 `CMakeLists.txt` 后新 target 不出现：重新 configure，`cmake --build` 不会重新生成工程。
+3. 新增目录或改了 `CMakeLists.txt` 后新 target 不出现：重新 configure；正常的 `cmake --build` 会自动触发 CMake 重新生成，但新增 target 的 IDE 缓存或直接指定新 target 的构建入口可能仍需手动 configure。
 4. `-Werror` 报错但不确定是不是自己引入的：`cmake --preset ci` 复现；只用 `default` 编译会漏掉这类告警。
 5. 运行的是刚装的版本还是构建树里的版本：构建树里跑 `./build/src/treeland.sh`，装好的走 `treeland.sh`，两者调试 socket 与日志去向不同，见 `treeland-debug` skill。

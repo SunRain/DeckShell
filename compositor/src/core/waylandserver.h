@@ -10,7 +10,9 @@
 #include "modules/wallpaper/wallpapermanagerinterfacev1.h"
 #include "modules/wallpaper/wallpapernotifierinterfacev1.h"
 #include "modules/show-desktop/showdesktopinterfacev1.h"
+#ifndef DISABLE_XWAYLAND
 #include "modules/xwindow-control/xwindowcontrolinterfacev1.h"
+#endif
 #include "utils/fpsdisplaymanager.h"
 
 #include <xcb/xproto.h>
@@ -70,7 +72,9 @@ class WSurfaceItem;
 class WToplevelSurface;
 class WXdgDecorationManager;
 class WXdgOutputManager;
+#ifndef DISABLE_XWAYLAND
 class WXWayland;
+#endif
 class WPointerConstraintsV1;
 
 class WForeignToplevel;
@@ -116,7 +120,6 @@ class DecorationManagerInterfaceV1;
 class RootSurfaceContainer;
 class ScreensaverInterfaceV2;
 class SessionManager;
-class SettingManager;
 class SessionModel;
 class ShellHandler;
 class ShellActionExecutor;
@@ -212,7 +215,9 @@ public:
     Q_INVOKABLE void addOutput();
 
     void addSocket(WSocket *socket);
+#ifndef DISABLE_XWAYLAND
     [[nodiscard]] WXWayland *createXWayland();
+#endif
 
     WSeat *seat() const;
 
@@ -291,7 +296,9 @@ public:
     void restoreFromShowDesktop(SurfaceWrapper *activeSurface = nullptr);
     void restoreShowDesktopFocus();
 
+#ifndef DISABLE_XWAYLAND
     bool setXWindowPositionRelative(uint wid, WSurface *anchor, wl_fixed_t dx, wl_fixed_t dy) const;
+#endif
     SeatManager *seatManager() const;
 
     WSeat *getSeatForEvent(QInputEvent *event) const;
@@ -414,7 +421,9 @@ private:
     AppearanceManagerInterfaceV1 *m_appearanceManagerInterfaceV1 = nullptr;
     CompositorActionInterfaceV1 *m_compositorActionInterfaceV1 = nullptr;
     WallpaperColorInterfaceV1 *m_wallpaperColorV1 = nullptr;
+#ifndef DISABLE_XWAYLAND
     XWindowControlInterfaceV1 *m_xWindowControlInterfaceV1 = nullptr;
+#endif
     DDEShellManagerInterfaceV1 *m_ddeShellV1 = nullptr;
     DDEShellManagerInterfaceV2 *m_ddeShellV2 = nullptr;
     DDMInterfaceV1 *m_ddmInterfaceV1 = nullptr;

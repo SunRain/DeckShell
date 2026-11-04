@@ -59,7 +59,6 @@ Q_SIGNALS:
                                    WSurface *target,
                                    QPoint abs,
                                    PreviewDirection direction);
-    void requestDockHideTooltip();
     void requestDockClose();
 
 protected:

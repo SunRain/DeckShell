@@ -247,6 +247,8 @@ qt_add_qml_module(libdeckcompositor
         utils/loginddbustypes.cpp
         utils/fpsdisplaymanager.cpp
         utils/fpsdisplaymanager.h
+        utils/graphicsplatform.cpp
+        utils/graphicsplatform.h
         utils/scriptrunner.cpp
         utils/scriptrunner.h
         wallpaper/wallpapersurface.h

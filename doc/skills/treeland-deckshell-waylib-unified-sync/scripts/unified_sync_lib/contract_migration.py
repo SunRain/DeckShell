@@ -33,6 +33,18 @@ PARENT_INTEGRATION_FILES = frozenset({
     "protocols/compositor/xml/treeland-show-desktop-unstable-v1.xml",
     "protocols/compositor/xml/treeland-foreign-toplevel-manager-v1.xml",
     "protocols/compositor/xml/treeland-foreign-toplevel-manager-unstable-v2.xml",
+    "protocols/compositor/xml/treeland-layer-shell-extension-unstable-v1.xml",
+    "protocols/compositor/xml/treeland-xwindow-control-unstable-v1.xml",
+    "protocols/compositor/xml/treeland-appearance-unstable-v1.xml",
+    "protocols/compositor/xml/treeland-appearance-manager-unstable-v1.xml",
+    "protocols/compositor/xml/treeland-decoration-unstable-v1.xml",
+    "protocols/compositor/xml/treeland-active-notify-unstable-v1.xml",
+    "protocols/compositor/xml/treeland-region-watch-unstable-v1.xml",
+    "protocols/compositor/xml/treeland-compositor-action-unstable-v1.xml",
+    "protocols/compositor/xml/treeland-snap-target-unstable-v1.xml",
+    "protocols/compositor/xml/treeland-dde-shell-unstable-v2.xml",
+    "protocols/compositor/xml/treeland-input-manager-unstable-v1.xml",
+    "protocols/compositor/xml/treeland-dde-shell-v1.xml",
 })
 
 

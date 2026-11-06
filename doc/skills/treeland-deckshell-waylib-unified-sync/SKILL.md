@@ -165,7 +165,7 @@ fi
 
 decisions 根对象只能包含 `entries`；每个来源 SHA 下仅允许实际拥有的 `wlroots`/`child`/`parent` lane。默认 C 的 `structural_paths` 只可精确声明 `CMakeLists.txt`，并提供逐路径适配证明；新增 wrapper 合同还要 `contract_additions`。不是任意根文件白名单。
 
-调用者另行明确授权公共合同迁移时，使用 [显式迁移审批](references/evidence-schema.md#显式公共合同迁移)，不能把 `contract_additions` 当成删除或替换旧 API 的授权。`contract_migration` 必须绑定当前来源、同一 refs_doc、相邻源码快照和完整批准差异；只允许 adapted C/P lane。必要的本地包配置、既有 consumer 和 P 测试调用方及现有 `compositor/src/CMakeLists.txt` 运行时安装入口，以及已授权 scanner/协议迁移的 P 根 `CMakeLists.txt`、`qtwaylandscanner/CMakeLists.txt`、`qtwaylandscanner/qtwaylandscanner.cpp`、`protocols/compositor/CMakeLists.txt` 和 `protocols/compositor/xml/treeland-remote-subsurface-unstable-v1.xml`可逐文件声明 `structural_paths`，仍须证明补丁投影；不改 inventory、不放行任意生产路径或通配目录。没有迁移审批的运行保持原有严格行为。
+调用者另行明确授权公共合同迁移时，使用 [显式迁移审批](references/evidence-schema.md#显式公共合同迁移)，不能把 `contract_additions` 当成删除或替换旧 API 的授权。`contract_migration` 必须绑定当前来源、同一 refs_doc、相邻源码快照和完整批准差异；只允许 adapted C/P lane。必要的本地包配置、既有 consumer 和 P 测试调用方及现有 `compositor/src/CMakeLists.txt` 运行时安装入口，以及已授权 scanner/协议迁移的 P 根 `CMakeLists.txt`、`qtwaylandscanner/CMakeLists.txt`、`qtwaylandscanner/qtwaylandscanner.cpp`、`protocols/compositor/CMakeLists.txt` 和 [受控 XML 精确清单](references/evidence-schema.md#已授权的受控协议-xml-迁移) 中的文件可逐文件声明 `structural_paths`，仍须用户批准固定协议来源并证明补丁投影；不改 inventory、不放行任意生产路径或通配目录。没有迁移审批的运行保持原有严格行为。
 
 另获调用者明确批准时，既有 `compositor/src/core/qml/PrelaunchSplash.qml` 可作为精确 QML 集成路径，仅修正为已约定的 `WaylibShared.QuickSharedServer 1.0` 导入。仍须绑定具体来源审批和逐路径补丁证明；这不是整个 QML 目录的授权，不创建旧 URI 兼容模块。
 

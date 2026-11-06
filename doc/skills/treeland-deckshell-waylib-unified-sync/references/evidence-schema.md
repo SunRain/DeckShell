@@ -79,7 +79,7 @@ additions 精确覆盖全部 drift.added；旧值不得删除、重命名或改�
 
 `drift` 必须是从真实快照生成、逐项审核后的完整变化，不能只列字段名或填空对象忽略变化。源码审计保留实际 drift，并在有审批时增加 `approved_migration`；C manifest 同时记录审批工件。默认缺省字段不改变旧审计结构或规则。
 
-集成路径只能是具体文件：C 的根 `CMakeLists.txt`、既有 `test_project/` 调用方或 `waylib/src/cmake/` 本地包配置；P 的既有 `compositor/tests/` 调用方，以及唯一现有运行时安装入口 `compositor/src/CMakeLists.txt`。运行时入口用于补齐原生库依赖；已授权 scanner/协议迁移另可精确登记 P 根 `CMakeLists.txt`、`qtwaylandscanner/CMakeLists.txt`、`qtwaylandscanner/qtwaylandscanner.cpp`、`protocols/compositor/CMakeLists.txt` 和 `protocols/compositor/xml/treeland-remote-subsurface-unstable-v1.xml`，用于迁移工具与安装冻结的 Git 协议输入。不授权其他生产文件、协议 XML 或 CMake 目录。禁止通配、路径穿越和任意 P 生产文件。decision 的列表必须与当前来源审批对应 lane 完全一致，按顺序追加到普通 inventory 目标后，并逐路径提供 adapted 证明。P evidence 的 `target_paths` 仍表示规范来源目标，附加路径从审批读取；两个 verifier 都验证实际 type/mode/blob，不只接受消息标记。
+集成路径只能是具体文件：C 的根 `CMakeLists.txt`、既有 `test_project/` 调用方或 `waylib/src/cmake/` 本地包配置；P 的既有 `compositor/tests/` 调用方，以及唯一现有运行时安装入口 `compositor/src/CMakeLists.txt`。运行时入口用于补齐原生库依赖；已授权 scanner/协议迁移另可精确登记 P 根 `CMakeLists.txt`、`qtwaylandscanner/CMakeLists.txt`、`qtwaylandscanner/qtwaylandscanner.cpp`、`protocols/compositor/CMakeLists.txt` 和 `protocols/compositor/xml/treeland-remote-subsurface-unstable-v1.xml`，用于迁移工具与安装冻结的 Git 协议输入。已授权 scanner/协议迁移可使用文末受控 XML 清单中的精确文件，不能扩展到未列出的协议或 CMake 目录。禁止通配、路径穿越和任意 P 生产文件。decision 的列表必须与当前来源审批对应 lane 完全一致，按顺序追加到普通 inventory 目标后，并逐路径提供 adapted 证明。P evidence 的 `target_paths` 仍表示规范来源目标，附加路径从审批读取；两个 verifier 都验证实际 type/mode/blob，不只接受消息标记。
 
 单独获准的 QML 导入修正另有一个精确例外：既有 `compositor/src/core/qml/PrelaunchSplash.qml` 可在对应来源的 `structural_paths.parent` 中登记，仅将导入映射为既定 `WaylibShared.QuickSharedServer 1.0`。无审批仍拒绝；不放行 QML 目录或其他生产文件，也不豁免实际补丁内容验证。
 
@@ -178,3 +178,20 @@ remote-subsurface 的独立来源范围、配套回放、审查和真实交互�
 ## 已授权的受控协议 XML 迁移
 
 显式来源审批可精确登记 P `protocols/compositor/xml/` 下的 app-id-resolver v1→unstable-v2、prelaunch-splash v2→unstable-v2、screensaver v1→unstable-v2、wallpaper-shell、Wine 两项协议、window-management→show-desktop 和 foreign-toplevel v1→unstable-v2 文件，以及既有 remote-subsurface。旧文件删除与新文件创建分别留逐路径证明；未经审批仍拒绝，不能用此清单放行任意 XML、目录或通配路径。
+
+Treeland 0.10.0 → 0.11.0 的限定协议集成另支持以下文件名，均位于上述 P XML 目录：
+
+- `treeland-layer-shell-extension-unstable-v1.xml`
+- `treeland-xwindow-control-unstable-v1.xml`
+- `treeland-appearance-unstable-v1.xml`
+- `treeland-appearance-manager-unstable-v1.xml`
+- `treeland-decoration-unstable-v1.xml`
+- `treeland-active-notify-unstable-v1.xml`
+- `treeland-region-watch-unstable-v1.xml`
+- `treeland-compositor-action-unstable-v1.xml`
+- `treeland-snap-target-unstable-v1.xml`
+- `treeland-dde-shell-unstable-v2.xml`
+- `treeland-input-manager-unstable-v1.xml`
+- `treeland-dde-shell-v1.xml`
+
+清单只定义工具能够验证的路径；每轮仍需用户批准固定协议来源和实际集成范围，审批绑定具体实现提交、相邻快照、完整 drift 与逐路径补丁。只批准协议集成不等于批准 Waylib 包名、导出目标、namespace 或安装布局迁移。

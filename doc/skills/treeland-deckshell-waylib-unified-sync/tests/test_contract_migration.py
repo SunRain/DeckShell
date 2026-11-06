@@ -87,8 +87,8 @@ class ContractMigrationTests(unittest.TestCase):
     def _prepare_parent(self, runtime_install, protocol_integration, prelaunch_import):
         """Prepare only the explicitly selected integration paths."""
         parent = add_worktree(self.parent, self.root / "p-preview", "p-preview", self.pb)
-        changes = {"compositor/src/app.cpp": "native app\n",
-                   "compositor/tests/local.cpp": "native fixture\n"}
+        changes: dict[str, str | None] = {"compositor/src/app.cpp": "native app\n",
+                                         "compositor/tests/local.cpp": "native fixture\n"}
         parent_paths = ["compositor/tests/local.cpp"]
         if runtime_install:
             changes["compositor/src/CMakeLists.txt"] = (
@@ -112,6 +112,18 @@ class ContractMigrationTests(unittest.TestCase):
                          "protocols/compositor/xml/treeland-show-desktop-unstable-v1.xml",
                          "protocols/compositor/xml/treeland-foreign-toplevel-manager-v1.xml",
                          "protocols/compositor/xml/treeland-foreign-toplevel-manager-unstable-v2.xml",
+                         "protocols/compositor/xml/treeland-layer-shell-extension-unstable-v1.xml",
+                         "protocols/compositor/xml/treeland-xwindow-control-unstable-v1.xml",
+                         "protocols/compositor/xml/treeland-appearance-unstable-v1.xml",
+                         "protocols/compositor/xml/treeland-appearance-manager-unstable-v1.xml",
+                         "protocols/compositor/xml/treeland-decoration-unstable-v1.xml",
+                         "protocols/compositor/xml/treeland-active-notify-unstable-v1.xml",
+                         "protocols/compositor/xml/treeland-region-watch-unstable-v1.xml",
+                         "protocols/compositor/xml/treeland-compositor-action-unstable-v1.xml",
+                         "protocols/compositor/xml/treeland-snap-target-unstable-v1.xml",
+                         "protocols/compositor/xml/treeland-dde-shell-unstable-v2.xml",
+                         "protocols/compositor/xml/treeland-input-manager-unstable-v1.xml",
+                         "protocols/compositor/xml/treeland-dde-shell-v1.xml",
                          ):
                 changes[path] = "reviewed scanner/protocol integration\n"
                 parent_paths.append(path)
@@ -292,6 +304,8 @@ class ContractMigrationTests(unittest.TestCase):
                            ("parent", "compositor/src/core/qml/Other.qml"),
                            ("parent", "compositor/src/core/qml/PrelaunchSplash.qml.bak"),
                            ("parent", "protocols/compositor/xml/unrelated.xml"),
+                           ("parent", "protocols/compositor/xml/treeland-dde-shell-unstable-v3.xml"),
+                           ("parent", "protocols/compositor/xml/treeland-input-manager-unstable-v1.xml.bak"),
                            ("parent", "qtwaylandscanner/unrelated.cpp"),
                            ("parent", "/tmp/caller.cpp")]:
             with self.subTest(lane=lane, path=path):

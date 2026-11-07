@@ -9,7 +9,9 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 
 from protocol_fixture import IMPLEMENTATION, UPSTREAM_XML, XML, ProtocolFixture
-from support import commit_files
+from records_fixture import RecordsFixture
+from support import commit_files, run
+from unified_sync_lib.git_ops import run_git
 from unified_sync_lib.record_context import make_context
 from unified_sync_lib.record_special import special_rows
 from unified_sync_lib.record_special_render import special_document
@@ -26,6 +28,7 @@ class RecordSpecialTests(unittest.TestCase):
         commit_files(f.source, {IMPLEMENTATION: "// renamed_v1 implementation\n"}, "rename implementation")
         commit_files(f.protocol, {UPSTREAM_XML: XML.replace("manager_v1", "renamed_v1")}, "rename wire")
         self.request = f.request()
+        self.request.refs_doc = "plans/record.md"
         self.manifest = run_replay(self.request)
         self.context = make_context(f.source, self.request.parent_worktree, self.request.child_worktree,
                                     None, "sample", self.root, "history/sample", None)
@@ -44,6 +47,45 @@ class RecordSpecialTests(unittest.TestCase):
             self.assertIn("renamed_v1", text)
             self.assertIn("manifest.json#protocol_update", text)
         self.assertEqual(rows["parent"][0]["transition"]["to"], rows["child"][0]["target"])
+
+    def rewrite(self):
+        helper = RecordsFixture.__new__(RecordsFixture)
+        helper.root = self.root
+        helper.repos = self.context.repos
+        helper.active_r = False
+        helper.bases = {lane: getattr(self.request, lane + "_base") for lane in helper.repos}
+        helper.manifest = self.manifest
+        path, _ = helper.rewrite()
+        self.context = make_context(self.fixture.source, self.request.parent_worktree,
+                                    self.request.child_worktree, None, "sample", self.root, "history/sample", path)
+        return path
+
+    def test_companion_rewrite_keeps_original_delta_and_maps_dependency(self):
+        self.rewrite()
+        rows = special_rows(self.context, self.node)
+        for lane in ("child", "parent"):
+            row = rows[lane][0]
+            self.assertNotEqual(row["old"], row["target"])
+            self.assertEqual(row["target"], self.context.target(lane, row["old"]))
+            text = special_document(self.context, row, 1)
+            self.assertIn(row["old"], text)
+            self.assertIn(row["target"], text)
+            self.assertIn("原目标", text)
+
+    def test_companion_rewrite_cannot_hide_source_changes(self):
+        self.rewrite()
+        lane, repo = "child", self.request.child_worktree
+        old = self.manifest["protocol_update"][lane]["head"]
+        new = self.context.target(lane, old)
+        assert new is not None
+        tree = run(repo, "rev-parse", new + "^{tree}")
+        raw = run_git(repo, "cat-file", "commit", new, text=False)
+        wrong_tree = run(repo, "rev-parse", self.request.child_base + "^{tree}")
+        bad = run_git(repo, "hash-object", "-t", "commit", "-w", "--stdin",
+                      input_data=raw.replace(tree.encode(), wrong_tree.encode(), 1), text=False).decode().strip()
+        self.context.history[lane]["mapping"][old] = bad
+        with self.assertRaisesRegex(ValueError, "普通文件变化"):
+            special_rows(self.context, self.node)
 
     def test_wrong_companion_pair_fails_before_rendering(self):
         manifest = copy.deepcopy(self.manifest)

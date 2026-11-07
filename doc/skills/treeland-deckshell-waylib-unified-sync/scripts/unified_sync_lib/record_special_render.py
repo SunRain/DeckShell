@@ -7,13 +7,14 @@ from .record_git import entries
 def special_document(context, row, index):
     """为真实特殊目标展示逐路径 Git 增量和原说明，不制造上游来源。"""
     from .record_render import block, code
-    repo, head, base = context.repos[row["lane"]], row["target"], row["base"]
+    repo, head, base = context.repos[row["lane"]], row["old"], row["base"]
     lines = [f"# {row['kind']}：{row['subject']}", "", f"- 类型：{row['kind']}；不属于普通 Treeland 来源映射。",
-             f"- 直接父提交：{code(base)}；本仓目标：{code(head)}。",
+             f"- 原直接父提交：{code(base)}；原目标：{code(head)}。",
+             f"- 本仓直接父提交：{code(context.target(row['lane'], base))}；本仓目标：{code(row['target'])}。",
              f"- [本仓总记录](../summary.md#entry-{index})。", "", "## 原依据与取舍", ""]
     lines += ["- " + code(context.portable(note)) for note in row["notes"] if note]
     lines += ["- " + context.external(row["node_path"], path) for path in row["evidence_locations"]]
-    lines += ["", "原授权说明适用于其列出的修复范围；下列逐路径增量来自真实 Git，不从主题推测额外理由。", ""]
+    lines += ["", "原授权说明适用于其列出的修复范围；下列逐路径增量来自原 Git 对象；整理后的普通文件不变，派生 gitlink 按映射核对。", ""]
     before, after = entries(repo, base), entries(repo, head)
     for path in row["paths"]:
         diff = str(run_git(repo, "diff", "--no-ext-diff", "--no-textconv", "--no-renames", "--unified=0", base, head, "--", path))

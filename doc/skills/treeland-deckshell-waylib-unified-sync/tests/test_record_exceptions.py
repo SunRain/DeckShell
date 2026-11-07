@@ -48,19 +48,39 @@ class RecordExceptionTests(unittest.TestCase):
                                     "drm_behavior_proven": False, "exit_code": 0,
                                     **{"tests_" + k: v for k, v in parsed["tests"].items()}}}
 
-    def read(self, closeout=None):
+    def read(self, closeout=None, context=None):
         bundle = {key: write_artifact(self.root, key + ".json", json.dumps(value).encode())
                   for key, value in {"skip_authorization": self.auth, "inventory": self.inventory,
                                      "manifest": self.manifest, "validations": self.validation}.items()}
-        return exception_record(SimpleNamespace(batch="sample"), {"name": "N1"}, self.root,
+        return exception_record(context or SimpleNamespace(batch="sample"), {"name": "N1"}, self.root,
                                 {"skip_exception": bundle}, self.inventory, self.manifest,
                                 self.validation, {"outcome": "pass"} if closeout is None else closeout)
 
     def test_original_fail_and_exact_skip_are_not_rewritten_to_pass(self):
         result = self.read()
+        assert result is not None
         self.assertEqual(self.entry["outcome"], "fail")
         self.assertFalse(result["authorization"]["acceptance"]["drm_behavior_proven"])
         check_accepted_results({}, {"sample": {"outcome": "pass"}}, self.validation, result)
+
+    def test_exact_legacy_root_and_relative_label_remain_readable(self):
+        context = SimpleNamespace(batch="sample", evidence_root=self.root,
+                                  evidence_label=".helloagents/plans/sample")
+        for value in (str(self.root / "plan.md"), ".helloagents/plans/sample/plan.md"):
+            with self.subTest(value=value):
+                self.manifest["identity"]["refs_doc"] = value
+                self.entry["manifest_sha256"] = canonical_json_sha256(self.manifest)
+                result = self.read(context=context)
+                assert result is not None
+                self.assertFalse(result["authorization"]["acceptance"]["drm_behavior_proven"])
+                self.assertEqual(self.manifest["identity"]["refs_doc"], value)
+
+    def test_unrelated_absolute_plan_is_rejected(self):
+        self.manifest["identity"]["refs_doc"] = str(self.root / "other/plan.md")
+        self.entry["manifest_sha256"] = canonical_json_sha256(self.manifest)
+        with self.assertRaisesRegex(ValueError, "方案身份"):
+            self.read(context=SimpleNamespace(batch="sample", evidence_root=self.root,
+                                             evidence_label=".helloagents/plans/sample"))
 
     def test_different_node_authorization_is_rejected(self):
         self.auth["node"] = "N2"

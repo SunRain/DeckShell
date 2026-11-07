@@ -45,4 +45,4 @@ protocol_tracking:
 
 artifact_root: /srv/sync-artifacts/treeland-unified/2026-09-07
 run_id: treeland-unified-20260907-001
-refs_doc: /srv/sync-artifacts/treeland-unified/2026-09-07/refs.md
+refs_doc: .helloagents/plans/treeland-unified-20260907/plan.md # 外层工作区相对标识

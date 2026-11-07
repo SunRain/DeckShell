@@ -24,6 +24,7 @@ from .replay_types import GITLINK_PATH, ReplayBlocked, ReplayRequest
 from .schema import LANE_ACTIONS, inventory_errors
 from .wlroots import frozen_wlroots_identity
 from .protocol_update import freeze_protocol_update
+from .refs import relative_reference
 
 
 TRACE_TRAILER = re.compile(r"(?m)^Treeland-Commit: ([0-9a-f]{40})$")
@@ -45,8 +46,10 @@ def _message_metadata_errors(request: ReplayRequest) -> List[str]:
     errors: List[str] = []
     if not isinstance(request.run_id, str) or not RUN_ID.fullmatch(request.run_id):
         errors.append("run-id must be a safe single-line identifier")
-    if not _single_line(request.refs_doc):
-        errors.append("refs-doc must be a non-empty single-line value")
+    try:
+        relative_reference(request.refs_doc)
+    except ValueError as error:
+        errors.append(str(error))
     if request.gitlink_path != GITLINK_PATH:
         errors.append(f"gitlink path must remain {GITLINK_PATH}")
     return errors
@@ -225,7 +228,8 @@ def _decision_errors(
         if not isinstance(value, dict):
             errors.append(f"decision for {source} must be an object")
             continue
-        permitted = set(allowed_lanes.get(by_source[source].get("classification"), set()))
+        classification = by_source[source].get("classification")
+        permitted = set(allowed_lanes.get(classification, set())) if isinstance(classification, str) else set()
         if by_source[source].get("wlroots", {}).get("included"):
             permitted.add("wlroots")
         errors.extend(
@@ -253,9 +257,9 @@ def _decision_errors(
 
 def _baseline_trace_errors(request: ReplayRequest) -> List[str]:
     expected = {
-        item.get("source_commit")
+        item["source_commit"]
         for item in request.inventory.get("commits", [])
-        if isinstance(item, dict)
+        if isinstance(item, dict) and isinstance(item.get("source_commit"), str)
     }
     errors: List[str] = []
     lanes = [
@@ -263,6 +267,8 @@ def _baseline_trace_errors(request: ReplayRequest) -> List[str]:
         ("child", request.child_worktree, request.child_base),
     ]
     if request.wlroots_worktree is not None:
+        if request.wlroots_base is None:
+            return ["wlroots baseline is required"]
         lanes.append(("wlroots", request.wlroots_worktree, request.wlroots_base))
     for label, repo, base in lanes:
         frozen_base = resolve_commit(repo, base)

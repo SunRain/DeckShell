@@ -9,7 +9,14 @@ from .git_ops import read_json, run_git
 from .local_fixes import local_fix_errors
 from .protocol_update import companion_lane_errors
 from .record_context import LINKS, require
-from .record_git import changed, entries, parent_of, target_message
+from .record_git import (
+    changed,
+    check_rewritten,
+    check_transition,
+    entries,
+    parent_of,
+    target_message,
+)
 
 
 def _row(context, node, lane, kind, record, notes, evidence):
@@ -17,7 +24,7 @@ def _row(context, node, lane, kind, record, notes, evidence):
     require(parent_of(repo, head) == base, "特殊提交不是一个相邻线性提交")
     paths = changed(repo, base, head)
     require(sorted(paths) == sorted(record["paths"]), "特殊提交路径与 Git 不符")
-    require(context.target(lane, head) == head, "特殊提交尚不支持历史改写，不能隐式替换身份")
+    mapped = check_rewritten(context, lane, head)
     require(not any(line.startswith("Treeland-Commit:") for line in target_message(repo, head)),
             "特殊提交不能冒充普通 Treeland 来源")
     transition = None
@@ -25,12 +32,14 @@ def _row(context, node, lane, kind, record, notes, evidence):
         path, lower = LINKS[lane]
         before, after = entries(repo, base).get(path), entries(repo, head).get(path)
         if before != after:
-            require(after is not None and after.startswith("160000 commit "), "特殊提交依赖类型错误")
+            if after is None or not after.startswith("160000 commit "):
+                raise ValueError("特殊提交依赖类型错误")
             target = after.split()[-1]
             run_git(context.repos[lower], "cat-file", "-e", target + "^{commit}")
             transition = {"status": "updated", "from": before.split()[-1] if before else None, "to": target}
+    check_transition(context, lane, head, transition)
     return {"kind": kind, "lane": lane, "node": node["name"], "node_path": node["path"],
-            "source": None, "old": head, "target": head, "base": base,
+            "source": None, "old": head, "target": mapped, "base": base,
             "subject": str(run_git(repo, "show", "-s", "--format=%s", head)).strip(),
             "classification": kind, "action": kind, "content_action": kind,
             "paths": paths, "actual_paths": paths, "drop_paths": [], "structural_paths": [],
@@ -78,7 +87,9 @@ def bridge_rows(context, previous, node, descriptors):
     seen = set()
     for descriptor in descriptors:
         lane = descriptor["lane"]
-        require(previous is not None and lane in context.repos and lane not in seen, "节点间修复归属重复或无前节点")
+        if previous is None:
+            raise ValueError("节点间修复缺少前节点")
+        require(lane in context.repos and lane not in seen, "节点间修复归属重复或无前节点")
         seen.add(lane)
         path = context.node_root(descriptor["path"])
         receipt = read_json(path)
@@ -86,12 +97,12 @@ def bridge_rows(context, previous, node, descriptors):
                 and receipt["kind"].startswith("treeland-")
                 and receipt["kind"].endswith("structural-repair-closeout")
                 and receipt.get("schema_version") == 1, "不支持的节点间接受凭据")
-        require(receipt.get("authorization", "").strip() and receipt.get("changes"), "节点间修复缺少原授权/说明")
+        require(bool(receipt.get("authorization", "").strip() and receipt.get("changes")), "节点间修复缺少原授权/说明")
         base, head = receipt["expected_old"], receipt["new_head"]
         require(base == previous["heads"][lane] and head == node["bases"][lane], "节点间修复端点错配")
         require(receipt.get("source_range") == "none; local structural repair only", "节点间修复冒充来源映射")
         logs = [receipt[key] for key in receipt if key.startswith("verified_") and key != "verified_worktree"]
-        require(logs and all(context.node_root(log).is_file() for log in logs), "节点间修复缺少原验证日志")
+        require(bool(logs) and all(context.node_root(log).is_file() for log in logs), "节点间修复缺少原验证日志")
         repo = context.repos[lane]
         paths = changed(repo, base, head)
         if lane in LINKS:

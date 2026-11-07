@@ -55,6 +55,8 @@ def _decision_artifact(
     errors = artifact_errors(record, request.artifact_root, label)
     if errors:
         raise ReplayBlocked("; ".join(errors))
+    if not isinstance(record, Mapping):
+        raise ReplayBlocked(f"{label} must be an artifact object")
     _path, content = read_verified_artifact(record, request.artifact_root, label)
     return record, content
 
@@ -93,6 +95,8 @@ def wlroots_stage(request: ReplayRequest, item: Mapping[str, Any]):
     record, patch = _write_source_patch(request, source_sha, "wlroots", "source", item["wlroots"]["source_paths"])
     artifacts = {"source_patch": record}
     repo = request.wlroots_worktree
+    if repo is None:
+        raise ReplayBlocked("wlroots replay requires a worktree")
     _apply_file_patch(request, repo, source_sha, "wlroots", action, decision, patch, artifacts)
     paths = set(item["wlroots"]["target_paths"])
     actual = enforce_staged_paths(repo, paths, paths if action == "applied" else set(), f"{source_sha}/wlroots")

@@ -2,6 +2,14 @@
 
 所有同步提交保留来源 author name/email/date。来源完整 message 放在缩进块中，防止来源正文里的同名 trailer 被误解析为本次追溯字段。
 
+## 引用基准与旧证据
+
+新提交的唯一 `Refs:` 保存外层工作区相对方案标识，例如 `.helloagents/plans/<batch>/plan.md`；普通 P/C/R 与协议 companion 共用同一值。路径使用 `/`，不允许绝对路径、盘符、`..`、反斜杠、`~`、控制字符或 `./` 等非规范形式。它是历史资料定位，不是相对 P/C/R 仓库的 Markdown 链接。
+
+运行参数仍由现有路径解析器取得 canonical repo、common Git directory、worktree 和工件路径；实际环境身份、安装路径和原始日志保持原语义。迁移审批中的 `refs_doc` 必须与本次相对值完全一致。历史 manifest、报告和日志中的绝对路径只读兼容，不能批量替换或重算旧证据后声称新 SHA 已验收。
+
+已获授权的消息整理只改顶层 `Refs:` 及生成的下层依赖 SHA，保留来源缩进块、来源 trailer、作者和提交者元数据。协议 companion 保留 `Protocol-Implementation-Commit` / `Treeland-Protocols-Commit`，不制造普通 `Treeland-Commit`。对应内容/拓扑检查见 [旧新映射](repo-records.md#可选旧新映射)。
+
 ## child commit
 
 ```text

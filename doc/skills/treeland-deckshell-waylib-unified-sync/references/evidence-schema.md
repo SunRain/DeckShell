@@ -4,6 +4,10 @@
 
 ## Inventory 与三仓身份
 
+新 `identity.refs_doc` 使用以外层工作区为基准的规范相对标识；审批中的 `refs_doc` 与之完全相同。`source_repo`、worktree、common Git directory 和验证命令的实际路径仍按运行时规范解析并绑定。工件 `{path,size,sha256}` 的 `path` 继续相对各自 `artifact_root`；报告 Markdown artifact 的绝对定位和原始日志保留当前合同，不能把所有 `path` 字段当作同一种对外引用。
+
+旧绝对 `refs_doc` 只在原报告/记录读取中核验，限定为原批次及证据根的方案；不改写原文件、不重算旧授权或报告以绑定新提交。历史消息整理通过单独完整旧新映射说明等价关系，见 [按仓记录](repo-records.md#可选旧新映射)。
+
 `treeland-deckshell-waylib-unified-inventory` 冻结 source_repo、range.base/head/source_tip、ordered_source_commits/ordered_sha256、merge_commits、path_policy.path/sha256、approved_review 和 counts。
 
 `child_owned_roots = [qwlroots, waylib, wlroots]`，`wlroots_owned_root = 3rdparty/wlroots`。每项保存原始 status/old/new、deckshell 的 included/mapped_source_paths/root_source_paths/target_paths/drop_paths、waylib_shared 的 included/source_paths/drop_paths、wlroots 的 included/source_paths/target_paths/drop_paths 和两个 protocol 路径数组。waylib_shared.included 包含 R 引起的依赖变化。

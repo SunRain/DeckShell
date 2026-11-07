@@ -7,7 +7,9 @@ from functools import lru_cache
 from pathlib import Path
 
 from .git_ops import run_git
+from .history_messages import mapped_message
 from .record_context import LINKS, RecordContext, require
+from .refs import relative_reference
 
 
 @lru_cache(maxsize=128)
@@ -40,10 +42,20 @@ def target_message(repo: Path, sha: str) -> list:
 def check_pair(context: RecordContext, lane: str, old: str, source: str, initialization=False) -> str:
     """验证目标来源不变及允许的 gitlink 派生差异。"""
     repo, new = context.repos[lane], context.target(lane, old)
+    if not isinstance(new, str):
+        raise ValueError(f"{lane} 映射目标缺失")
     trailer = "Treeland-Initialization" if initialization else "Treeland-Commit"
     for sha in dict.fromkeys((old, new)):
         values = [line for line in target_message(repo, sha) if line.startswith(trailer + ":")]
         require(values == [f"{trailer}: {source}"], f"{lane} 来源与目标错配：{sha}")
+    return check_rewritten(context, lane, old)
+
+
+def check_rewritten(context: RecordContext, lane: str, old: str) -> str:
+    """核对重写拓扑与文件身份；只允许 Refs 和派生下层引用变化。"""
+    repo, new = context.repos[lane], context.target(lane, old)
+    if not isinstance(new, str):
+        raise ValueError(f"{lane} 映射目标缺失")
     if new == old:
         return new
     require(parent_of(repo, new) == context.target(lane, parent_of(repo, old)), f"{lane} 映射拓扑错误")
@@ -58,10 +70,29 @@ def check_pair(context: RecordContext, lane: str, old: str, source: str, initial
             require(after[path] == f"160000 commit {expected}", f"{lane} 旧新 gitlink 错配")
             after[path] = before[path]
     require(after == before, f"{lane} 历史映射混入普通文件变化")
+    _rewritten_metadata(context, lane, old, new)
     return new
 
 
-def check_transition(context: RecordContext, lane: str, old: str, transition: dict) -> None:
+def _rewritten_metadata(context, lane, old, new):
+    raw = [run_git(context.repos[lane], "cat-file", "commit", sha, text=False)
+           for sha in (old, new)]
+    parts = [value.split(b"\n\n", 1) for value in raw]
+    headers, messages = [part[0] for part in parts], [part[1] for part in parts]
+    stable = [[line for line in header.splitlines() if not line.startswith((b"tree ", b"parent "))]
+              for header in headers]
+    require(stable[0] == stable[1], f"{lane} 历史映射改变了作者或其它提交元数据")
+    old_refs = [line for line in messages[0].decode("utf-8").splitlines() if line.startswith("Refs: ")]
+    new_refs = [line for line in messages[1].decode("utf-8").splitlines() if line.startswith("Refs: ")]
+    require(len(old_refs) == len(new_refs) == 1, f"{lane} 历史映射需要唯一 Refs")
+    new_ref = relative_reference(new_refs[0][6:])
+    lower = LINKS.get(lane, (None, None))[1]
+    mapping = context.history.get(lower, {}).get("mapping", {})
+    expected = mapped_message(messages[0], old_refs[0][6:], new_ref, mapping)
+    require(expected == messages[1], f"{lane} 历史映射改变了来源或非派生消息")
+
+
+def check_transition(context: RecordContext, lane: str, old: str, transition: dict | None) -> None:
     """依赖前后 SHA 必须同时与旧树和新树匹配。"""
     if transition is None:
         return

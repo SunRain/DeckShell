@@ -44,7 +44,7 @@ parent_worktree: <显式 linked worktree>
 child_worktree: <显式 linked worktree>
 artifact_root: <所有 replay worktree 外、非 /tmp 的持久目录>
 run_id: <本次唯一且稳定的标识>
-refs_doc: <持久方案或审计文档路径>
+refs_doc: <以外层工作区为基准的规范相对方案标识，例如 .helloagents/plans/<batch>/plan.md>
 ```
 
 来源涉及 `wlroots/**`、`3rdparty/wlroots/**`，或 C 基线已登记 R 时，以下输入缺一不可：
@@ -69,6 +69,8 @@ protocol_ref: <用户手工输入并可解析的协议 ref 或完整 SHA>
 ```
 
 完整示例见 [unified-sync.example.yaml](examples/unified-sync.example.yaml)。整体范围和关键节点清单记入 `refs_doc`；该 YAML 是输入清单，不是脚本配置文件。公开 CLI 仍逐段接收范围，按 `--help` 调用，不接受清单自动调度参数。
+
+`Refs:` 与 `--evidence-label` 使用外层工作区相对标识；`--plan-dir`、仓库、worktree 和工件目录是运行时路径，相对参数从命令工作目录解析并规范化。新 replay 在创建 journal 前拒绝绝对 `refs_doc`、`..`、反斜杠、控制字符及非规范路径。外层方案标识不承诺 P/C/R 仓内存在该文件；P/C 随仓副本分别位于 `doc/treeland-sync/<batch>/` 与 `docs/treeland-sync/<batch>/`。旧绝对引用仅供原证据只读核验，不用于新 replay 或旧 journal 续写，详见 [提交消息合同](references/commit-messages.md)。
 
 ## 顺序检查清单
 
@@ -417,6 +419,8 @@ closeout 按 R→C→P（R 不适用则 C→P）执行 expected-old CAS。部分
 每段须来源映射齐全、九类结构化门禁（P/C/R verify、两层 gitlink、protocol advisory、protocol pairing、Waylib contract、递归 materialization）通过、必需日志和本段完整报告有效，并完成获准的 closeout。全部冻结关键节点均满足这些条件且下文 `finish` 成功，才可声明包含仓内记录的整批交付完成；普通中间提交不作可构建承诺。R 不适用须由工具核验；隔离 fixture 不代表真实产品验证，远程发布和文档提交另行授权。
 
 ## 12. 正常任务完成：自动交付两仓记录
+
+已获准整理历史时，在下列 `finish` 命令追加 `--history-map "$HISTORY_MAP"`。它只读核对原接受证据、完整旧新拓扑、元数据、消息和派生 gitlink，接受普通及协议配套提交；不把旧报告重新绑定到新 SHA。历史创建、旧头保留及 C→P expected-old 更新按 [历史整理边界](references/repo-records.md#可选旧新映射) 单独执行，不能用普通 closeout 接受改写后的候选。
 
 执行者从当前方案取得原同步批次 ID、整批冻结来源范围、原 evidence 根和原 plan/prd 目录；不让用户重新选择 attempts。`PLAN_DIR` 可为已归档方案；`BATCH_EVIDENCE_ROOT` 仍使用未移动的原证据目录，不扫描其它批次。归并不使用归并方案名新建同步批次，也不 replay 已接受节点。
 

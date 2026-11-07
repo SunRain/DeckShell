@@ -7,9 +7,10 @@ import json
 import os
 import subprocess
 import tempfile
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, List, Mapping, Optional, Sequence, Union
+from typing import Any, Literal, overload
 
 
 class GitError(RuntimeError):
@@ -21,24 +22,42 @@ class Change:
     """One Git name-status record, including both rename/copy sides."""
 
     status: str
-    old_path: Optional[str]
-    new_path: Optional[str]
+    old_path: str | None
+    new_path: str | None
 
 
-def changed_paths(change: Change) -> List[str]:
+def changed_paths(change: Change) -> list[str]:
     """复制只改变目标侧；重命名的两侧都属于实际变更。"""
 
     sides = (change.new_path,) if change.status.startswith("C") else (change.old_path, change.new_path)
     return [path for path in sides if path is not None]
 
 
+@overload
+def run_git(repo: Path, *args: str, text: Literal[True] = True,
+            input_data: str | bytes | None = None,
+            env: Mapping[str, str] | None = None) -> str: ...
+
+
+@overload
+def run_git(repo: Path, *args: str, text: Literal[False],
+            input_data: str | bytes | None = None,
+            env: Mapping[str, str] | None = None) -> bytes: ...
+
+
+@overload
+def run_git(repo: Path, *args: str, text: bool,
+            input_data: str | bytes | None = None,
+            env: Mapping[str, str] | None = None) -> str | bytes: ...
+
+
 def run_git(
     repo: Path,
     *args: str,
     text: bool = True,
-    input_data: Optional[Union[str, bytes]] = None,
-    env: Optional[Mapping[str, str]] = None,
-) -> Union[str, bytes]:
+    input_data: str | bytes | None = None,
+    env: Mapping[str, str] | None = None,
+) -> str | bytes:
     """Run Git with an argument array and return stdout."""
 
     command = ["git", "-C", str(repo), *args]
@@ -112,13 +131,13 @@ def common_git_dir(repo: Path) -> Path:
     return _resolved_git_path(repo, str(run_git(repo, "rev-parse", "--git-common-dir")))
 
 
-def parse_name_status_z(data: bytes) -> List[Change]:
+def parse_name_status_z(data: bytes) -> list[Change]:
     """Parse NUL-separated `git diff --name-status` output."""
 
     fields = data.split(b"\0")
     if fields and fields[-1] == b"":
         fields.pop()
-    changes: List[Change] = []
+    changes: list[Change] = []
     index = 0
     while index < len(fields):
         status = fields[index].decode("ascii")
@@ -139,7 +158,7 @@ def parse_name_status_z(data: bytes) -> List[Change]:
     return changes
 
 
-def commit_changes(repo: Path, commit: str) -> List[Change]:
+def commit_changes(repo: Path, commit: str) -> list[Change]:
     """Return canonical first-parent changes for a non-merge commit."""
 
     raw = run_git(
@@ -159,7 +178,7 @@ def commit_changes(repo: Path, commit: str) -> List[Change]:
     return parse_name_status_z(bytes(raw))
 
 
-def stable_unique(values: Sequence[str]) -> List[str]:
+def stable_unique(values: Sequence[str]) -> list[str]:
     """Remove duplicates while preserving first-seen order."""
 
     return list(dict.fromkeys(values))
@@ -186,7 +205,7 @@ def canonical_json_sha256(payload: Mapping[str, Any]) -> str:
     return sha256_bytes(encoded)
 
 
-def read_json(path: Path) -> Dict[str, Any]:
+def read_json(path: Path) -> dict[str, Any]:
     """Read a JSON object from disk."""
 
     payload = json.loads(path.read_text(encoding="utf-8"))

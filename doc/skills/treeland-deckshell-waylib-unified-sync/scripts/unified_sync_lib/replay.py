@@ -48,6 +48,8 @@ def _require_child_contract_audit(
     errors.extend(updater_guard_errors(request.source_repo, source, request.child_worktree, str(commit), f"{commit}^"))
     if not errors:
         try:
+            if not isinstance(record, Mapping):
+                raise ValueError("child source contract audit record must be an object")
             _path, content = read_verified_artifact(
                 record, request.artifact_root, "child source contract audit"
             )
@@ -83,6 +85,8 @@ def _checkpoint_history_errors(
         ("child", request.child_worktree, request.child_base, journal["current_child_head"]),
     ]
     if request.wlroots_worktree is not None:
+        if request.wlroots_base is None:
+            return ["wlroots checkpoint is missing its baseline"]
         lanes.append(("wlroots", request.wlroots_worktree, request.wlroots_base, journal["current_wlroots_head"]))
     for lane, repo, base, head in lanes:
         expected = [
@@ -137,6 +141,9 @@ def _checkpoint_dependency_errors(request, journal):
             expected = None
             if r and (tree_entry(request.child_worktree, ccommit, WLROOTS_ROOT)
                       or required_by_inventory({"commits": [item]})):
+                if not isinstance(current_r, str):
+                    errors.append("wlroots checkpoint is missing its commit")
+                    continue
                 expected = nested_transition(request.child_worktree, ccommit + "^", ccommit,
                                              current_r, r["submodule_url"])
             if node.get("nested_gitlink") != expected:
@@ -193,6 +200,8 @@ def _new_journal(
     _require_clean_head(request.parent_worktree, identity["parent_base"], "parent")
     _require_clean_head(request.child_worktree, identity["child_base"], "child")
     if identity.get("wlroots"):
+        if request.wlroots_worktree is None:
+            raise ReplayBlocked("wlroots identity requires a worktree")
         _require_clean_head(request.wlroots_worktree, identity["wlroots"]["base"], "wlroots")
     initial = tree_entry(request.parent_worktree, identity["parent_base"], request.gitlink_path)
     if not initial or initial["mode"] != "160000" or initial["sha"] != identity["child_base"]:

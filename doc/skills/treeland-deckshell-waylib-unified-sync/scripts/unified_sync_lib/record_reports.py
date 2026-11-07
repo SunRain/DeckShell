@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
 
 from .artifacts import read_verified_artifact
 from .ctest_results import discovery_errors, parse_ctest
@@ -75,7 +76,7 @@ def _exception_entry(root, auth, manifest, validation):
     require(entry["outcome"] == "fail" and entry["exit_code"] == 0
             and entry["tests"]["failed"] == 0, "例外不能覆盖真实失败")
     skipped = [t["name"] for t in entry["test_results"] if t["status"] == "skipped"]
-    require(skipped and skipped == scope["allowed_skips"], "跳过集合超出原授权")
+    require(bool(skipped) and skipped == scope["allowed_skips"], "跳过集合超出原授权")
     filters = ("-R", "-E", "-L", "-LE", "-I", "--tests-regex", "--exclude-regex", "--label-regex",
                "--label-exclude", "--tests-information", "--rerun-failed", "--tests-from-file", "--exclude-from-file")
     require(not any(arg == flag or arg.startswith(flag + "=") or
@@ -108,7 +109,12 @@ def exception_record(context, descriptor, root, report, inventory, manifest, val
             and auth.get("schema_version") == 1 and auth.get("authorization", "").strip(), "例外授权缺失")
     require(auth.get("plan") == context.batch and auth.get("node") == descriptor["name"]
             and auth["scope"]["source_head"] == inventory["range"]["head"], "例外属于其它批次或节点")
-    require(manifest["identity"]["refs_doc"] == context.batch + "/plan.md", "例外方案身份不符")
+    accepted_refs = {context.batch + "/plan.md"}
+    if hasattr(context, "evidence_label"):
+        accepted_refs.add(context.evidence_label + "/plan.md")
+    if hasattr(context, "evidence_root"):
+        accepted_refs.add(str(Path(context.evidence_root) / "plan.md"))
+    require(manifest["identity"]["refs_doc"] in accepted_refs, "例外方案身份不符")
     _exception_entry(root, auth, manifest, validation)
     return {"authorization": auth, "path": bundle["skip_authorization"]["path"]}
 

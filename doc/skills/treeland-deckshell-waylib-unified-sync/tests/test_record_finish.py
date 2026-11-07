@@ -117,7 +117,8 @@ class RecordFinishTests(unittest.TestCase):
         from unified_sync_lib.record_sidecars import plan_documents
         from unified_sync_lib.repo_records import collect_records
         from unified_sync_lib.record_render import render_documents
-        inputs = discover_nodes(context, *[self.f.request.inventory["range"][k] for k in ("base", "head")], "consolidate")
+        frozen = self.f.request.inventory["range"]
+        inputs = discover_nodes(context, frozen["base"], frozen["head"], "consolidate")
         context.plan_documents = plan_documents(context, self.plan)
         nodes, rows = collect_records(context, inputs)
         documents = render_documents(context, nodes, rows)
@@ -128,6 +129,39 @@ class RecordFinishTests(unittest.TestCase):
         self.assertEqual(self.invoke()[0], 0)
         self.assertEqual(path.stat().st_mtime_ns, before)
         self.assertEqual(len(self.documents()), 9)
+
+    def test_finish_maps_accepted_history_without_rebinding_old_report(self):
+        f = self.f
+        original = {path: path.read_bytes() for path in f.artifacts.glob("*.json")}
+        mapping, lanes = f.rewrite()
+        for lane, info in lanes.items():
+            subprocess.run(["git", "-C", str(f.repos[lane]), "update-ref", "refs/heads/sync",
+                            info["new_head"], info["old_head"]], check=True)
+        self.assertNotEqual(self.invoke("sync")[0], 0)
+        output, errors = io.StringIO(), io.StringIO()
+        with contextlib.redirect_stdout(output), contextlib.redirect_stderr(errors):
+            code = main([*self.args("sync"), "--history-map", str(mapping)])
+        self.assertEqual((code, errors.getvalue()), (0, ""))
+        for path, content in original.items():
+            self.assertEqual(path.read_bytes(), content)
+        summary = (f.request.parent_worktree / "doc/treeland-sync/sample/summary.md").read_text()
+        self.assertIn(lanes["parent"]["new_head"], summary)
+        self.assertIn(lanes["parent"]["old_head"], summary)
+        self.assertIn("这不是产品重新验收", summary)
+
+    def test_finish_rejects_incomplete_mapping_before_writes(self):
+        f = self.f
+        path, lanes = f.rewrite()
+        for lane, info in lanes.items():
+            subprocess.run(["git", "-C", str(f.repos[lane]), "update-ref", "refs/heads/sync",
+                            info["new_head"], info["old_head"]], check=True)
+        payload = read_json(path)
+        payload["repositories"]["parent"]["commits"].pop(0)
+        atomic_write_json(path, payload)
+        with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+            code = main([*self.args("sync"), "--history-map", str(path)])
+        self.assertEqual(code, 1)
+        self.assertFalse(self.documents())
 
     def test_generator_error_is_a_failure_of_the_normal_task(self):
         with patch("unified_sync_lib.record_finish.generate_from_inputs", side_effect=OSError("disk unavailable")):

@@ -32,7 +32,7 @@
 
 「无警告」由 fixture 的 `qInstallMessageHandler` 计数：`wTextureProvider() is nullptr`、
 `can only be queried on the rendering thread`、`texture missing or item size invalid`、
-`Reject buffer with invalid size`，以及任何提及 `DockPreview.qml` 的 warning/critical
+`Reject buffer with invalid size`，以及任何提及 `DockPreview.qml` 或拆分目录 `DockPreview/` 的 warning/critical
 （QML 引擎拒绝赋值只记日志、不报错）。
 
 ## 关键实现约束

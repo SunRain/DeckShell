@@ -56,7 +56,8 @@ bool isBufferItemWarning(QtMsgType type, const QString &message)
         || message.contains(QLatin1String("texture missing or item size invalid"))
         || message.contains(QLatin1String("Reject buffer with invalid size"))
         || ((type == QtWarningMsg || type == QtCriticalMsg)
-            && message.contains(QLatin1String("DockPreview.qml")));
+            && (message.contains(QLatin1String("DockPreview.qml"))
+                || message.contains(QLatin1String("DockPreview/"))));
 }
 
 void recordBufferItemWarnings(QtMsgType type,

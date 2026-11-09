@@ -27,7 +27,7 @@ SPDX-License-Identifier: MIT
         are to be interpreted as described in RFC 2119.
     </description>
 
-    <interface name="treeland_dde_shell_manager_v2" version="1">
+    <interface name="treeland_dde_shell_manager_v2" version="2">
         <description summary="factory for DDE shell surfaces">
             A global that creates treeland_dde_shell_surface_v2 objects for
             privileged DDE clients implementing parts of the shell user
@@ -68,7 +68,7 @@ SPDX-License-Identifier: MIT
         </request>
     </interface>
 
-    <interface name="treeland_dde_shell_surface_v2" version="1">
+    <interface name="treeland_dde_shell_surface_v2" version="2">
         <description summary="shell surface role">
             A shell surface object assigns the DDE shell surface role to a
             wl_surface. A shell surface renders either at the overlay level
@@ -105,6 +105,7 @@ SPDX-License-Identifier: MIT
             </description>
             <entry name="normal" value="0" summary="normal window layer, below the overlay layer and participating in regular toplevel stacking" />
             <entry name="overlay" value="1" summary="workspace overlay layer, above normal toplevels and below layer-shell surfaces" />
+            <entry name="always_on_top" value="2" since="2" summary="above normal windows and below workspace overlays" />
         </enum>
 
         <enum name="skip_flag" bitfield="true">
@@ -216,5 +217,14 @@ SPDX-License-Identifier: MIT
             </description>
             <arg name="accept" type="uint" summary="0 to refuse keyboard focus, 1 to accept it" />
         </request>
+        <event name="role" since="2">
+            <description summary="effective rendering role">
+                Sent when the shell surface object is created and whenever
+                its effective role changes. Window menu pin and unpin actions
+                can change this role independently of client requests.
+                Repeating a request for the current role sends no new event.
+            </description>
+            <arg name="role" type="uint" enum="role" summary="the effective rendering role" />
+        </event>
     </interface>
 </protocol>

@@ -124,6 +124,13 @@ class ContractMigrationTests(unittest.TestCase):
                          "protocols/compositor/xml/treeland-dde-shell-unstable-v2.xml",
                          "protocols/compositor/xml/treeland-input-manager-unstable-v1.xml",
                          "protocols/compositor/xml/treeland-dde-shell-v1.xml",
+                         "protocols/compositor/xml/treeland-window-transition-unstable-v1.xml",
+                         "protocols/compositor/xml/treeland-shortcut-manager-unstable-v3.xml",
+                         "protocols/compositor/xml/treeland-output-uuid-unstable-v1.xml",
+                         "protocols/compositor/xml/treeland-output-uuid-head-unstable-v1.xml",
+                         "protocols/compositor/xml/treeland-output-manager-unstable-v2.xml",
+                         "protocols/compositor/xml/treeland-output-group-manager-unstable-v1.xml",
+                         "protocols/compositor/xml/treeland-foreign-toplevel-manager-unstable-v3.xml",
                          ):
                 changes[path] = "reviewed scanner/protocol integration\n"
                 parent_paths.append(path)

@@ -198,4 +198,14 @@ Treeland 0.10.0 → 0.11.0 的限定协议集成另支持以下文件名，均�
 - `treeland-input-manager-unstable-v1.xml`
 - `treeland-dde-shell-v1.xml`
 
+Treeland `f342a5b6..9dcaef2e` 的限定协议集成另支持以下七个文件名，仍仅位于上述 P XML 目录：
+
+- `treeland-window-transition-unstable-v1.xml`
+- `treeland-shortcut-manager-unstable-v3.xml`
+- `treeland-output-uuid-unstable-v1.xml`
+- `treeland-output-uuid-head-unstable-v1.xml`
+- `treeland-output-manager-unstable-v2.xml`
+- `treeland-output-group-manager-unstable-v1.xml`
+- `treeland-foreign-toplevel-manager-unstable-v3.xml`
+
 清单只定义工具能够验证的路径；每轮仍需用户批准固定协议来源和实际集成范围，审批绑定具体实现提交、相邻快照、完整 drift 与逐路径补丁。只批准协议集成不等于批准 Waylib 包名、导出目标、namespace 或安装布局迁移。

@@ -86,6 +86,9 @@ uint ShortcutController::registerKey(const QString &name, const QString& key, Sh
     m_actionCombinedMap[action] = combined;
     m_deleters[name] = [this, combined, action]() {
         m_keyMap[combined].remove(action);
+        if (m_keyMap[combined].isEmpty()) {
+            m_keyMap.remove(combined);
+        }
         m_actionCombinedMap.remove(action);
     };
     if (lcTlShortcut().isInfoEnabled()) {

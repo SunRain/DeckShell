@@ -1,0 +1,53 @@
+# N11 独立修复：DockPreviewSurface 显式绑定所属桌面
+
+本提交给 DockPreviewSurface 增加只读、强类型的 `desktop` 属性，绑定既有 `preview.desktop`。保留原 Session-isolation 测试及断言、视觉父子关系和事件路由；不引入第二份可独立设置的桌面状态。
+
+## 原因和已观察到的失败
+
+此前的判空和快捷键独立修复之后，`N11-local-fix-2` 正常及关闭 XWayland 的完整构建均通过，完整 compositor CTest 分别为 102 total / 100 passed / 1 failed / 1 skipped 和 100 / 98 / 1 / 1。两配置唯一失败均为 `test_session_isolation` 的原断言：
+
+```text
+FAIL: Session owns independent window models and workspaces
+Actual (m_context.result): 1
+Expected (0): 0
+```
+
+原 fixture 遍历每个 DesktopEnvironment 的 `viewRoot()->childItems()`，要求所有直接视觉子项的 `desktop` 属性等于所属桌面。DockPreview 控制器有该属性；DockPreviewSurface 通过 `parent: root.parent` 成为它的视觉兄弟，只有 `preview` 属性，却已在鼠标进入/离开时使用 `preview.desktop.windowManagement`。
+
+使用同一候选二进制及真实注册测试环境的只读 GDB 观察确认：DockPreview 的属性返回所属桌面指针，DockPreviewSurface 的 `property("desktop")` 返回无效 QVariant，转换后为 null，导致 `independent_desktops=false`。这不是已证明的跨用户泄漏，也不是属性初始化时序的证据。
+
+## 来源归因与批准范围
+
+失败检查来自上游 `f3e6d407f58f84ecf884d08653d5f8db1b31caac`，生产桌面组装及控制器依赖注入来自 `b6b80c3ef7e693cc596658d5e1f428c1aeacf144`。面板拆分与视觉兄弟结构来自已在本批基线内的 `4abd1b9a1d30a79dee6d98951cfb0a4836952cce`。
+
+候选的 Session fixture、C 客户端和 DesktopEnvironment 实现与冻结来源 head 字节相同；两个 DockPreview QML 文件及 QmlEngine 只存在项目模块 URI 差异。归因是来源实现/测试合同不一致，不是本地移植或前两项修复引入；没有独立运行纯 Treeland，不宣称其 CI 已复现。
+
+用户明确批准按 PRD §10 执行下述窄修，要求单独 commit，并在 `docs/treeland-sync/` 对应批次目录保存本独立说明：
+
+```qml
+readonly property DesktopEnvironment desktop: preview.desktop
+```
+
+该属性显式暴露面板已使用的桌面归属。强类型允许原 C++ 断言读取 DesktopEnvironment 指针；readonly 防止调用方覆盖绑定，绑定仍随 preview 的桌面依赖更新。继续使用 required QtObject preview，避免组件类型循环依赖。
+
+不改变 parent、动画、尺寸、透明度、输入处理、鼠标协议事件或任何原测试；不跳过缺属性对象，不新增全局桌面回退，不重写测试使其变绿。
+
+## 与冻结历史的关系
+
+- 来源范围仍为 `(1f8c2a658b4b4e868e0650f9890c5e752fd1b839..77f885c8dbeb0e0e0bebdafdee02eadb1d150439]`，65 项来源映射不变。
+- 直接父 P 为 `bf2b6c2395275e74703933d9296640de26968631`，原快捷键修复不改写。
+- 更早的判空传播 P `da94bafea5d130bdee98e2c7854e2b352c7d5224` 和 C `780ae6e53d52483d17f14d40fa44c8d67d5874fc` 保持原样。
+- R 保持 `b79b9b38a473ca57f5b54892280dfad4f25f8e42`；两层 gitlink、XML/provenance 和 WaylibShared 包合同不变。
+- 独立标识为 `N11-dock-preview-desktop-ownership-1`；本提交不带来源或协议 companion trailer。
+
+这是一个相邻非 merge P-only 修复，生产 diff 仅一行，与本说明同作独立提交。批次私有记录必须单列本修复并保留原 local_fix、快捷键 parent_tail_repair 及其原授权、diff 和 manifest，不制造 C/R 内容提交或修改日常源码树工具。
+
+## 验证要求与交付边界
+
+新候选使用 `evidence/N11-local-fix-3/` 的独立构建/安装和运行记录。先确认 QML 编译、真实组件创建及原桌面指针检查，再让原完整 Session-isolation 执行后续场景；正常和关闭 XWayland 的完整 suite、C/R 依赖与安装消费链、协议/runtime 和各原 gate 仍必须实际验证。
+
+本说明记录提交时的事实和验收要求，不预先宣称新候选或整批通过。此前没有运行到的断言可能暴露新失败；若发生，保留真实结果并继续阻断，不扩大本修复范围。仅原获准 DRM 环境前提不足的真实 SKIP 可限定接受，其它失败、额外 SKIP 或未执行不豁免。
+
+主工作树五份 WIP、外层 index 和旧候选/日志均保留。全部原条件满足后才允许已授权的专用 refs CAS 及真实整批 finish；独立提交本身不是整批接受凭据。
+
+外层方案标识：`.helloagents/plans/20261111_treeland_1f8c2a65_to_77f885c8_local_sync/plan.md`。

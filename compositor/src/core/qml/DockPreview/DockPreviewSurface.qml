@@ -13,6 +13,7 @@ Rectangle {
 
     // The DockPreview controller: geometry, fades and chrome switches.
     required property QtObject preview
+    readonly property DesktopEnvironment desktop: preview.desktop
 
     // Scale of the whole popover around `scaleOrigin`. The entry animation
     // decides `shellScale`; the dock edge the frame is glued to decides where
